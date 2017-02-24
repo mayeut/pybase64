@@ -1,0 +1,37 @@
+notifications:
+  email: false
+
+matrix:
+  include:
+    - sudo: required
+      services:
+        - docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+    - sudo: required
+      services:
+        - docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+           PRE_CMD=linux32
+    - language: python
+      python: "3.6"
+    - os: osx
+      osx_image: xcode8.2
+
+install:
+  - if [ "${DOCKER_IMAGE:-}" != "" ]; then
+      docker pull $DOCKER_IMAGE;
+    elif [ "${TRAVIS_OS_NAME}" == "osx" ]; then
+      ./travis/install-python-macos.sh;
+    else
+      pip install -r requirements.txt;
+    fi
+
+script:
+  - if [ "${DOCKER_IMAGE:-}" != "" ]; then
+      docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels-docker.sh;
+    elif [ "${TRAVIS_OS_NAME}" == "osx" ]; then
+      ./travis/build-wheels-macos.sh;
+    else
+      ./travis/build-source-dist.sh;
+    fi
+  - ls todeploy/
