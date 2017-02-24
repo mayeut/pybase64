@@ -1,0 +1,9 @@
+# Include the license file
+include LICENSE
+
+# Include full base64 folder
+graft base64
+# but the git folder
+prune base64/.git
+# and hidden files
+global-exclude .*

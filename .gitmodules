@@ -1,0 +1,3 @@
+[submodule "base64"]
+	path = base64
+	url = https://github.com/aklomp/base64.git
