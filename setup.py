@@ -3,7 +3,7 @@ from distutils.command.build_ext import build_ext
 from distutils.dep_util import newer_group
 from distutils import log
 
-from pybase64.distutils import CCompilerCapabilities
+from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities
 
 from codecs import open
 from os import path
@@ -75,7 +75,11 @@ class pybase64_build_ext(build_ext):
         ext_path = self.get_ext_fullpath(ext.name)
         depends = sources + ext.depends
 
-        for add_sources in simd_sources.itervalues():
+        try:
+            simd_sources_values = simd_sources.itervalues()
+        except AttributeError:
+            simd_sources_values = simd_sources.values()
+        for add_sources in simd_sources_values:
             depends = depends + add_sources
 
         if not (self.force or newer_group(depends, ext_path, 'newer')):
