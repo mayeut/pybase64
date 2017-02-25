@@ -16,6 +16,9 @@ if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
 
 here = path.abspath(path.dirname(__file__))
 
+# Get version
+exec(open(path.join(here, 'pybase64/_version.py')).read())
+
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
@@ -146,7 +149,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0',
+    version=__version__,
 
     description='Fast Base64 encoding/decoding',
     long_description=long_description,
