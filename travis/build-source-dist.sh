@@ -9,7 +9,8 @@ mkdir from_source
 pushd from_source
 tar -xf ../dist/pybase64*.tar.gz
 pushd pybase64*
-python setup.py test
+python setup.py build_ext -i -f
+nosetests
 popd
 popd
 

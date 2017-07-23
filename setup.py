@@ -1,15 +1,26 @@
+import glob
+import os
+import sys
+
 from setuptools import setup, find_packages, Extension
+from distutils.cmd import Command
 from distutils.command.build_ext import build_ext
 from distutils.dep_util import newer_group
 from distutils import log
-
-from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities
-
 from codecs import open
 from os import path
 from os import environ
-import os
-import sys
+
+if sys.version_info[0] >= 3:
+    import builtins
+else:
+    import __builtin__ as builtins
+
+# Not to try loading things from the main module during setup
+builtins.__PYBASE64_SETUP__ = True
+
+from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities
+
 
 if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
     raise RuntimeError("Python version 2.7 or >= 3.4 required.")
@@ -24,9 +35,9 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 pybase64_ext = Extension(
-    "_pybase64",
+    "pybase64._pybase64",
     [
-       "pybase64/_pybase64/_pybase64.c",
+       "pybase64/_pybase64.c",
        "base64/lib/lib.c",
        "base64/lib/codec_choose.c",
        "base64/lib/arch/generic/codec.c"
@@ -135,6 +146,30 @@ class pybase64_build_ext(build_ext):
             build_temp=self.build_temp,
             target_lang=language)
 
+
+# Let's define a class to clean in-place built extensions
+class CleanExtensionCommand(Command):
+    """A custom command to clean all in-place built C extensions."""
+
+    description = 'clean all in-place built C extensions'
+    user_options = []
+
+    def initialize_options(self):
+        """Set default values for options."""
+
+    def finalize_options(self):
+        """Post-process options."""
+
+    def run(self):
+        """Run command."""
+        for ext in ['*.so', '*.pyd']:
+            for file in glob.glob('./pybase64/' + ext):
+                log.info("removing '%s'", file)
+                if self.dry_run:
+                    continue
+                os.remove(file)
+
+
 # Get the C code
 exts = []
 exts.append(
@@ -142,30 +177,33 @@ exts.append(
 )
 
 setup(
-    name='pybase64',
-    cmdclass={"build_ext": pybase64_build_ext},
-    ext_modules=exts,
+    name = 'pybase64',
+    cmdclass = {
+        "build_ext": pybase64_build_ext,
+        'clean_ext': CleanExtensionCommand,
+    },
+    ext_modules = exts,
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=__version__,
+    version = __version__,
 
-    description='Fast Base64 encoding/decoding',
-    long_description=long_description,
+    description = 'Fast Base64 encoding/decoding',
+    long_description = long_description,
 
     # The project's main homepage.
-    url='https://github.com/mayeut/pybase64',
+    url = 'https://github.com/mayeut/pybase64',
 
     # Author details
-    author='Matthieu Darbois',
-    #author_email='mayeut@users.noreply.github.com',
+    author = 'Matthieu Darbois',
+    #author_email = 'mayeut@users.noreply.github.com',
 
     # Choose your license
-    license='BSD-2-Clause',
+    license = 'BSD-2-Clause',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    classifiers=[
+    classifiers = [
         # How mature is this project? Common values are
         #   3 - Alpha
         #   4 - Beta
@@ -192,13 +230,15 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='base64',
+    keywords = 'base64',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['distutils', 'docs', 'tests']),
+    packages = find_packages(exclude=['distutils', 'tests']),
+    install_requires = ['six>=1.10.0'],
 
-    test_suite='pybase64.tests.test_pybase64_unittest',
+    test_suite = 'pybase64.tests',
+    tests_require = ['future>=0.16.0'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -212,7 +252,7 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={
+    entry_points = {
         'console_scripts': [
             'pybase64=pybase64.__main__:main',
         ],

@@ -1,16 +1,22 @@
-from distutils.errors import *
-from distutils import log
 import os
 import sys
+from distutils import log
+from distutils.errors import CompileError, LinkError
+
+
+__all__ = [
+    'CCompilerCapabilities'
+]
+
 
 class CCompilerCapabilities:
-    SIMD_SSSE3=0
-    SIMD_SSE41=1
-    SIMD_SSE42=2
-    SIMD_AVX=3
-    SIMD_AVX2=4
-    SIMD_NEON32=5
-    SIMD_NEON64=6
+    SIMD_SSSE3 = 0
+    SIMD_SSE41 = 1
+    SIMD_SSE42 = 2
+    SIMD_AVX = 3
+    SIMD_AVX2 = 4
+    SIMD_NEON32 = 5
+    SIMD_NEON64 = 6
 
     def __init__(self, compiler):
         self.__capabilities = dict()
@@ -49,35 +55,97 @@ int main (int argc, char **argv) {
             except CompileError:
                 continue
             try:
-                compiler.link_executable(objects, "a.out")
+                compiler.link_shared_lib(objects, "a.out")
             except (LinkError, TypeError):
                 continue
             if quiet:
                 os.dup2(oldstderr, sys.stderr.fileno())
                 os.dup2(oldstdout, sys.stdout.fileno())
                 devnull.close()
-            return { 'support': True, 'flags': lflags }
+            return {'support': True, 'flags': lflags}
         if quiet:
             os.dup2(oldstderr, sys.stderr.fileno())
             os.dup2(oldstdout, sys.stdout.fileno())
             devnull.close()
-        return { 'support': False, 'flags': [] }
+        return {'support': False, 'flags': []}
 
     def __get_capabilities(self, compiler):
         log.info("getting compiler simd support")
-        self.__capabilities[CCompilerCapabilities.SIMD_SSSE3] = self.__has_simd_support(compiler, ['','-mssse3'], 'tmmintrin.h', '__m128i t = _mm_setzero_si128(); t = _mm_shuffle_epi8(t, t); return _mm_cvtsi128_si32(t);')
-        log.info("SSSE3: %s" % str(self.__capabilities[CCompilerCapabilities.SIMD_SSSE3]['support']))
-        self.__capabilities[CCompilerCapabilities.SIMD_SSE41] = self.__has_simd_support(compiler, ['','-msse4.1'], 'smmintrin.h', '__m128i t = _mm_setzero_si128(); t = _mm_insert_epi32(t, 1, 1); return _mm_cvtsi128_si32(t);')
-        log.info("SSE41: %s" % str(self.__capabilities[CCompilerCapabilities.SIMD_SSE41]['support']))
-        self.__capabilities[CCompilerCapabilities.SIMD_SSE42] = self.__has_simd_support(compiler, ['','-msse4.2'], 'nmmintrin.h', '__m128i t = _mm_setzero_si128(); return _mm_cmpistra(t, t, 0);')
-        log.info("SSE42: %s" % str(self.__capabilities[CCompilerCapabilities.SIMD_SSE42]['support']))
-        self.__capabilities[CCompilerCapabilities.SIMD_AVX]   = self.__has_simd_support(compiler, ['','-mavx'],   'immintrin.h', '__m256i t = _mm256_setzero_si256(); return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));')
-        log.info("AVX:   %s" % str(self.__capabilities[CCompilerCapabilities.SIMD_AVX]['support']))
-        self.__capabilities[CCompilerCapabilities.SIMD_AVX2]  = self.__has_simd_support(compiler, ['','-mavx2'],  'immintrin.h', '__m256i t = _mm256_broadcastd_epi32(_mm_setzero_si128()); return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));')
-        log.info("AVX2:  %s" % str(self.__capabilities[CCompilerCapabilities.SIMD_AVX2]['support']))
+        self.__capabilities[CCompilerCapabilities.SIMD_SSSE3] = \
+            self.__has_simd_support(
+                compiler,
+                ['', '-mssse3'],
+                'tmmintrin.h',
+                '__m128i t = _mm_setzero_si128();'
+                't = _mm_shuffle_epi8(t, t);'
+                'return _mm_cvtsi128_si32(t);'
+        )
+        log.info(
+            "SSSE3: %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_SSSE3
+            ]['support'])
+        )
+        self.__capabilities[CCompilerCapabilities.SIMD_SSE41] = \
+            self.__has_simd_support(
+                compiler,
+                ['', '-msse4.1'],
+                'smmintrin.h',
+                '__m128i t = _mm_setzero_si128();'
+                't = _mm_insert_epi32(t, 1, 1);'
+                'return _mm_cvtsi128_si32(t);'
+        )
+        log.info(
+            "SSE41: %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_SSE41
+            ]['support'])
+        )
+        self.__capabilities[CCompilerCapabilities.SIMD_SSE42] = \
+            self.__has_simd_support(
+                compiler,
+                ['', '-msse4.2'],
+                'nmmintrin.h',
+                '__m128i t = _mm_setzero_si128();'
+                'return _mm_cmpistra(t, t, 0);'
+        )
+        log.info(
+            "SSE42: %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_SSE42
+            ]['support'])
+        )
+        self.__capabilities[CCompilerCapabilities.SIMD_AVX] = \
+            self.__has_simd_support(
+                compiler,
+                ['', '-mavx'],
+                'immintrin.h',
+                '__m256i t = _mm256_setzero_si256();'
+                'return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));'
+        )
+        log.info(
+            "AVX:   %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_AVX
+            ]['support'])
+        )
+        self.__capabilities[CCompilerCapabilities.SIMD_AVX2] = \
+            self.__has_simd_support(
+                compiler,
+                ['', '-mavx2'],
+                'immintrin.h',
+                '__m256i t = _mm256_broadcastd_epi32(_mm_setzero_si128());'
+                'return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));'
+        )
+        log.info(
+            "AVX2:  %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_AVX2
+            ]['support'])
+        )
 
     def has(self, what):
-        if not what in self.__capabilities:
+        if what not in self.__capabilities:
             return False
         return self.__capabilities[what]['support']
 
