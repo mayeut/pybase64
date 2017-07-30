@@ -1,4 +1,6 @@
 .. SETUP VARIABLES
+.. |pypi-status| image:: https://img.shields.io/pypi/v/pybase64.svg
+  :target: https://pypi.python.org/pypi/pybase64
 .. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
   :target: https://travis-ci.org/mayeut/pybase64
 .. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha?svg=true
@@ -17,7 +19,7 @@ It aims to provide a fast base64 implementation for standard base64 encoding/dec
 Current status
 ==============
 
-|travis-status| |appveyor-status| |codecov-status|
+|pypi-status| |travis-status| |appveyor-status| |codecov-status|
   
 Benchmark
 =========
