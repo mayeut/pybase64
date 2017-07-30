@@ -1,0 +1,14 @@
+version: 0.1.0.{build}
+environment:
+  global:
+    CIBW_TEST_REQUIRES: "nose future"
+    CIBW_TEST_COMMAND: "nosetests {project}"
+    CIBW_SKIP: cp27-win* cp33-win* cp34-win*
+install:
+  - git submodule update --init --recursive
+build_script:
+  - pip install cibuildwheel==0.4.0
+  - cibuildwheel --output-dir todeploy
+artifacts:
+  - path: "todeploy\\*.whl"
+    name: Wheels
