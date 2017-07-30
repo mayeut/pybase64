@@ -307,9 +307,6 @@ static PyObject* pybase64_import(const char* from, const char* object)
     importedObject = PyObject_GetAttr(imports, subModuleName);
     Py_DECREF(subModuleName);
     Py_DECREF(imports);
-    if (importedObject == NULL) {
-        return NULL;
-    }
     return importedObject;
 }
 

@@ -63,5 +63,5 @@ def main(args=None):
 #    print(encodedcontent.decode('ascii'))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no branch
     main()

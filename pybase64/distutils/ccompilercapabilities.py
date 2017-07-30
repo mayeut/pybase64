@@ -40,7 +40,7 @@ int main (int argc, char **argv) {
         finally:
             f.close()
 
-        if quiet:
+        if quiet:  # pragma: no branch
             devnull = open(os.devnull, 'w')
             oldstderr = os.dup(sys.stderr.fileno())
             oldstdout = os.dup(sys.stdout.fileno())
@@ -56,14 +56,14 @@ int main (int argc, char **argv) {
                 continue
             try:
                 compiler.link_shared_lib(objects, "a.out")
-            except (LinkError, TypeError):
-                continue
-            if quiet:
+            except (LinkError, TypeError):  # pragma: no cover
+                continue  # pragma: no cover
+            if quiet:  # pragma: no branch
                 os.dup2(oldstderr, sys.stderr.fileno())
                 os.dup2(oldstdout, sys.stdout.fileno())
                 devnull.close()
             return {'support': True, 'flags': lflags}
-        if quiet:
+        if quiet:  # pragma: no branch
             os.dup2(oldstderr, sys.stderr.fileno())
             os.dup2(oldstdout, sys.stdout.fileno())
             devnull.close()
@@ -143,6 +143,20 @@ int main (int argc, char **argv) {
                 CCompilerCapabilities.SIMD_AVX2
             ]['support'])
         )
+        self.__capabilities[CCompilerCapabilities.SIMD_NEON32] = \
+            self.__has_simd_support(
+                compiler,
+                [''],
+                'arm_neon.h',
+                'uint8x16_t t = vdupq_n_u8(1);'
+                'return vgetq_lane_s32(vreinterpretq_s32_u8(t));'
+        )
+        log.info(
+            "NEON32:  %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_NEON32
+            ]['support'])
+        )
 
     def has(self, what):
         if what not in self.__capabilities:
@@ -150,6 +164,6 @@ int main (int argc, char **argv) {
         return self.__capabilities[what]['support']
 
     def flags(self, what):
-        if not self.has(what):
-            return self.__capabilities[666]['flags']
+        if not self.has(what):  # pragma: no branch
+            return self.__capabilities[666]['flags']  # pragma: no cover
         return self.__capabilities[what]['flags']

@@ -6,7 +6,7 @@ except NameError:
     __PYBASE64_SETUP__ = False
 
 # Only go on if not in setup.py
-if not __PYBASE64_SETUP__:  # pragma: no branch
+if not __PYBASE64_SETUP__:
     try:
         from ._pybase64 import b64encode
         from ._pybase64 import b64decode
