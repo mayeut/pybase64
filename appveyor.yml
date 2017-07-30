@@ -13,5 +13,5 @@ build_script:
   - ps: >-
       if ($env:APPVEYOR_REPO_TAG -eq "true") {
         python -m pip install twine
-        python -m twine upload (resolve-path todeploy\*.whl)
+        python -m twine upload --skip-existing (resolve-path todeploy\*.whl)
       }
