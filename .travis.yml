@@ -5,6 +5,7 @@ env:
   global:
     - CIBW_TEST_REQUIRES="nose future"
     - CIBW_TEST_COMMAND="nosetests {project}"
+    - TWINE_USERNAME=mayeut
 
 matrix:
   include:
@@ -42,3 +43,8 @@ script:
       ./travis/build-source-dist.sh;
     fi
   - ls todeploy/
+  - |
+    if [[ $TRAVIS_TAG ]]; then
+      python -m pip install twine
+      python -m twine upload todeploy/*
+    fi

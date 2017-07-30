@@ -4,11 +4,14 @@ environment:
     CIBW_TEST_REQUIRES: "nose future"
     CIBW_TEST_COMMAND: "nosetests {project}"
     CIBW_SKIP: cp27-win* cp33-win* cp34-win*
+    TWINE_USERNAME: mayeut
 install:
-  - git submodule update --init --recursive
+  - git submodule update --init --recursive
 build_script:
   - pip install cibuildwheel==0.4.0
   - cibuildwheel --output-dir todeploy
-artifacts:
-  - path: "todeploy\\*.whl"
-    name: Wheels
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq "true") {
+        python -m pip install twine
+        python -m twine upload (resolve-path todeploy\*.whl)
+      }
