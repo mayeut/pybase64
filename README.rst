@@ -7,5 +7,12 @@ It aims to provide a fast base64 implementation for standard base64 encoding/dec
 
 Current status
 ==============
-.. image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
+|travis-status| |codecov-status|
+
+
+.. Let's setup images here
+.. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
          :target: https://travis-ci.org/mayeut/pybase64
+.. |codecov-status| image:: https://codecov.io/gh/mayeut/pybase64/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/mayeut/pybase64
+  
