@@ -235,10 +235,6 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         return NULL;
     }
 
-    if (!validation) {
-        return PyObject_Call(g_fallbackDecode, args, kwds);
-    }
-
     if (parse_alphabet(in_alphabet, alphabet, & use_alphabet) != 0) {
         return NULL;
     }
@@ -259,6 +255,28 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
         Py_DECREF(in_object);
         return NULL;
+    }
+
+    if (!validation) {
+        PyObject* translate_object = NULL;
+
+        if (use_alphabet) {
+            translate_object = PyBytes_FromStringAndSize(NULL, buffer.len);
+            if (translate_object == NULL) {
+                PyBuffer_Release(&buffer);
+                Py_DECREF(in_object);
+                return NULL;
+            }
+            translate(buffer.buf, PyBytes_AS_STRING(translate_object), buffer.len, alphabet);
+        }
+        PyBuffer_Release(&buffer);
+        if (translate_object != NULL) {
+            Py_DECREF(in_object);
+            in_object = translate_object;
+        }
+        out_object = PyObject_CallFunctionObjArgs(g_fallbackDecode, in_object, NULL);
+        Py_DECREF(in_object);
+        return out_object;
     }
 
     if (buffer.len > (PY_SSIZE_T_MAX - 3)) {
