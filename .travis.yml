@@ -3,16 +3,19 @@ notifications:
 
 matrix:
   include:
-    - sudo: required
+    - dist: trusty
+      sudo: required
       services:
         - docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
-    - sudo: required
+    - dist: trusty
+      sudo: required
       services:
         - docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            PRE_CMD=linux32
-    - language: python
+    - dist: trusty
+      language: python
       python: "3.6"
     - os: osx
       osx_image: xcode8.2
