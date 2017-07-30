@@ -1,19 +1,18 @@
 notifications:
   email: false
 
+env:
+  global:
+    - CIBW_TEST_REQUIRES="nose future"
+    - CIBW_TEST_COMMAND="nosetests {project}"
+
 matrix:
   include:
     - dist: trusty
       sudo: required
       services:
         - docker
-      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
-    - dist: trusty
-      sudo: required
-      services:
-        - docker
-      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
-           PRE_CMD=linux32
+      env: PYBASE64_BUILD_WHEEL=1
     - dist: trusty
       language: python
       python: "3.6"
@@ -23,12 +22,11 @@ matrix:
       env: PYBASE64_TOX=1
     - os: osx
       osx_image: xcode8.2
+      env: PYBASE64_BUILD_WHEEL=1
 
 install:
-  - if [ "${DOCKER_IMAGE:-}" != "" ]; then
-      docker pull $DOCKER_IMAGE;
-    elif [ "${TRAVIS_OS_NAME}" == "osx" ]; then
-      ./travis/install-python-macos.sh;
+  - if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
+      pip install cibuildwheel==0.4.0;
     elif [ "${PYBASE64_TOX}" != "" ]; then
       pip install -r requirements.txt codecov;
     else
@@ -36,12 +34,10 @@ install:
     fi
 
 script:
-  - if [ "${DOCKER_IMAGE:-}" != "" ]; then
-      docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels-docker.sh;
-    elif [ "${TRAVIS_OS_NAME}" == "osx" ]; then
-      ./travis/build-wheels-macos.sh;
+  - if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
+      cibuildwheel --output-dir todeploy;
     elif [ "${PYBASE64_TOX}" != "" ]; then
-      python -m tox; mkdir todeploy; codecov;
+      python -m tox && mkdir todeploy && codecov;
     else
       ./travis/build-source-dist.sh;
     fi

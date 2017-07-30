@@ -22,8 +22,8 @@ builtins.__PYBASE64_SETUP__ = True
 from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities
 
 
-if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
-    raise RuntimeError("Python version 2.7 or >= 3.4 required.")
+if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 3):
+    raise RuntimeError("Python version 2.7 or >= 3.3 required.")
 
 here = path.abspath(path.dirname(__file__))
 
@@ -224,6 +224,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
