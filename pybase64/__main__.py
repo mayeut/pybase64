@@ -33,14 +33,18 @@ def bench_one(data, enc, dec, altchars=None, validate=False):
     number = 0
     time = timer()
     while True:
-        decodedcontent = dec(encodedcontent, altchars=altchars)
+        decodedcontent = dec(encodedcontent,
+                             altchars=altchars,
+                             validate=validate)
         number += 1
         if timer() - time > 0.25:
             break
     iter = number
     time = timer()
     while iter > 0:
-        decodedcontent = dec(encodedcontent, altchars=altchars, validate=True)
+        decodedcontent = dec(encodedcontent,
+                             altchars=altchars,
+                             validate=validate)
         iter -= 1
     time = timer() - time
     print('{0:<32s} {1:9.3f} MB/s ({2:,d} bytes)'.format(
@@ -51,8 +55,20 @@ def bench_one(data, enc, dec, altchars=None, validate=False):
 
 
 def bench(data):
-    bench_one(data, pybase64.b64encode, pybase64.b64decode)
-    bench_one(data, base64.b64encode, b64decodeValidate)
+    for altchars in [None, b'-_']:
+        for validate in [False, True]:
+            print('bench: altchars={0:s}, validate={1:s}'.format(
+                  repr(altchars), repr(validate)))
+            bench_one(data,
+                      pybase64.b64encode,
+                      pybase64.b64decode,
+                      altchars,
+                      validate)
+            bench_one(data,
+                      base64.b64encode,
+                      b64decodeValidate,
+                      altchars,
+                      validate)
 
 
 def main(args=None):

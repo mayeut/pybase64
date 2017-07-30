@@ -121,6 +121,26 @@ class TestPyBase64(unittest.TestCase):
                 b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'
                 b'ghijklmnopqrstuvwxyz0123456789-_'
             )
+            self.assertEqual(
+                pybase64.urlsafe_b64encode(
+                    pybase64.b64decode(
+                        b'_-_ABC_-_-_-_-_-_A-_',
+                        b'-_',
+                        validate
+                    )
+                ),
+                b'_-_ABC_-_-_-_-_-_A-_'
+            )
+            self.assertEqual(
+                pybase64.urlsafe_b64encode(
+                    pybase64.b64decode(
+                        b'_-_A',
+                        b'-_',
+                        validate
+                    )
+                ),
+                b'_-_A'
+            )
 
     def test_roundtrip(self):
         for validate in [True, False]:

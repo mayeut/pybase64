@@ -4,6 +4,11 @@
 #include <string.h> /* memset */
 #include <assert.h>
 
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
+
+
 static PyObject* g_BinAsciiError = NULL;
 static PyObject* g_fallbackDecode = NULL;
 
@@ -60,11 +65,31 @@ static int parse_alphabet(PyObject* alphabetObject, char alphabet[2], int* useAl
 
 static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
 {
-    size_t i;
+    size_t i = 0U;
     const char c0 = alphabet[0];
     const char c1 = alphabet[1];
 
-    for (i = 0U; i < len; ++i) {
+#ifdef __SSE2__
+    if (len >= 16U) {
+        const __m128i plus  = _mm_set1_epi8('+');
+        const __m128i slash = _mm_set1_epi8('/');
+        const __m128i c0_ = _mm_set1_epi8(c0);
+        const __m128i c1_ = _mm_set1_epi8(c1);
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            __m128i srcDst = _mm_loadu_si128((const __m128i*)(pSrcDst + i));
+            __m128i m0     = _mm_cmpeq_epi8(srcDst, plus);
+            __m128i m1     = _mm_cmpeq_epi8(srcDst, slash);
+
+            srcDst = _mm_or_si128(_mm_andnot_si128(m0, srcDst), _mm_and_si128(m0, c0_));
+            srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, c1_));
+
+            _mm_storeu_si128((__m128i*)(pSrcDst + i), srcDst);
+        }
+    }
+#endif
+
+    for (; i < len; ++i) {
         char c = pSrcDst[i];
 
         if (c == '+') {
@@ -78,11 +103,31 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
 
 static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet)
 {
-    size_t i;
+    size_t i = 0U;
     const char c0 = alphabet[0];
     const char c1 = alphabet[1];
 
-    for (i = 0U; i < len; ++i) {
+#ifdef __SSE2__
+    if (len >= 16U) {
+        const __m128i plus  = _mm_set1_epi8('+');
+        const __m128i slash = _mm_set1_epi8('/');
+        const __m128i c0_ = _mm_set1_epi8(c0);
+        const __m128i c1_ = _mm_set1_epi8(c1);
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            __m128i srcDst = _mm_loadu_si128((const __m128i*)(pSrc + i));
+            __m128i m0     = _mm_cmpeq_epi8(srcDst, c0_);
+            __m128i m1     = _mm_cmpeq_epi8(srcDst, c1_);
+
+            srcDst = _mm_or_si128(_mm_andnot_si128(m0, srcDst), _mm_and_si128(m0, plus));
+            srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, slash));
+
+            _mm_storeu_si128((__m128i*)(pDst + i), srcDst);
+        }
+    }
+#endif
+
+    for (; i < len; ++i) {
         char c = pSrc[i];
 
         if (c == c0) {
