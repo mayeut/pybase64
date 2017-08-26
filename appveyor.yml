@@ -6,8 +6,10 @@ environment:
     TWINE_USERNAME: mayeut
 install:
   - git submodule update --init --recursive
-build_script:
   - pip install cibuildwheel==0.4.1
+# Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
+  - touch .cibuildwheel
+build_script:
   - cibuildwheel --output-dir todeploy
   - >
     IF "%APPVEYOR_REPO_TAG%" == "true"

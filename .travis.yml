@@ -26,24 +26,29 @@ matrix:
       env: PYBASE64_BUILD_WHEEL=1
 
 install:
-  - if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      pip install cibuildwheel==0.4.1;
+  - |
+    if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
+      pip install cibuildwheel==0.4.1
+      # Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
+      touch .cibuildwheel
     elif [ "${PYBASE64_TOX}" != "" ]; then
-      pip install -r requirements.txt codecov;
+      pip install -r requirements.txt codecov
     else
-      pip install -r requirements.txt;
+      pip install -r requirements.txt
     fi
 
 script:
-  - if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      cibuildwheel --output-dir todeploy;
+  - |
+    if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
+      cibuildwheel --output-dir todeploy
     elif [ "${PYBASE64_TOX}" != "" ]; then
-      python -m tox && mkdir todeploy && codecov;
+      python -m tox && mkdir todeploy && codecov
     else
-      ./travis/build-source-dist.sh;
+      ./travis/build-source-dist.sh
     fi
   - ls todeploy/
-  - if [ "${PYBASE64_TOX:-}" == "" ] && [ "${TRAVIS_TAG:-}" != "" ]; then
-      python -m pip install twine;
-      python -m twine upload --skip-existing todeploy/*;
+  - |
+    if [ "${PYBASE64_TOX:-}" == "" ] && [ "${TRAVIS_TAG:-}" != "" ]; then
+      python -m pip install twine
+      python -m twine upload --skip-existing todeploy/*
     fi

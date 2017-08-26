@@ -43,7 +43,7 @@ pybase64_ext = Extension(
        "base64/lib/arch/generic/codec.c"
     ],
     include_dirs=["base64/include/"],
-    optional=True,
+    optional=not os.path.exists(os.path.join(here, '.cibuildwheel')),
 )
 
 pybase64_ext.sources_ssse3=["base64/lib/arch/ssse3/codec.c"]
