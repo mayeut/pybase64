@@ -2,7 +2,7 @@ environment:
   global:
     CIBW_TEST_REQUIRES: "nose future"
     CIBW_TEST_COMMAND: "nosetests {project}"
-    CIBW_SKIP: cp27-win*
+    CIBW_SKIP: cp27-win* cp33-win* cp34-win*
     TWINE_USERNAME: mayeut
 install:
   - git submodule update --init --recursive
