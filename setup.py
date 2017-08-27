@@ -43,8 +43,11 @@ pybase64_ext = Extension(
        "base64/lib/arch/generic/codec.c"
     ],
     include_dirs=["base64/include/"],
-    optional=not os.path.exists(os.path.join(here, '.cibuildwheel')),
 )
+
+# optional is not supported by Python 2
+# manage this in the cutom build command
+pybase64_ext.optional=not os.path.exists(os.path.join(here, '.cibuildwheel'))
 
 pybase64_ext.sources_ssse3=["base64/lib/arch/ssse3/codec.c"]
 pybase64_ext.sources_sse41=["base64/lib/arch/sse41/codec.c"]
@@ -77,75 +80,81 @@ class pybase64_build_ext(build_ext):
                   "a list of source filenames" % ext.name)
         sources = list(sources)
 
-        simd_sources = dict()
-        simd_sources[CCompilerCapabilities.SIMD_SSSE3]  = ext.sources_ssse3
-        simd_sources[CCompilerCapabilities.SIMD_SSE41]  = ext.sources_sse41
-        simd_sources[CCompilerCapabilities.SIMD_SSE42]  = ext.sources_sse42
-        simd_sources[CCompilerCapabilities.SIMD_AVX]    = ext.sources_avx
-        simd_sources[CCompilerCapabilities.SIMD_AVX2]   = ext.sources_avx2
-        simd_sources[CCompilerCapabilities.SIMD_NEON32] = ext.sources_neon32
-        simd_sources[CCompilerCapabilities.SIMD_NEON64] = ext.sources_neon64
-
-        ext_path = self.get_ext_fullpath(ext.name)
-        depends = sources + ext.depends
-
         try:
-            simd_sources_values = simd_sources.itervalues()
-        except AttributeError:
-            simd_sources_values = simd_sources.values()
-        for add_sources in simd_sources_values:
-            depends = depends + add_sources
+            simd_sources = dict()
+            simd_sources[CCompilerCapabilities.SIMD_SSSE3]  = ext.sources_ssse3
+            simd_sources[CCompilerCapabilities.SIMD_SSE41]  = ext.sources_sse41
+            simd_sources[CCompilerCapabilities.SIMD_SSE42]  = ext.sources_sse42
+            simd_sources[CCompilerCapabilities.SIMD_AVX]    = ext.sources_avx
+            simd_sources[CCompilerCapabilities.SIMD_AVX2]   = ext.sources_avx2
+            simd_sources[CCompilerCapabilities.SIMD_NEON32] = ext.sources_neon32
+            simd_sources[CCompilerCapabilities.SIMD_NEON64] = ext.sources_neon64
 
-        if not (self.force or newer_group(depends, ext_path, 'newer')):
-            log.debug("skipping '%s' extension (up-to-date)", ext.name)
-            return
-        else:
-            log.info("building '%s' extension", ext.name)
+            ext_path = self.get_ext_fullpath(ext.name)
+            depends = sources + ext.depends
 
-        capabilities = CCompilerCapabilities(self.compiler)
-        pybase64_write_config(capabilities)
+            try:
+                simd_sources_values = simd_sources.itervalues()
+            except AttributeError:
+                simd_sources_values = simd_sources.values()
+            for add_sources in simd_sources_values:
+                depends = depends + add_sources
 
-        objects = list()
+            if not (self.force or newer_group(depends, ext_path, 'newer')):
+                log.debug("skipping '%s' extension (up-to-date)", ext.name)
+                return
+            else:
+                log.info("building '%s' extension", ext.name)
 
-        for simd_opt in (
-            CCompilerCapabilities.SIMD_SSSE3,
-            CCompilerCapabilities.SIMD_SSE41,
-            CCompilerCapabilities.SIMD_SSE42,
-            CCompilerCapabilities.SIMD_AVX,
-            CCompilerCapabilities.SIMD_AVX2,
-            CCompilerCapabilities.SIMD_NEON32,
-            CCompilerCapabilities.SIMD_NEON64):
-            if len(simd_sources[simd_opt]) > 0:
-                if capabilities.has(simd_opt):
-                    objects = objects + self.compiler.compile(simd_sources[simd_opt],
+            capabilities = CCompilerCapabilities(self.compiler)
+            pybase64_write_config(capabilities)
+
+            objects = list()
+
+            for simd_opt in (
+                CCompilerCapabilities.SIMD_SSSE3,
+                CCompilerCapabilities.SIMD_SSE41,
+                CCompilerCapabilities.SIMD_SSE42,
+                CCompilerCapabilities.SIMD_AVX,
+                CCompilerCapabilities.SIMD_AVX2,
+                CCompilerCapabilities.SIMD_NEON32,
+                CCompilerCapabilities.SIMD_NEON64):
+                if len(simd_sources[simd_opt]) > 0:
+                    if capabilities.has(simd_opt):
+                        objects = objects + self.compiler.compile(simd_sources[simd_opt],
+                                                                  output_dir=self.build_temp,
+                                                                  include_dirs=ext.include_dirs,
+                                                                  debug=self.debug,
+                                                                  extra_postargs=capabilities.flags(simd_opt),
+                                                                  depends=ext.depends)
+                    else:
+                        sources = sources + simd_sources[simd_opt]
+
+            objects = objects + self.compiler.compile(sources,
                                                       output_dir=self.build_temp,
                                                       include_dirs=ext.include_dirs,
                                                       debug=self.debug,
-                                                      extra_postargs=capabilities.flags(simd_opt),
+                                                      extra_postargs=[],
                                                       depends=ext.depends)
-                else:
-                    sources = sources + simd_sources[simd_opt]
 
-        objects = objects + self.compiler.compile(sources,
-                                                  output_dir=self.build_temp,
-                                                  include_dirs=ext.include_dirs,
-                                                  debug=self.debug,
-                                                  extra_postargs=[],
-                                                  depends=ext.depends)
+            # Detect target language, if not provided
+            language = ext.language or self.compiler.detect_language(sources)
 
-        # Detect target language, if not provided
-        language = ext.language or self.compiler.detect_language(sources)
-
-        self.compiler.link_shared_object(
-            objects, ext_path,
-            libraries=self.get_libraries(ext),
-            library_dirs=ext.library_dirs,
-            runtime_library_dirs=ext.runtime_library_dirs,
-            export_symbols=self.get_export_symbols(ext),
-            debug=self.debug,
-            build_temp=self.build_temp,
-            target_lang=language)
-
+            self.compiler.link_shared_object(
+                objects, ext_path,
+                libraries=self.get_libraries(ext),
+                library_dirs=ext.library_dirs,
+                runtime_library_dirs=ext.runtime_library_dirs,
+                export_symbols=self.get_export_symbols(ext),
+                debug=self.debug,
+                build_temp=self.build_temp,
+                target_lang=language)
+        except:
+            if ext.optional:
+                log.warn("warning: Extension %s could not be built" % ext.name)
+            else:
+                log.error("error: Extension %s could not be built" % ext.name)
+                raise
 
 # Let's define a class to clean in-place built extensions
 class CleanExtensionCommand(Command):
@@ -208,7 +217,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
