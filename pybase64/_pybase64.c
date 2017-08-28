@@ -279,12 +279,10 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         return out_object;
     }
 
-    if (buffer.len > (PY_SSIZE_T_MAX - 3)) {
-        PyBuffer_Release(&buffer);
-        return PyErr_NoMemory();
-    }
-
-    out_len = (size_t)(((buffer.len + 3) / 4) * 3);
+    /* No overflow check needed, exact out_len recomputed at the end */
+    /* out_len is ceildiv(len / 4) * 3  when len % 4 != 0*/
+    /* else out_len is (ceildiv(len / 4) + 1) * 3 */
+    out_len = (size_t)((buffer.len / 4) * 3) + 3U;
     out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
     if (out_object == NULL) {
         PyBuffer_Release(&buffer);
