@@ -3,6 +3,9 @@
   :target: https://github.com/mayeut/pybase64/blob/master/LICENSE
 .. |pypi-status| image:: https://img.shields.io/pypi/v/pybase64.svg
   :target: https://pypi.python.org/pypi/pybase64
+.. |rtd-status| image:: https://readthedocs.org/projects/pybase64/badge/?version=stable
+  :target: http://pybase64.readthedocs.io/en/stable/?badge=stable
+  :alt: Documentation Status
 .. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
   :target: https://travis-ci.org/mayeut/pybase64
 .. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha/branch/master?svg=true
@@ -14,7 +17,7 @@
 Fast Base64 implementation
 ==========================
 
-|license-status| |pypi-status| |travis-status| |appveyor-status| |codecov-status|
+|license-status| |pypi-status| |rtd-status| |travis-status| |appveyor-status| |codecov-status|
 
 This project is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
 
@@ -66,6 +69,8 @@ A command-line tool is also provided. It has encode, decode and benchmark subcom
     optional arguments:
       -h, --help            show this help message and exit
       -v, --version         show program's version number and exit
+      
+Full documentation on `Read the Docs <http://pybase64.readthedocs.io/en/stable/?badge=stable>`_.
 
 Benchmark
 =========
