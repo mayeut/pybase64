@@ -79,7 +79,7 @@ def writeall(file, data):
                     f.write(data)
                     return
         except:  # pragma: no cover
-            # This is probably not stdin
+            # This is probably not stdout
             pass  # pragma: no cover
     file.write(data)
 
