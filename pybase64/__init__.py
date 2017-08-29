@@ -7,6 +7,7 @@ except NameError:
 
 # Only go on if not in setup.py
 if not __PYBASE64_SETUP__:
+    from ._license import _license
     try:
         from ._pybase64 import b64encode
         from ._pybase64 import b64decode
@@ -15,6 +16,9 @@ if not __PYBASE64_SETUP__:
         from ._fallback import b64encode
         from ._fallback import b64decode
         _has_extension = False
+
+    def get_license_text():
+        return _license
 
     def get_version():
         if _has_extension:

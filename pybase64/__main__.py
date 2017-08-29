@@ -115,6 +115,27 @@ def decode(args):
     writeall(args.output, data)
 
 
+class LicenseAction(argparse.Action):
+
+    def __init__(self,
+                 option_strings,
+                 license=None,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help="show license information and exit"):
+        super(LicenseAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+        self.license = license
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(self.license)
+        parser.exit()
+
+
 def main(args=None):
     # main parser
     parser = argparse.ArgumentParser(
@@ -124,6 +145,10 @@ def main(args=None):
         '-v', '--version',
         action='version',
         version=__package__ + ' ' + pybase64.get_version())
+    parser.add_argument(
+        '--license',
+        action=LicenseAction,
+        license=pybase64.get_license_text())
     # create sub-parsers
     subparsers = parser.add_subparsers(help='tool help')
     # benchmark parser
