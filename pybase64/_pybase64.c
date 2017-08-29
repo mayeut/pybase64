@@ -228,7 +228,7 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     size_t out_len;
     PyObject* in_alphabet = NULL;
     PyObject* in_object;
-    PyObject* out_object;
+    PyObject* out_object = NULL;
 
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", kwlist, &in_object, &in_alphabet, &validation)) {
@@ -257,15 +257,14 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         return NULL;
     }
 
+/* TRY: */
     if (!validation) {
         PyObject* translate_object = NULL;
 
         if (use_alphabet) {
             translate_object = PyBytes_FromStringAndSize(NULL, buffer.len);
             if (translate_object == NULL) {
-                PyBuffer_Release(&buffer);
-                Py_DECREF(in_object);
-                return NULL;
+                goto EXCEPT;
             }
             translate(buffer.buf, PyBytes_AS_STRING(translate_object), buffer.len, alphabet);
         }
@@ -285,9 +284,7 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     out_len = (size_t)((buffer.len / 4) * 3) + 3U;
     out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
     if (out_object == NULL) {
-        PyBuffer_Release(&buffer);
-        Py_DECREF(in_object);
-        return NULL;
+        goto EXCEPT;
     }
 
     if (use_alphabet) {
@@ -304,10 +301,8 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
 
             translate(src, cache, src_slice, alphabet);
             if (base64_decode(cache, src_slice, dst, &dst_len, 0) <= 0) {
-                PyBuffer_Release(&buffer);
                 PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
-                Py_DECREF(in_object);
-                return NULL;
+                goto EXCEPT;
             }
 
             len -= src_slice;
@@ -317,27 +312,27 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         }
         translate(src, cache, len, alphabet);
         if (base64_decode(cache, len, dst, &out_len, 0) <= 0) {
-            PyBuffer_Release(&buffer);
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
-            Py_DECREF(in_object);
-            return NULL;
+            goto EXCEPT;
         }
         out_len += (dst - PyBytes_AS_STRING(out_object));
     }
     else {
         if (base64_decode(buffer.buf, buffer.len, PyBytes_AS_STRING(out_object), &out_len, 0) <= 0) {
-            PyBuffer_Release(&buffer);
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
-            Py_DECREF(in_object);
-            return NULL;
+            goto EXCEPT;
         }
     }
-    PyBuffer_Release(&buffer);
-
     _PyBytes_Resize(&out_object, (Py_ssize_t)out_len);
-
+    goto FINALLY;
+EXCEPT:
+    if (out_object != NULL) {
+        Py_DECREF(out_object);
+        out_object = NULL;
+    }
+FINALLY:
+    PyBuffer_Release(&buffer);
     Py_DECREF(in_object);
-
     return out_object;
 }
 
