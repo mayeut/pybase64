@@ -109,7 +109,14 @@ def encode(args):
     writeall(args.output, data)
 
 
+def decode(args):
+    data = readall(args.input)
+    data = pybase64.b64decode(data, args.altchars)
+    writeall(args.output, data)
+
+
 def main(args=None):
+    # main parser
     parser = argparse.ArgumentParser(
         prog=__package__,
         description=__package__ + ' command-line tool.')
@@ -117,13 +124,16 @@ def main(args=None):
         '-v', '--version',
         action='version',
         version=__package__ + ' ' + pybase64.get_version())
+    # create sub-parsers
     subparsers = parser.add_subparsers(help='tool help')
+    # benchmark parser
     benchmark_parser = subparsers.add_parser('benchmark', help='-h for usage')
     benchmark_parser.add_argument(
         'input',
         type=argparse.FileType('rb'),
         help='input file used for the benchmark')
     benchmark_parser.set_defaults(func=benchmark)
+    # encode parser
     encode_parser = subparsers.add_parser('encode', help='-h for usage')
     encode_parser.add_argument(
         'input',
@@ -147,7 +157,36 @@ def main(args=None):
         default=sys.stdout,
         help='encoded output file (default to stdout)')
     encode_parser.set_defaults(func=encode)
-    args = parser.parse_args()
+    # decode parser
+    decode_parser = subparsers.add_parser('decode', help='-h for usage')
+    decode_parser.add_argument(
+        'input',
+        type=argparse.FileType('rb'),
+        help='input file to be decoded')
+    group = decode_parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '-u', '--url',
+        action='store_const',
+        const=b'-_',
+        dest='altchars',
+        help='use URL decoding')
+    group.add_argument(
+        '-a', '--altchars',
+        dest='altchars',
+        help='use alternative characters for decoding')
+    decode_parser.add_argument(
+        '-o', '--output',
+        dest='output',
+        type=argparse.FileType('wb'),
+        default=sys.stdout,
+        help='decoded output file (default to stdout)')
+    decode_parser.set_defaults(func=decode)
+    # ready, parse
+    if args is None:  # pragma: no branch
+        args = sys.argv[1:]
+    if len(args) == 0:  # pragma: no branch
+        args = ['-h']  # pragma: no cover
+    args = parser.parse_args(args=args)
     args.func(args)
 
 
