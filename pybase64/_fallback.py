@@ -33,16 +33,24 @@ def _get_bytes(s):
 
 
 def b64decode(s, altchars=None, validate=False):
-    """Decode the Base64 encoded bytes-like object or ASCII string s.
-    Optional altchars must be a bytes-like object or ASCII string of length 2
-    which specifies the alternative alphabet used instead of the '+' and '/'
-    characters.
-    The result is returned as a bytes object.  A binascii.Error is raised if
-    s is incorrectly padded.
-    If validate is False (the default), characters that are neither in the
-    normal base-64 alphabet nor the alternative alphabet are discarded prior
-    to the padding check.  If validate is True, these non-alphabet characters
-    in the input result in a binascii.Error.
+    """Decode bytes encoded with the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` or ASCII string to
+    decode.
+
+    Optional ``altchars`` must be a :term:`bytes-like object` or ASCII
+    string of length 2 which specifies the alternative alphabet used instead
+    of the '+' and '/' characters.
+
+    If ``validate`` is ``False`` (the default), characters that are neither in
+    the normal base-64 alphabet nor the alternative alphabet are discarded
+    prior to the padding check.
+    If ``validate`` is ``True``, these non-alphabet characters in the input
+    result in a :exc:`binascii.Error`.
+
+    The result is returned as a :class:`bytes` object.
+
+    A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
     if version_info < (3, 0):
         s = _get_bytes(s)
@@ -60,10 +68,15 @@ def b64decode(s, altchars=None, validate=False):
 
 
 def b64encode(s, altchars=None):
-    """Encode the bytes-like object s using Base64 and return a bytes object.
-    Optional altchars should be a byte string of length 2 which specifies an
-    alternative alphabet for the '+' and '/' characters.  This allows an
+    """Encode bytes using the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` to encode.
+
+    Optional ``altchars`` must be a byte string of length 2 which specifies
+    an alternative alphabet for the '+' and '/' characters.  This allows an
     application to e.g. generate url or filesystem safe Base64 strings.
+
+    The result is returned as a :class:`bytes` object.
     """
     if altchars is not None:
         altchars = _get_bytes(altchars)
