@@ -111,7 +111,7 @@ def encode(args):
 
 def decode(args):
     data = readall(args.input)
-    data = pybase64.b64decode(data, args.altchars)
+    data = pybase64.b64decode(data, args.altchars, args.validate)
     writeall(args.output, data)
 
 
@@ -180,6 +180,11 @@ def main(args=None):
         type=argparse.FileType('wb'),
         default=sys.stdout,
         help='decoded output file (default to stdout)')
+    decode_parser.add_argument(
+        '--no-validation',
+        dest='validate',
+        action='store_false',
+        help='disable validation of the input data')
     decode_parser.set_defaults(func=decode)
     # ready, parse
     if args is None:  # pragma: no branch
