@@ -1,25 +1,71 @@
 .. SETUP VARIABLES
+.. |license-status| image:: https://img.shields.io/badge/license-BSD%202--Clause-blue.svg
+  :target: https://github.com/mayeut/pybase64/blob/master/LICENSE
 .. |pypi-status| image:: https://img.shields.io/pypi/v/pybase64.svg
   :target: https://pypi.python.org/pypi/pybase64
 .. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
   :target: https://travis-ci.org/mayeut/pybase64
-.. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha?svg=true
-  :target: https://ci.appveyor.com/project/mayeut/pybase64
+.. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha/branch/master?svg=true
+  :target: https://ci.appveyor.com/project/mayeut/pybase64/branch/master
 .. |codecov-status| image:: https://codecov.io/gh/mayeut/pybase64/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/mayeut/pybase64
+  :target: https://codecov.io/gh/mayeut/pybase64/branch/master
 .. END OF SETUP
 
 Fast Base64 implementation
 ==========================
 
+|license-status| |pypi-status| |travis-status| |appveyor-status| |codecov-status|
+
 This project is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
 
 It aims to provide a fast base64 implementation for standard base64 encoding/decoding.
 
-Current status
-==============
+Installation
+============
 
-|pypi-status| |travis-status| |appveyor-status| |codecov-status|
+.. code::
+
+    pip install pybase64
+
+Usage
+=====
+
+``pybase64`` uses the same API as Python base64 "modern interface" (introduced in Python 2.4) for an easy integration.
+
+To get the fastest decoding, it is recommended to use the ``pybase64.b64decode`` and ``validate=True`` when possible.
+
+.. code:: python
+
+    import pybase64
+    
+    # Standard encoding
+    print(pybase64.standard_b64encode(b'>>>foo???'))       # b'Pj4+Zm9vPz8/'
+    print(pybase64.standard_b64decode(b'Pj4+Zm9vPz8/'))    # b'>>>foo???'
+    print(pybase64.urlsafe_b64encode(b'>>>foo???'))        # b'Pj4-Zm9vPz8_'
+    print(pybase64.urlsafe_b64decode(b'Pj4-Zm9vPz8_'))     # b'>>>foo???'
+    print(pybase64.b64encode(b'>>>foo???', altchars='_:')) # b'Pj4_Zm9vPz8:'
+    print(pybase64.b64decode(b'Pj4_Zm9vPz8:', altchars='_:', validate=True)) # b'>>>foo???'
+    
+
+
+A command-line tool is also provided. It has encode, decode and benchmark subcommands.
+
+.. code::
+
+    usage: pybase64 [-h] [-v] {benchmark,encode,decode} ...
+
+    pybase64 command-line tool.
+
+    positional arguments:
+      {benchmark,encode,decode}
+                            tool help
+        benchmark           -h for usage
+        encode              -h for usage
+        decode              -h for usage
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -v, --version         show program's version number and exit
 
 Benchmark
 =========
