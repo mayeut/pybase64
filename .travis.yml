@@ -21,6 +21,14 @@ matrix:
       language: python
       python: "3.6"
       env: PYBASE64_TOX=1
+    - dist: trusty
+      language: python
+      python: "3.6"
+      env: PYBASE64_VALGRIND=1
+      addons:
+        apt:
+          packages:
+            - valgrind
     - os: osx
       osx_image: xcode8.2
       env: PYBASE64_BUILD_WHEEL=1
@@ -31,7 +39,7 @@ install:
       pip install cibuildwheel==0.4.1
       # Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
       touch .cibuildwheel
-    elif [ "${PYBASE64_TOX}" != "" ]; then
+    elif [ "${PYBASE64_TOX:-}" != "" ]; then
       pip install -r requirements.txt codecov
     else
       pip install -r requirements.txt
@@ -42,13 +50,18 @@ script:
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
       cibuildwheel --output-dir todeploy
     elif [ "${PYBASE64_TOX}" != "" ]; then
-      python -m tox && mkdir todeploy && codecov
+      python -m tox && codecov
+    elif [ "${PYBASE64_VALGRIND}" != "" ]; then
+      CFLAGS="-O0" python setup.py build_ext -fiv
+      PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(pyenv which python) -m unittest
     else
       ./travis/build-source-dist.sh
     fi
-  - ls todeploy/
   - |
-    if [ "${PYBASE64_TOX:-}" == "" ] && [ "${TRAVIS_TAG:-}" != "" ]; then
-      python -m pip install twine
-      python -m twine upload --skip-existing todeploy/*
+    if [ "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}" == "" ]; then
+      ls todeploy/
+      if [ "${TRAVIS_TAG:-}" != "" ]; then
+        python -m pip install twine
+        python -m twine upload --skip-existing todeploy/*
+      fi
     fi
