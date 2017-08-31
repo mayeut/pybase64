@@ -1,7 +1,7 @@
 environment:
   global:
     CIBW_TEST_REQUIRES: "nose future"
-    CIBW_TEST_COMMAND: "nosetests {project}"
+    CIBW_TEST_COMMAND: "nosetests -v pybase64"
     CIBW_SKIP: cp27-win* cp33-win* cp34-win*
     TWINE_USERNAME: mayeut
 install:
@@ -11,7 +11,7 @@ build_script:
 # Test with cp27, extension shall fail to build silently (optional)
   - python setup.py build_ext -i -f -v
 # But still, tests shall pass
-  - nosetests
+  - nosetests -v
 # Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
   - touch .cibuildwheel
   - cibuildwheel --output-dir todeploy
@@ -22,3 +22,6 @@ build_script:
     &&
     python -m twine upload --skip-existing todeploy/*.whl
     )
+artifacts:
+  - path: "todeploy\\*.whl"
+    name: Wheels
