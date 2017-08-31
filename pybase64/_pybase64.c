@@ -13,7 +13,7 @@ static PyObject* g_BinAsciiError = NULL;
 static PyObject* g_fallbackDecode = NULL;
 
 /* returns 0 on success */
-static int parse_alphabet(PyObject* alphabetObject, char alphabet[2], int* useAlphabet)
+static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlphabet)
 {
     Py_buffer buffer;
 
@@ -128,23 +128,27 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
 #endif
 
     for (; i < len; ++i) {
-        char c = pSrc[i];
+        const char cs = pSrc[i];
+        char cd;
 
-        if (c == c0) {
-            c = '+';
+        if (cs == c0) {
+            cd = '+';
         }
-        else if (c == c1) {
-            c = '/';
+        else if (cs == c1) {
+            cd = '/';
         }
 #if 0 /* TODO, python does not do this, add option */
-        else if (c == '+') {
-            c = c0;
+        else if (cs == '+') {
+            cd = c0;
         }
-        else if (c == '/') {
-            c = c1;
+        else if (cs == '/') {
+            cd = c1;
         }
 #endif
-        pDst[i] = c;
+        else {
+            cd = cs;
+        }
+        pDst[i] = cd;
     }
 }
 
@@ -235,7 +239,7 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         return NULL;
     }
 
-    if (parse_alphabet(in_alphabet, alphabet, & use_alphabet) != 0) {
+    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
         return NULL;
     }
 
