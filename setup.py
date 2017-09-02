@@ -265,11 +265,11 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages = find_packages(exclude=['distutils', 'tests']),
-    install_requires = ['six>=1.10.0'],
+    packages = find_packages(),
+    install_requires = ['six>=1.10.0', 'parameterized>=0.6.1'],
 
     test_suite = 'pybase64.tests',
-    tests_require = ['future>=0.16.0'],
+    tests_require = ['parameterized>=0.6.1'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

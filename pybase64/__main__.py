@@ -1,6 +1,5 @@
 import argparse
 import base64
-import os
 import sys
 from timeit import default_timer as timer
 
@@ -13,13 +12,14 @@ else:
     from base64 import b64decode as b64decodeValidate
 
 
-def bench_one(data, enc, dec, altchars=None, validate=False):
+def bench_one(duration, data, enc, dec, altchars=None, validate=False):
+    duration = duration / 2.0
     number = 0
     time = timer()
     while True:
         encodedcontent = enc(data, altchars=altchars)
         number += 1
-        if timer() - time > 0.25:
+        if timer() - time > duration:
             break
     iter = number
     time = timer()
@@ -38,7 +38,7 @@ def bench_one(data, enc, dec, altchars=None, validate=False):
                              altchars=altchars,
                              validate=validate)
         number += 1
-        if timer() - time > 0.25:
+        if timer() - time > duration:
             break
     iter = number
     time = timer()
@@ -56,32 +56,26 @@ def bench_one(data, enc, dec, altchars=None, validate=False):
 
 
 def readall(file):
-    # Python 3 does not honor the binary flag when using standard streams
-    if sys.version_info > (3, 0):
-        try:
-            fileno = file.fileno()
-            if fileno == sys.stdin.fileno():
-                with os.fdopen(fileno, 'rb') as f:
-                    return f.read()
-        except:  # pragma: no cover
-            # This is probably not stdin
-            pass  # pragma: no cover
-    return file.read()
+    try:
+        # Python 3 does not honor the binary flag when using standard streams
+        if sys.version_info >= (3, 0):
+            if file == sys.__stdin__:
+                return file.buffer.read()
+        return file.read()
+    finally:
+        file.close()
 
 
 def writeall(file, data):
-    # Python 3 does not honor the binary flag when using standard streams
-    if sys.version_info > (3, 0):
-        try:
-            fileno = file.fileno()
-            if fileno == sys.stdout.fileno():
-                with os.fdopen(fileno, 'wb') as f:
-                    f.write(data)
-                    return
-        except:  # pragma: no cover
-            # This is probably not stdout
-            pass  # pragma: no cover
-    file.write(data)
+    try:
+        # Python 3 does not honor the binary flag when using standard streams
+        if sys.version_info >= (3, 0):
+            if file == sys.__stdout__:
+                file.buffer.write(data)
+                return
+        file.write(data)
+    finally:
+        file.close()
 
 
 def benchmark(args):
@@ -91,12 +85,14 @@ def benchmark(args):
         for validate in [False, True]:
             print('bench: altchars={0:s}, validate={1:s}'.format(
                   repr(altchars), repr(validate)))
-            bench_one(data,
+            bench_one(args.duration,
+                      data,
                       pybase64.b64encode,
                       pybase64.b64decode,
                       altchars,
                       validate)
-            bench_one(data,
+            bench_one(args.duration,
+                      data,
                       base64.b64encode,
                       b64decodeValidate,
                       altchars,
@@ -153,6 +149,13 @@ def main(args=None):
     subparsers = parser.add_subparsers(help='tool help')
     # benchmark parser
     benchmark_parser = subparsers.add_parser('benchmark', help='-h for usage')
+    benchmark_parser.add_argument(
+        '-d', '--duration',
+        metavar='D',
+        dest='duration',
+        type=float,
+        default=1.0,
+        help='expected duration for a single encode or decode test')
     benchmark_parser.add_argument(
         'input',
         type=argparse.FileType('rb'),
@@ -212,13 +215,13 @@ def main(args=None):
         help='disable validation of the input data')
     decode_parser.set_defaults(func=decode)
     # ready, parse
-    if args is None:  # pragma: no branch
+    if args is None:
         args = sys.argv[1:]
-    if len(args) == 0:  # pragma: no branch
-        args = ['-h']  # pragma: no cover
+    if len(args) == 0:
+        args = ['-h']
     args = parser.parse_args(args=args)
     args.func(args)
 
 
-if __name__ == "__main__":  # pragma: no branch
+if __name__ == "__main__":
     main()
