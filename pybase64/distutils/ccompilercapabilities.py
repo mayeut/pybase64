@@ -60,9 +60,14 @@ class CCompilerCapabilities:
 
     def __init__(self, compiler):
         self.__capabilities = dict()
+        self.__cflags = []
+        if compiler.compiler_type == 'msvc':
+            self.__cflags = ['/WX', '/Od']  # pragma: no cover
+        else:
+            self.__cflags = ['-O0']
         self.__get_capabilities(compiler)
 
-    def __has_simd_support(self, compiler, flags, include, content):
+    def __has_simd_support(self, compiler, flags, define, include, content):
         quiet = True
 
         with mkdtemp("pybase64simdtest") as dname:
@@ -80,9 +85,10 @@ int main (int argc, char **argv) {
                     if not len(flag) == 0:
                         lflags = [flag]
                     try:
-                        objects = compiler.compile(['simd.c'],
-                                                   output_dir=dname,
-                                                   extra_postargs=lflags)
+                        objects = compiler.compile(
+                            ['simd.c'],
+                            output_dir=dname,
+                            extra_postargs=lflags + self.__cflags)
                     except CompileError:
                         continue
                     try:
@@ -91,7 +97,7 @@ int main (int argc, char **argv) {
                                                  output_dir=dname)
                     except (LinkError, TypeError):  # pragma: no cover
                         continue  # pragma: no cover
-                    return {'support': True, 'flags': lflags}
+                    return {'support': True, 'flags': lflags + define}
                 return {'support': False, 'flags': []}
 
     def __get_capabilities(self, compiler):
@@ -100,8 +106,9 @@ int main (int argc, char **argv) {
             self.__has_simd_support(
                 compiler,
                 ['', '-mssse3'],
+                ['-D__SSSE3__'],
                 'tmmintrin.h',
-                '__m128i t = _mm_setzero_si128();'
+                '__m128i t = _mm_loadu_si128((const __m128i*)argv[0]);'
                 't = _mm_shuffle_epi8(t, t);'
                 'return _mm_cvtsi128_si32(t);'
         )
@@ -115,9 +122,10 @@ int main (int argc, char **argv) {
             self.__has_simd_support(
                 compiler,
                 ['', '-msse4.1'],
+                ['-D__SSE4_1__'],
                 'smmintrin.h',
-                '__m128i t = _mm_setzero_si128();'
-                't = _mm_insert_epi32(t, 1, 1);'
+                '__m128i t = _mm_loadu_si128((const __m128i*)argv[0]);'
+                't = _mm_mpsadbw_epu8(t, t, 1);'
                 'return _mm_cvtsi128_si32(t);'
         )
         log.info(
@@ -130,8 +138,9 @@ int main (int argc, char **argv) {
             self.__has_simd_support(
                 compiler,
                 ['', '-msse4.2'],
+                ['-D__SSE4_2__'],
                 'nmmintrin.h',
-                '__m128i t = _mm_setzero_si128();'
+                '__m128i t = _mm_loadu_si128((const __m128i*)argv[0]);'
                 'return _mm_cmpistra(t, t, 0);'
         )
         log.info(
@@ -143,10 +152,11 @@ int main (int argc, char **argv) {
         self.__capabilities[CCompilerCapabilities.SIMD_AVX] = \
             self.__has_simd_support(
                 compiler,
-                ['', '-mavx'],
+                ['', '-mavx', '/arch:AVX'],
+                ['-D__AVX__'],
                 'immintrin.h',
-                '__m256i t = _mm256_setzero_si256();'
-                'return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));'
+                '__m256i y = _mm256_loadu_si256((const __m256i*)argv[0]);'
+                'return _mm256_testz_si256(y, y);'
         )
         log.info(
             "AVX:   %s" %
@@ -157,10 +167,12 @@ int main (int argc, char **argv) {
         self.__capabilities[CCompilerCapabilities.SIMD_AVX2] = \
             self.__has_simd_support(
                 compiler,
-                ['', '-mavx2'],
+                ['', '-mavx2', '/arch:AVX2'],
+                ['-D__AVX2__'],
                 'immintrin.h',
-                '__m256i t = _mm256_broadcastd_epi32(_mm_setzero_si128());'
-                'return _mm_cvtsi128_si32(_mm256_castsi256_si128(t));'
+                '__m256i y = _mm256_loadu_si256((const __m256i*)argv[0]);'
+                'y = _mm256_i32gather_epi32((int const*)argv[1], y, 2);'
+                'return _mm_cvtsi128_si32(_mm256_castsi256_si128(y));'
         )
         log.info(
             "AVX2:  %s" %
@@ -172,6 +184,7 @@ int main (int argc, char **argv) {
             self.__has_simd_support(
                 compiler,
                 [''],
+                [],
                 'arm_neon.h',
                 'uint8x16_t t = vdupq_n_u8(1);'
                 'return vgetq_lane_s32(vreinterpretq_s32_u8(t));'

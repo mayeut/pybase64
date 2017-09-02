@@ -11,6 +11,7 @@ if not __PYBASE64_SETUP__:
     try:
         from ._pybase64 import b64encode
         from ._pybase64 import b64decode
+        from ._pybase64 import _get_simd_path
         _has_extension = True
     except ImportError:
         from ._fallback import b64encode
@@ -28,10 +29,26 @@ if not __PYBASE64_SETUP__:
         """Returns pybase64 version as a :class:`str` object.
 
         The result reports if the C extension is used or not.
-        e.g. `1.0.0 (C extension active)`
+        e.g. `1.0.0 (C extension active - AVX2)`
         """
         if _has_extension:
-            return __version__ + ' (C extension active)'
+            simd_name = None
+            simd_flag = _get_simd_path()
+            if simd_flag == 0:
+                simd_name = 'No SIMD'
+            elif simd_flag == 4:
+                simd_name = 'SSSE3'
+            elif simd_flag == 8:
+                simd_name = 'SSE41'
+            elif simd_flag == 16:
+                simd_name = 'SSE42'
+            elif simd_flag == 32:
+                simd_name = 'AVX'
+            elif simd_flag == 64:
+                simd_name = 'AVX2'
+            else:  # pragma: no branch
+                simd_name = 'Unknown'  # pragma: no cover
+            return __version__ + ' (C extension active - ' + simd_name + ')'
         return __version__ + ' (C extension inactive)'
 
     def standard_b64encode(s):

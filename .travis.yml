@@ -4,7 +4,7 @@ notifications:
 env:
   global:
     - CIBW_TEST_REQUIRES="nose future"
-    - CIBW_TEST_COMMAND="nosetests -v pybase64"
+    - CIBW_TEST_COMMAND="nosetests pybase64"
     - TWINE_USERNAME=mayeut
 
 matrix:

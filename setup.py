@@ -54,11 +54,12 @@ pybase64_ext = Extension(
     "pybase64._pybase64",
     [
        "pybase64/_pybase64.c",
+       "pybase64/_pybase64_get_simd_flags.c",
        "base64/lib/lib.c",
        "base64/lib/codec_choose.c",
        "base64/lib/arch/generic/codec.c"
     ],
-    include_dirs=["base64/include/"],
+    include_dirs=["base64/include/", "base64/lib/"],
 )
 
 # optional is not supported by Python 2
@@ -73,19 +74,14 @@ pybase64_ext.sources_avx2=["base64/lib/arch/avx2/codec.c"]
 pybase64_ext.sources_neon32=["base64/lib/arch/neon32/codec.c"]
 pybase64_ext.sources_neon64=["base64/lib/arch/neon64/codec.c"]
 
-# SIMD is buggy on Windows c.f. https://github.com/mayeut/pybase64/issues/8
-# Disable for now
-import platform
-is_not_windows = platform.system() != 'Windows'
-
 def pybase64_write_config(capabilities):
     log.info("creating 'base64/lib/config.h'")
     with open(path.join(here, 'base64/lib/config.h'), mode='wt') as f:
-        f.write('\n#define HAVE_SSSE3                 %i' % (is_not_windows and capabilities.has(CCompilerCapabilities.SIMD_SSSE3)))
-        f.write('\n#define HAVE_SSE41                 %i' % (is_not_windows and capabilities.has(CCompilerCapabilities.SIMD_SSE41)))
-        f.write('\n#define HAVE_SSE42                 %i' % (is_not_windows and capabilities.has(CCompilerCapabilities.SIMD_SSE42)))
-        f.write('\n#define HAVE_AVX                   %i' % (is_not_windows and capabilities.has(CCompilerCapabilities.SIMD_AVX)))
-        f.write('\n#define HAVE_AVX2                  %i' % (is_not_windows and capabilities.has(CCompilerCapabilities.SIMD_AVX2)))
+        f.write('\n#define HAVE_SSSE3                 %i' % capabilities.has(CCompilerCapabilities.SIMD_SSSE3))
+        f.write('\n#define HAVE_SSE41                 %i' % capabilities.has(CCompilerCapabilities.SIMD_SSE41))
+        f.write('\n#define HAVE_SSE42                 %i' % capabilities.has(CCompilerCapabilities.SIMD_SSE42))
+        f.write('\n#define HAVE_AVX                   %i' % capabilities.has(CCompilerCapabilities.SIMD_AVX))
+        f.write('\n#define HAVE_AVX2                  %i' % capabilities.has(CCompilerCapabilities.SIMD_AVX2))
         f.write('\n#define HAVE_NEON32                %i' % False)
         f.write('\n#define HAVE_NEON64                %i' % False)
         f.write('\n#define HAVE_FAST_UNALIGNED_ACCESS %i' % True)
