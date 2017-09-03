@@ -9,11 +9,16 @@ mkdir from_source
 pushd from_source
 tar -xf ../dist/pybase64*.tar.gz
 pushd pybase64*
+# make extension mandatory
+touch .cibuildwheel
+# build extension
 python setup.py build_ext -i -f
+# test
 nosetests
 popd
 popd
 
+# all is ok, move sdist in todelpoy folder
 mkdir todeploy
 mv dist/pybase64*.tar.gz todeploy/
 
