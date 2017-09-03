@@ -47,7 +47,7 @@ A command-line tool is also provided. It has encode, decode and benchmark subcom
 
 .. code-block:: none
 
-    usage: pybase64 [-h] [-v] {benchmark,encode,decode} ...
+    usage: pybase64 [-h] [-V] {benchmark,encode,decode} ...
 
     pybase64 command-line tool.
 
@@ -60,7 +60,7 @@ A command-line tool is also provided. It has encode, decode and benchmark subcom
 
     optional arguments:
       -h, --help            show this help message and exit
-      -v, --version         show program's version number and exit
+      -V, --version         show program's version number and exit
 
 Benchmark
 ---------
