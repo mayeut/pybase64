@@ -1,15 +1,15 @@
-API
-===
+API Reference
+=============
 
-Main API
---------
+Main API Reference
+------------------
 
 .. autofunction:: pybase64.b64encode
 
 .. autofunction:: pybase64.b64decode
 
-Helpers API
------------
+Helpers API Reference
+---------------------
 
 .. autofunction:: pybase64.standard_b64encode
 
@@ -19,8 +19,8 @@ Helpers API
 
 .. autofunction:: pybase64.urlsafe_b64decode
 
-Information API
----------------
+Information API Reference
+-------------------------
 
 .. autofunction:: pybase64.get_version
 

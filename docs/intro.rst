@@ -1,43 +1,25 @@
-.. SETUP VARIABLES
-.. |license-status| image:: https://img.shields.io/badge/license-BSD%202--Clause-blue.svg
-  :target: https://github.com/mayeut/pybase64/blob/master/LICENSE
-.. |pypi-status| image:: https://img.shields.io/pypi/v/pybase64.svg
-  :target: https://pypi.python.org/pypi/pybase64
-.. |rtd-status| image:: https://readthedocs.org/projects/pybase64/badge/?version=stable
-  :target: http://pybase64.readthedocs.io/en/stable/?badge=stable
-  :alt: Documentation Status
-.. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
-  :target: https://travis-ci.org/mayeut/pybase64
-.. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha/branch/master?svg=true
-  :target: https://ci.appveyor.com/project/mayeut/pybase64/branch/master
-.. |codecov-status| image:: https://codecov.io/gh/mayeut/pybase64/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/mayeut/pybase64/branch/master
-.. END OF SETUP
+Getting started
+===============
 
-Fast Base64 implementation
-==========================
-
-|license-status| |pypi-status| |rtd-status| |travis-status| |appveyor-status| |codecov-status|
-
-This project is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
+``pybase64`` is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
 
 It aims to provide a fast base64 implementation for base64 encoding/decoding.
 
 Installation
-============
+------------
 
-.. code::
+.. code-block:: bash
 
     pip install pybase64
 
 Usage
-=====
+-----
 
-``pybase64`` uses the same API as Python base64 "modern interface" (introduced in Python 2.4) for an easy integration.
+``pybase64`` uses the same API as Python :mod:`base64` "modern interface" (introduced in Python 2.4) for an easy integration.
 
-To get the fastest decoding, it is recommended to use the ``pybase64.b64decode`` and ``validate=True`` when possible.
+To get the fastest decoding, it is recommended to use the :func:`~pybase64.b64decode` and `validate=True` when possible.
 
-.. code:: python
+.. code-block:: python
 
     import pybase64
 
@@ -59,9 +41,11 @@ To get the fastest decoding, it is recommended to use the ``pybase64.b64decode``
     # b'>>>foo???'
 
 
+Check :doc:`api` for more details.
+
 A command-line tool is also provided. It has encode, decode and benchmark subcommands.
 
-.. code::
+.. code-block:: none
 
     usage: pybase64 [-h] [-v] {benchmark,encode,decode} ...
 
@@ -78,14 +62,12 @@ A command-line tool is also provided. It has encode, decode and benchmark subcom
       -h, --help            show this help message and exit
       -v, --version         show program's version number and exit
 
-Full documentation on `Read the Docs <http://pybase64.readthedocs.io/en/stable/?badge=stable>`_.
-
 Benchmark
-=========
+---------
 
 Running Python 3.6.0, Apple LLVM version 8.1.0 (clang-802.0.42), Mac OS X 10.12.6 on an Intel Core i7-4870HQ @ 2.50GHz
 
-.. code::
+.. code-block:: none
 
     pybase64 0.2.0 (C extension active - AVX2)
     bench: altchars=None, validate=False
