@@ -138,7 +138,7 @@ def main(args=None):
         prog=__package__,
         description=__package__ + ' command-line tool.')
     parser.add_argument(
-        '-v', '--version',
+        '-V', '--version',
         action='version',
         version=__package__ + ' ' + pybase64.get_version())
     parser.add_argument(
