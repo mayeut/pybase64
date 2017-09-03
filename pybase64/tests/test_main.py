@@ -127,7 +127,7 @@ class TestMain(unittest.TestCase):
             self.assertEqual(c.exception.code, 0)
 
     def test_version(self):
-        with capture(['-v']) as c:
+        with capture(['-V']) as c:
             if version_info < (3, 4):
                 self.assertEqual(c.out, '')
                 self.assertTrue(
