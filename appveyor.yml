@@ -6,7 +6,7 @@ environment:
     TWINE_USERNAME: mayeut
 install:
   - git submodule update --init --recursive
-  - pip install -r requirements.txt cibuildwheel==0.4.1
+  - pip install -r requirements.txt cibuildwheel==0.7.0
 build_script:
 # Test with cp27, extension shall fail to build silently (optional)
   - python setup.py build_ext -i -f -v

@@ -1,3 +1,5 @@
+language: python
+python: "3.6"
 notifications:
   email: false
 
@@ -15,28 +17,26 @@ matrix:
         - docker
       env: PYBASE64_BUILD_WHEEL=1
     - dist: trusty
-      language: python
-      python: "3.6"
     - dist: trusty
-      language: python
-      python: "3.6"
       env: PYBASE64_TOX=1
     - dist: trusty
-      language: python
-      python: "3.6"
       env: PYBASE64_VALGRIND=1
       addons:
         apt:
           packages:
             - valgrind
     - os: osx
-      osx_image: xcode8.2
+      osx_image: xcode9.2
+      language: generic
       env: PYBASE64_BUILD_WHEEL=1
+      before_install:
+        - brew update
+        - brew install python3
 
 install:
   - |
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      pip install cibuildwheel==0.4.1
+      pip3 install cibuildwheel==0.7.0
       # Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
       touch .cibuildwheel
     elif [ "${PYBASE64_TOX:-}" != "" ]; then
