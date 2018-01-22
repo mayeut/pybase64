@@ -1,5 +1,6 @@
 from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
+from binascii import Error as BinAsciiError
 from sys import version_info
 
 from six import binary_type, text_type
@@ -9,8 +10,6 @@ __all__ = ['b64decode', 'b64encode']
 
 
 if version_info < (3, 0):
-    from binascii import Error as BinAsciiError
-    from re import match as re_match
     from string import maketrans
 
 _bytes_types = (binary_type, bytearray)  # Types acceptable as binary data
@@ -52,19 +51,33 @@ def b64decode(s, altchars=None, validate=False):
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
-    if version_info < (3, 0):
+    if version_info < (3, 0) or validate:
+        if validate and len(s) % 4 != 0:
+            raise BinAsciiError('Incorrect padding')
         s = _get_bytes(s)
         if altchars is not None:
             altchars = _get_bytes(altchars)
             assert len(altchars) == 2, repr(altchars)
-            s = s.translate(maketrans(altchars, b'+/'))
-        if validate and not re_match(b'^[A-Za-z0-9+/]*={0,2}$', s):
-            raise BinAsciiError('Non-base64 digit found')
+            if version_info < (3, 0):
+                map = maketrans(altchars, b'+/')
+            else:
+                map = bytes.maketrans(altchars, b'+/')
+            s = s.translate(map)
         try:
-            return builtin_decode(s, altchars)
+            result = builtin_decode(s, altchars)
         except TypeError as e:
             raise BinAsciiError(str(e))
-    return builtin_decode(s, altchars, validate)
+        if validate:
+            # check length of result vs length of input
+            padding = 0
+            if len(s) > 1 and s[-2] in (b'=', 61):
+                padding = padding + 1
+            if len(s) > 0 and s[-1] in (b'=', 61):
+                padding = padding + 1
+            if 3 * (len(s) / 4) - padding != len(result):
+                raise BinAsciiError('Non-base64 digit found')
+        return result
+    return builtin_decode(s, altchars)
 
 
 def b64encode(s, altchars=None):
