@@ -413,6 +413,16 @@ class TestPyBase64(unittest.TestCase):
         with self.assertRaises(exception):
             pybase64.b64decode(vector, altchars, True)
 
+    @parameterized.expand(params_validate, testcase_func_name=tc_name)
+    def test_invalid_padding_dec(self, altchars_id, vector_id, validate,
+                                 ualtchars, simd_id):
+        self.simd_setup(simd_id)
+        vector = test_vectors_b64[altchars_id][vector_id][1:]
+        if len(vector) > 0:
+            altchars = altchars_lut[altchars_id]
+            with self.assertRaises(BinAsciiError):
+                pybase64.b64decode(vector, altchars, validate)
+
     def test_invalid_data_enc_0(self):
         with self.assertRaises(TypeError):
             pybase64.b64encode(u'this is a test')
