@@ -56,8 +56,7 @@ master_doc = 'index'
 # General information about the project.
 project = 'pybase64'
 author = 'Matthieu Darbois'
-copyright = '2017, Matthieu Darbois'
-#copyright = '2017-{}, Matthieu Darbois'.format(datetime.date.today().year)
+copyright = '2017-{}, Matthieu Darbois'.format(datetime.date.today().year)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
