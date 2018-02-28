@@ -108,3 +108,7 @@ Running Python 3.6.0, Apple LLVM version 8.1.0 (clang-802.0.42), Mac OS X 10.12.
     pybase64._pybase64.b64decode:     2790.047 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     base64.b64encode:                  314.182 MB/s (13,271,472 bytes -> 17,695,296 bytes)
     base64.b64decode:                   89.855 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+
+.. image:: ./benchmark/benchmark-std-encoding.svg
+
+.. image:: ./benchmark/benchmark-url-encoding.svg
