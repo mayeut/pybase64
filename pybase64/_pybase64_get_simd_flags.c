@@ -45,7 +45,7 @@ static uint64_t _xgetbv (uint32_t index)
 }
 #endif
 
-uint32_t pybase64_get_simd_flags()
+uint32_t pybase64_get_simd_flags(void)
 {
 	uint32_t result = 0U;
 	uint32_t eax, ebx, ecx, edx;
@@ -95,7 +95,7 @@ uint32_t pybase64_get_simd_flags()
 }
 #else
 /* default version */
-uint32_t pybase64_get_simd_flags()
+uint32_t pybase64_get_simd_flags(void)
 {
 	return 0U;
 }

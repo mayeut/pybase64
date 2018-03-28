@@ -9,4 +9,4 @@
 
 #include <stdint.h>
 
-uint32_t pybase64_get_simd_flags();
+uint32_t pybase64_get_simd_flags(void);
