@@ -256,6 +256,9 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
 
+    # Supported python versions
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*',
+
     # What does your project relate to?
     keywords = 'base64',
 
