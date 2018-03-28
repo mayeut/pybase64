@@ -8,12 +8,35 @@ import pybase64
 
 if sys.version_info < (3, 0):
     from pybase64._fallback import b64decode as b64decodeValidate
+    from base64 import encodestring as b64encodebytes
 else:
     from base64 import b64decode as b64decodeValidate
+    from base64 import encodebytes as b64encodebytes
 
 
-def bench_one(duration, data, enc, dec, altchars=None, validate=False):
+def bench_one(duration, data, enc, dec, encbytes,
+              altchars=None, validate=False):
     duration = duration / 2.0
+
+    if not validate and altchars is None:
+        number = 0
+        time = timer()
+        while True:
+            encodedcontent = encbytes(data)
+            number += 1
+            if timer() - time > duration:
+                break
+        iter = number
+        time = timer()
+        while iter > 0:
+            encodedcontent = encbytes(data)
+            iter -= 1
+        time = timer() - time
+        print('{0:<32s} {1:9.3f} MB/s ({2:,d} bytes -> {3:,d} bytes)'.format(
+            encbytes.__module__ + '.' + encbytes.__name__ + ':',
+            ((number * len(data)) / (1024.0 * 1024.0)) / time,
+            len(data), len(encodedcontent)))
+
     number = 0
     time = timer()
     while True:
@@ -31,6 +54,7 @@ def bench_one(duration, data, enc, dec, altchars=None, validate=False):
         enc.__module__ + '.' + enc.__name__ + ':',
         ((number * len(data)) / (1024.0 * 1024.0)) / time,
         len(data), len(encodedcontent)))
+
     number = 0
     time = timer()
     while True:
@@ -89,12 +113,14 @@ def benchmark(args):
                       data,
                       pybase64.b64encode,
                       pybase64.b64decode,
+                      pybase64.encodebytes,
                       altchars,
                       validate)
             bench_one(args.duration,
                       data,
                       base64.b64encode,
                       b64decodeValidate,
+                      b64encodebytes,
                       altchars,
                       validate)
 

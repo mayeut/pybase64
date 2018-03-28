@@ -20,7 +20,11 @@ except ImportError:
     _has_extension = False
 
 if version_info < (3, 0):
+    from base64 import encodestring as b64encodebytes
     from string import maketrans
+else:
+    from base64 import encodebytes as b64encodebytes
+
 
 STD = 0
 URL = 1
@@ -74,7 +78,13 @@ test_vectors_b64_list = [
     b'Zm9vYmFy',
     # custom test vectors
     std[len(std) - 12:],
-    std
+    std,
+    std[:72],
+    std[:76],
+    std[:80],
+    std[:148],
+    std[:152],
+    std[:156],
 ]
 
 test_vectors_b64 = []
@@ -107,6 +117,12 @@ params_helper = [
     for s in range(len(compile_flags))
     for i in range(len(test_vectors_bin[0]))
     for which in [STD, URL]
+]
+params_encbytes = [
+    [which, i, s]
+    for s in range(len(compile_flags))
+    for i in range(len(test_vectors_bin[0]))
+    for which in [STD]
 ]
 params_novalidate = [
     [which, i, False, ualtchars, s]
@@ -280,6 +296,15 @@ class TestPyBase64(unittest.TestCase):
             enc_helper_lut[altchars_id](
                 dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))),
             vector
+        )
+
+    @parameterized.expand(params_encbytes, testcase_func_name=tc_name)
+    def test_encbytes(self, altchars_id, vector_id, simd_id):
+        self.simd_setup(simd_id)
+        vector = test_vectors_bin[altchars_id][vector_id]
+        self.assertEqual(
+            pybase64.encodebytes(vector),
+            b64encodebytes(vector)
         )
 
     @parameterized.expand(params_novalidate, testcase_func_name=tc_name)

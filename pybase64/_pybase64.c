@@ -174,7 +174,7 @@ static PyObject* pybase64_encode(PyObject* self, PyObject* args, PyObject *kwds)
         return NULL;
     }
 
-    if (parse_alphabet(in_alphabet, alphabet, & use_alphabet) != 0) {
+    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
         return NULL;
     }
 
@@ -345,6 +345,66 @@ FINALLY:
     return out_object;
 }
 
+static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
+{
+    Py_buffer buffer;
+    size_t out_len;
+    PyObject* out_object;
+
+    if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+        return NULL;
+    }
+
+    if (buffer.len > (3 * (PY_SSIZE_T_MAX / 4))) {
+        PyBuffer_Release(&buffer);
+        return PyErr_NoMemory();
+    }
+
+    out_len = (size_t)(((buffer.len + 2) / 3) * 4);
+    if (out_len != 0U) {
+        if ((((out_len - 1U) / 76U) + 1U) > (PY_SSIZE_T_MAX - out_len)) {
+            PyBuffer_Release(&buffer);
+            return PyErr_NoMemory();
+        }
+        out_len += ((out_len - 1U) / 76U) + 1U;
+    }
+
+    out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+    if (out_object == NULL) {
+        PyBuffer_Release(&buffer);
+        return NULL;
+    }
+
+    if (out_len > 0)
+    {
+        const size_t dst_slice = 77U;
+        const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
+        Py_ssize_t len = buffer.len;
+        const char* src = (const char*)buffer.buf;
+        char* dst = PyBytes_AS_STRING(out_object);
+        size_t remainder;
+
+        while (out_len > dst_slice) {
+            size_t dst_len = dst_slice - 1U;
+
+            base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
+            dst[dst_slice - 1U] = '\n';
+
+            len -= src_slice;
+            src += src_slice;
+            out_len -= dst_slice;
+            dst += dst_slice;
+        }
+        remainder = out_len - 1;
+        base64_encode(src, len, dst, &remainder, libbase64_simd_flag);
+        dst[out_len - 1] = '\n';
+    }
+
+    PyBuffer_Release(&buffer);
+
+    return out_object;
+}
+
 static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
 {
     return PyLong_FromUnsignedLong(active_simd_flag);
@@ -491,6 +551,7 @@ static PyObject* pybase64_import_fallbackDecode(PyObject* module)
 static PyMethodDef _pybase64_methods[] = {
     { "b64encode", (PyCFunction)pybase64_encode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
+    { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
     { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },

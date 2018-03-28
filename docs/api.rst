@@ -19,6 +19,11 @@ Helpers API Reference
 
 .. autofunction:: pybase64.urlsafe_b64decode
 
+Legacy API Reference
+--------------------
+
+.. autofunction:: pybase64.encodebytes
+
 Information API Reference
 -------------------------
 

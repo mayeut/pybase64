@@ -6,7 +6,13 @@ from sys import version_info
 from six import binary_type, text_type
 
 
-__all__ = ['b64decode', 'b64encode']
+try:
+    from base64 import encodebytes as builtin_encodebytes
+except ImportError:
+    from base64 import encodestring as builtin_encodebytes
+
+
+__all__ = ['b64decode', 'b64encode', 'encodebytes']
 
 
 if version_info < (3, 0):
@@ -99,3 +105,15 @@ def b64encode(s, altchars=None):
             raise TypeError('a bytes-like object is required, not \'' +
                             type(s).__name__ + '\'')
     return builtin_encode(s, altchars)
+
+
+def encodebytes(s):
+    """Encode bytes into a bytes object with newlines (b'\n') inserted after
+every 76 bytes of output, and ensuring that there is a trailing newline,
+as per :rfc:`2045` (MIME).
+
+Argument ``s`` is a :term:`bytes-like object` to encode.
+
+The result is returned as a :class:`bytes` object.
+    """
+    return builtin_encodebytes(s)
