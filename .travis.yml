@@ -31,7 +31,13 @@ matrix:
       env: PYBASE64_BUILD_WHEEL=1
       before_install:
         - brew update
-        - brew install python3
+        # Install/Upgrade OpenSSL if needed
+        - brew outdated openssl || brew upgrade openssl
+        # Install/Upgrade Python 3 if needed
+        - brew outdated python || brew upgrade python
+        # Make sure CA certificates are up-to-date
+        - brew postinstall openssl
+        - SSL_CERT_FILE=$(brew --prefix)/etc/openssl/cert.pem
 
 install:
   - |
