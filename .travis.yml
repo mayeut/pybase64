@@ -7,7 +7,6 @@ env:
   global:
     - CIBW_TEST_REQUIRES="pytest"
     - CIBW_TEST_COMMAND="pytest --pyargs pybase64"
-    - TWINE_USERNAME=mayeut
 
 matrix:
   include:
@@ -32,19 +31,18 @@ matrix:
       language: generic
       env: PYBASE64_BUILD_WHEEL=1
       before_install:
-        - brew update
-        # Install/Upgrade OpenSSL if needed
-        - brew outdated openssl || brew upgrade openssl
-        # Install/Upgrade Python 3 if needed
-        - brew outdated python || brew upgrade python
+        - brew update && brew bundle
         # Make sure CA certificates are up-to-date
         - brew postinstall openssl
         - SSL_CERT_FILE=$(brew --prefix)/etc/openssl/cert.pem
+        # Need to use a virtualenv for deployement
+        - python3 -m venv venv
+        - source venv/bin/activate
 
 install:
   - |
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      pip3 install cibuildwheel==0.7.0
+      pip install cibuildwheel==0.7.0
     elif [ "${PYBASE64_TOX:-}" != "" ]; then
       pip install -r requirements.txt codecov
     else
@@ -54,7 +52,7 @@ install:
 script:
   - |
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      cibuildwheel --output-dir todeploy
+      cibuildwheel --output-dir dist
     elif [ "${PYBASE64_TOX}" != "" ]; then
       python -m tox && codecov
     elif [ "${PYBASE64_VALGRIND}" != "" ]; then
@@ -66,11 +64,45 @@ script:
     else
       ./travis/build-source-dist.sh
     fi
-  - |
-    if [ "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}" == "" ]; then
-      ls todeploy/
-      if [ "${TRAVIS_TAG:-}" != "" ]; then
-        python -m pip install twine
-        python -m twine upload --skip-existing todeploy/*
-      fi
-    fi
+
+before_deploy:
+  - ls dist/
+
+deploy:
+  # Deploy master non-tags to test PyPI
+  - provider: pypi
+    server: https://test.pypi.org/legacy/
+    user: mayeut
+    password:
+      secure: CUdAYN7ely3JCsSrM7cuSOcGgy0hEr2y0WzN1a6Gfc5VT2r/hiCp9+tlj2Ahuo4WKuz0TVJP65Zce8hg+4BZ6N0yDC1Cd8qjyBIPxo7Sjl4OubIepjfr3kftD8fxnoQ1R4Uv4ZKKULT70p7IBxZxS42YiGtCznmQdHJGcGG//Zfws0wZ1TMJzngFRMST0+MYDyGm88+raQavpxoDEs8gI2qBhV2gRr5w7axH8dY9IqRIGxnBJlT919hOOF8+hjT7skxrBCqgH9/Tq9TFcM9SA375tTEBsk6RCEujT0+7zjWvTKHcHL//4609lc3fYfQfpVlffvqU+HgvHjIpU03SB6izCKyfHNVwTOp7PfS4QhmKPbHTuIiId9iw2gaDU0OdY90pi16AoeiKnBQIaY+iR9xKyeSivm6UXM7NMqP53FPh1HEOuzBYj0cFe8suthu1pQltEq6XQC6v+0hhCLxVQAeltiqsz09zoaffBXWzfQRxN4FJBM2MWCQEdUJ8jVfrq+83uwf+u22g2GUYgjchcrTQF0u5uUlBcqpCKq5Jc8psALzWYhJ0pZPj6q8Kd3jkA5b9hmylkR69N+nTHwkSVh1zxg5JG3/Nd0pMypfq7OQn7HqflG6nA0vAgpdo6jT0STGRmsD9LisvqoktAbsMzVUAK1WFIZKAyq/d4Nx6nys=
+    distributions: clean_ext
+    skip_existing: true
+    skip_cleanup: true
+    on:
+      repo: mayeut/pybase64
+      tags: false
+      branch: master
+      condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
+  # Deploy on tags to PyPI
+  - provider: pypi
+    user: mayeut
+    password:
+      secure: c6Tu/WtE4ZcCvS+dWQKsmMBTJNl5GA34suqD+NA5h9gsu4/nRQ46ae/k6/Br8qzVrS8Is3K8syWqQGy74cggPncPcQH6t07hDZ68D8CusTJnrkn1WcN41l2JtRmKz2EWKBuWzAZEVoIo2pwudwNjahFMtMH+R1cQq8szCRY5sV565CCtjuVlw8NE4nk6plG96yeHh+Ml8EuN2klakikPneE12PUHgnAebN1fTear62Sr/IsU86wL39riA7iTFNzS2EExVqN2Yenfh7j+M3k7BEprjaLWNaaRIM62Ef4+3SQvwbaaUSnhaucaDZTD/ruugtkqrvmg3mjsbnab+adA7vDZVz3xCMOlAdmoFrWS5Su7yUChV1AHOX/LWWEAeBE4k/KlI43CtaBqoETZdapzQcnoTw92OV5fUDFNpFqReX+qqXgrKyOktF7atPTNodud6cbfNuUXBEkSExN7bb8nvkxcoHmgwa6N/uYufPJ3GP98WcsjfwRkWvMDccp+Nk9z6tKOZsEDyhrzIrXswM/R5wGH6U9l8C9sKG5ArTqmOQ+qIwQU15Yzy0+XNsrfsh4qi0lGXUkAWLXX3P86hB0t0g2V6d+ti/pqMzvBnIW8kOiOpDZqSFF8yXEQvDI8cDzrs6aUYmm4R7hrxcJDiBkV4hMh5D4VTYbg8/3WJj4xatw=
+    distributions: clean_ext
+    skip_existing: true
+    skip_cleanup: true
+    on:
+      repo: mayeut/pybase64
+      tags: true
+      condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
+  # Deploy on tags to GitHub Releases
+  - provider: releases
+    api_key:
+      secure: lfOV3tIEyQOqQpcnyQryKXTHadXn6ylcJ4aQ79H64UBA3IG1DddKi5RYTHA24swr05lDPqo1uhk45clzgAT9Ftm43Y8j+UL4AunywSZV+9Gi1Vi+0ws/DhC02hgOwlt7gmxA+5gk507Xj/4bAMSfiwQ5y0fjpYP1/VRF/S744Urstn1hgSlBqr3DzFeGX1OuxWz64FeW9s9Ehb/kC2R7xvbnGj1mn4UMNjNyN4FaNNvAS5AzZ7kpnSalHPs5LEi9e5sLQK3hLeYQ5SFTy/2k+7/1qWE+O9PTlgxSP6WOGD5zv2wyzgjnSgr0xdM2yQbfq6k33P6ahlwOTHhSn4erdXKRLRgHLdYcdYuH0tFmKRUXqExjfpgyMRj2+NNgY0THZ9FKRoufmNMiByv4VxKKR4Gz0WLYbEnDsNu02AT1ta5qP3OGj+LZM0HcilPiO8kT2/V3veu9LyRzYYHtEo35Ya7WYZ9SPLm6tyAvbsR3YWzbkn9U6kmGjj0wfU1rip9mkQFMjCU7TapnzuN+D/23RZi/8apKuwSlTwxUG/lX4uwyNYhwXhv5LY+cOGSJ6E+YfOiuan3bTnsCwtDI0Y4FDnnjVZ4wp2H8PntQJ1ePR4Ei80Fjy9sVUmtQMJxMmxkYUWLlytc9Gq6MmrRD9T7FHgNIZT5WNy/0N971YcyWiYQ=
+    file_glob: true
+    file: "dist/*"
+    skip_cleanup: true
+    on:
+      repo: mayeut/pybase64
+      tags: true
+      condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
