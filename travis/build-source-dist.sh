@@ -14,7 +14,7 @@ touch .cibuildwheel
 # build extension
 python setup.py build_ext -i -f
 # test
-nosetests
+pytest
 popd
 popd
 

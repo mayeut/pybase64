@@ -64,15 +64,15 @@ pybase64_ext = Extension(
 
 # optional is not supported by Python 2
 # manage this in the cutom build command
-pybase64_ext.optional=not os.path.exists(os.path.join(here, '.cibuildwheel'))
+pybase64_ext.optional = environ.get('CIBUILDWHEEL', '0') != '1'
 
-pybase64_ext.sources_ssse3=["base64/lib/arch/ssse3/codec.c"]
-pybase64_ext.sources_sse41=["base64/lib/arch/sse41/codec.c"]
-pybase64_ext.sources_sse42=["base64/lib/arch/sse42/codec.c"]
-pybase64_ext.sources_avx=["base64/lib/arch/avx/codec.c"]
-pybase64_ext.sources_avx2=["base64/lib/arch/avx2/codec.c"]
-pybase64_ext.sources_neon32=["base64/lib/arch/neon32/codec.c"]
-pybase64_ext.sources_neon64=["base64/lib/arch/neon64/codec.c"]
+pybase64_ext.sources_ssse3 = ["base64/lib/arch/ssse3/codec.c"]
+pybase64_ext.sources_sse41 = ["base64/lib/arch/sse41/codec.c"]
+pybase64_ext.sources_sse42 = ["base64/lib/arch/sse42/codec.c"]
+pybase64_ext.sources_avx = ["base64/lib/arch/avx/codec.c"]
+pybase64_ext.sources_avx2 = ["base64/lib/arch/avx2/codec.c"]
+pybase64_ext.sources_neon32 = ["base64/lib/arch/neon32/codec.c"]
+pybase64_ext.sources_neon64 = ["base64/lib/arch/neon64/codec.c"]
 
 def pybase64_write_config(capabilities):
     log.info("creating 'base64/lib/config.h'")
@@ -265,19 +265,15 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages = find_packages(),
-    install_requires = ['six>=1.10.0', 'parameterized>=0.6.1'],
-
-    test_suite = 'pybase64.tests',
-    tests_require = ['parameterized>=0.6.1'],
+    install_requires = ['six>=1.10.0'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    #extras_require={
-    #    'dev': ['check-manifest'],
-    #    'test': ['coverage'],
-    #},
+    extras_require={
+        'test': ['pytest>=3.2.1'],
+    },
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow

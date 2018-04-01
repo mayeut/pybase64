@@ -5,8 +5,8 @@ notifications:
 
 env:
   global:
-    - CIBW_TEST_REQUIRES="nose future"
-    - CIBW_TEST_COMMAND="nosetests pybase64"
+    - CIBW_TEST_REQUIRES="pytest"
+    - CIBW_TEST_COMMAND="pytest --pyargs pybase64"
     - TWINE_USERNAME=mayeut
 
 matrix:
@@ -43,8 +43,6 @@ install:
   - |
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
       pip3 install cibuildwheel==0.7.0
-      # Create file '.cibuildwheel' so that extension build is not optional (c.f. setup.py).
-      touch .cibuildwheel
     elif [ "${PYBASE64_TOX:-}" != "" ]; then
       pip install -r requirements.txt codecov
     else
@@ -59,7 +57,7 @@ script:
       python -m tox && codecov
     elif [ "${PYBASE64_VALGRIND}" != "" ]; then
       CFLAGS="-O0" python setup.py build_ext -fiv
-      PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(pyenv which python) -m unittest
+      PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(pyenv which python) -m pytest
     else
       ./travis/build-source-dist.sh
     fi

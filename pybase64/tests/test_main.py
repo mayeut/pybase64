@@ -2,16 +2,14 @@
 
 import os
 import re
-import shutil
 import sys
-import tempfile
-import unittest
 from contextlib import contextmanager
 from sys import version_info
 
 import pybase64
-from parameterized import parameterized
 from pybase64.__main__ import main
+
+import pytest
 
 
 try:
@@ -93,107 +91,128 @@ def capture(args, newout=None):
                 sys.stdout = out
 
 
-class TestMain(unittest.TestCase):
+@pytest.fixture
+def emptyfile(tmpdir):
+    _file = os.path.join(tmpdir.strpath, 'empty')
+    with open(_file, 'wb'):
+        pass
+    yield _file
+    os.remove(_file)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.tmppath = tempfile.mkdtemp()
-        cls.emptyfile = os.path.join(cls.tmppath, 'empty')
-        cls.hello = os.path.join(cls.tmppath, 'helloworld')
-        with open(cls.emptyfile, 'wb'):
-            pass
-        with open(cls.hello, 'wb') as f:
-            f.write(b'hello world !/?\n')
 
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.tmppath)
+@pytest.fixture
+def hellofile(tmpdir):
+    _file = os.path.join(tmpdir.strpath, 'helloworld')
+    with open(_file, 'wb') as f:
+        f.write(b'hello world !/?\n')
+    yield _file
+    os.remove(_file)
 
-    @parameterized.expand([
-        [[]],
-        [['-h']],
-        [['benchmark', '-h']],
-        [['encode', '-h']],
-        [['decode', '-h']],
-    ])
-    def test_help(self, args):
-        if len(args) == 2:
-            usage = 'usage: pybase64 {0} [-h]'.format(args[0])
+
+def idfn_test_help(args):
+    if len(args) == 0:
+        return '(empty)'
+    return ' '.join(args)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        [],
+        ['-h'],
+        ['benchmark', '-h'],
+        ['encode', '-h'],
+        ['decode', '-h'],
+    ],
+    ids=idfn_test_help
+)
+def test_help(args):
+    if len(args) == 2:
+        usage = 'usage: pybase64 {0} [-h]'.format(args[0])
+    else:
+        usage = 'usage: pybase64 [-h]'
+    with capture(args) as c:
+        assert c.err == ''
+        assert c.out.startswith(usage)
+        assert c.exception.code == 0
+
+
+def test_version():
+    with capture(['-V']) as c:
+        if version_info < (3, 4):
+            assert c.out == ''
+            assert c.err.startswith('pybase64 ' + pybase64.__version__)
         else:
-            usage = 'usage: pybase64 [-h]'
-        with capture(args) as c:
-            self.assertEqual(c.err, '')
-            self.assertTrue(c.out.startswith(usage))
-            self.assertEqual(c.exception.code, 0)
+            assert c.err == ''
+            assert c.out.startswith('pybase64 ' + pybase64.__version__)
+        assert c.exception.code == 0
 
-    def test_version(self):
-        with capture(['-V']) as c:
-            if version_info < (3, 4):
-                self.assertEqual(c.out, '')
-                self.assertTrue(
-                    c.err.startswith('pybase64 ' + pybase64.__version__))
-            else:
-                self.assertEqual(c.err, '')
-                self.assertTrue(
-                    c.out.startswith('pybase64 ' + pybase64.__version__))
-            self.assertEqual(c.exception.code, 0)
 
-    def test_license(self):
-        restr = '\n'.join(x + '\n[=]+\n.*Copyright.*\n[=]+\n'
-                          for x in ['pybase64', 'libbase64'])
-        regex = re.compile('^' + restr + '$', re.DOTALL)
-        with capture(['--license']) as c:
-            self.assertEqual(c.err, '')
-            if version_info < (3, 3):
-                self.assertRegexpMatches(c.out, regex)  # deprecated
-            else:
-                self.assertRegex(c.out, regex)
-            self.assertEqual(c.exception.code, 0)
+def test_license():
+    restr = '\n'.join(x + '\n[=]+\n.*Copyright.*\n[=]+\n'
+                      for x in ['pybase64', 'libbase64'])
+    regex = re.compile('^' + restr + '$', re.DOTALL)
+    with capture(['--license']) as c:
+        assert c.err == ''
+        assert regex.match(c.out)
+        assert c.exception.code == 0
 
-    def test_benchmark(self):
-        with capture(['benchmark', '-d', '0.005', self.emptyfile]) as c:
-            self.assertEqual(c.exception, None)
-            self.assertNotEqual(c.out, '')
-            self.assertEqual(c.err, '')
 
-    @parameterized.expand([
-        [[], b'aGVsbG8gd29ybGQgIS8/Cg=='],
-        [['-u'], b'aGVsbG8gd29ybGQgIS8_Cg=='],
-        [['-a', ':,'], b'aGVsbG8gd29ybGQgIS8,Cg=='],
-    ])
-    def test_encode(self, args, expect):
-        with capture(['encode'] + args + [self.hello],
-                     newout=BytesIOBuffered()) as c:
-            self.assertEqual(c.exception, None)
-            self.assertEqual(c.out, expect)
-            self.assertEqual(c.err, '')
+def test_benchmark(emptyfile):
+    with capture(['benchmark', '-d', '0.005', emptyfile]) as c:
+        assert c.exception is None
+        assert c.out != ''
+        assert c.err == ''
 
-    @parameterized.expand([
+
+@pytest.mark.parametrize(
+    "args,expect",
+    [
+        ([], b'aGVsbG8gd29ybGQgIS8/Cg=='),
+        (['-u'], b'aGVsbG8gd29ybGQgIS8_Cg=='),
+        (['-a', ':,'], b'aGVsbG8gd29ybGQgIS8,Cg=='),
+    ],
+    ids=['0', '1', '2']
+)
+def test_encode(hellofile, args, expect):
+    with capture(['encode'] + args + [hellofile],
+                 newout=BytesIOBuffered()) as c:
+        assert c.exception is None
+        assert c.out == expect
+        assert c.err == ''
+
+
+@pytest.mark.parametrize(
+    "args,b64string",
+    [
         [[], b'aGVsbG8gd29ybGQgIS8/Cg=='],
         [['-u'], b'aGVsbG8gd29ybGQgIS8_Cg=='],
         [['-a', ':,'], b'aGVsbG8gd29ybGQgIS8,Cg=='],
         [['--no-validation'], b'aGVsbG8gd29yb GQgIS8/Cg==\n'],
-    ])
-    def test_decode(self, args, b64string):
-        iname = os.path.join(self.tmppath, 'in')
-        with open(iname, 'wb') as f:
-            f.write(b64string)
-        with capture(['decode'] + args + [iname],
-                     newout=BytesIOBuffered()) as c:
-            self.assertEqual(c.exception, None)
-            self.assertEqual(c.out, b'hello world !/?\n')
-            self.assertEqual(c.err, '')
+    ],
+    ids=['0', '1', '2', '3']
+)
+def test_decode(tmpdir, args, b64string):
+    iname = os.path.join(tmpdir.strpath, 'in')
+    with open(iname, 'wb') as f:
+        f.write(b64string)
+    with capture(['decode'] + args + [iname],
+                 newout=BytesIOBuffered()) as c:
+        assert c.exception is None
+        assert c.out == b'hello world !/?\n'
+        assert c.err == ''
 
-    def test_subprocess(self):
-        import subprocess
-        process = subprocess.Popen(
-            [sys.executable, '-m', 'pybase64', 'encode', '-'],
-            bufsize=4096,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        out, err = process.communicate()
-        process.wait()
-        self.assertEqual(process.returncode, 0)
-        self.assertEqual(out, b'')
-        self.assertEqual(err, b'')
+
+def test_subprocess():
+    import subprocess
+    process = subprocess.Popen(
+        [sys.executable, '-m', 'pybase64', 'encode', '-'],
+        bufsize=4096,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    process.wait()
+    assert process.returncode == 0
+    assert out == b''
+    assert err == b''

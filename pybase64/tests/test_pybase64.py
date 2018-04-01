@@ -1,13 +1,13 @@
 # coding: utf-8
 
 import base64
-import unittest
 from binascii import Error as BinAsciiError
 from sys import version_info
 
 import pybase64
-from parameterized import parameterized
 from six import binary_type, text_type
+
+import pytest
 
 
 try:
@@ -112,65 +112,6 @@ if _has_extension:
         if flags & (1 << i):
             compile_flags += [(1 << i)]
 
-params_helper = [
-    [which, i, s]
-    for s in range(len(compile_flags))
-    for i in range(len(test_vectors_bin[0]))
-    for which in [STD, URL]
-]
-params_encbytes = [
-    [which, i, s]
-    for s in range(len(compile_flags))
-    for i in range(len(test_vectors_bin[0]))
-    for which in [STD]
-]
-params_novalidate = [
-    [which, i, False, ualtchars, s]
-    for s in range(len(compile_flags))
-    for ualtchars in [False, True]
-    for validate in [False]
-    for i in range(len(test_vectors_bin[0]))
-    for which in [STD, URL, ALT1, ALT2, ALT3]
-]
-params_validate = [
-    [which, i, validate, ualtchars, s]
-    for s in range(len(compile_flags))
-    for ualtchars in [False, True]
-    for validate in [False, True]
-    for i in range(len(test_vectors_bin[0]))
-    for which in [STD, URL, ALT1, ALT2, ALT3]
-]
-params_invalid_data = [
-    [idx, s] + p
-    for s in range(len(compile_flags))
-    for idx, p in enumerate([
-        [b'A@@@@FG', None, BinAsciiError],
-        [u'ABC€', None, ValueError],
-        [3.0, None, TypeError],
-    ])
-]
-params_invalid_data_validate = [
-    [idx, s] + p
-    for s in range(len(compile_flags))
-    for idx, p in enumerate([
-        [b'\x00\x00\x00\x00', None, BinAsciiError],
-        [b'A@@@@FGHIJKLMNOPQRSTUVWXYZabcdef', b'-_', BinAsciiError],
-        [b'A@@@@FGH' * 10000, b'-_', BinAsciiError],
-        # [std, b'-_', BinAsciiError],  TODO does no fail with base64 module
-    ])
-]
-params_invalid_altchars = [
-    [idx, s] + p
-    for s in range(len(compile_flags))
-    for idx, p in enumerate([
-        [b'', AssertionError],
-        [b'-', AssertionError],
-        [b'-__', AssertionError],
-        [3.0, TypeError],
-        [u'-€', ValueError],
-    ])
-]
-
 
 def get_simd_name(simd_id):
     simd_name = None
@@ -195,267 +136,298 @@ def get_simd_name(simd_id):
     return simd_name
 
 
-def tc_name(testcase_func, param_num, param):
-    validate = False
-    ualtchars = False
-    if len(param.args) == 5:
-        validate = param.args[2]
-        ualtchars = param.args[3]
-        simd_name = get_simd_name(param.args[4])
+def simd_setup(simd_id):
+    if _has_extension:
+        flag = compile_flags[simd_id]
+        if flag != 0 and not flag & runtime_flags:  # pragma: no branch
+            pytest.skip('SIMD extension not available')  # pragma: no cover
+        _set_simd_path(flag)
+        assert _get_simd_path() == flag
     else:
-        simd_name = get_simd_name(param.args[2])
-    if ualtchars:
-        ualtchars = '_ualtchars'
+        assert 0 == simd_id
+
+
+param_vector = pytest.mark.parametrize('vector_id',
+                                       range(len(test_vectors_bin[0])))
+
+
+param_validate = pytest.mark.parametrize('validate',
+                                         [False, True],
+                                         ids=['novalidate', 'validate'])
+
+
+param_altchars = pytest.mark.parametrize('altchars_id',
+                                         [STD, URL, ALT1, ALT2, ALT3],
+                                         ids=lambda x: name_lut[x])
+
+
+param_altchars_helper = pytest.mark.parametrize('altchars_id',
+                                                [STD, URL],
+                                                ids=lambda x: name_lut[x])
+
+
+param_simd = pytest.mark.parametrize('simd',
+                                     range(len(compile_flags)),
+                                     ids=lambda x: get_simd_name(x),
+                                     indirect=True)
+
+
+@pytest.fixture
+def simd(request):
+    simd_setup(request.param)
+    return request.param
+
+
+@param_simd
+def test_version(simd):
+    assert pybase64.get_version().startswith(pybase64.__version__)
+
+
+@param_simd
+@param_vector
+@param_altchars_helper
+def test_enc_helper(altchars_id, vector_id, simd):
+    vector = test_vectors_bin[altchars_id][vector_id]
+    test = enc_helper_lut[altchars_id](vector)
+    base = ref_enc_helper_lut[altchars_id](vector)
+    assert test == base
+
+
+@param_simd
+@param_vector
+@param_altchars_helper
+def test_dec_helper(altchars_id, vector_id, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    test = dec_helper_lut[altchars_id](vector)
+    base = ref_dec_helper_lut[altchars_id](vector)
+    assert test == base
+
+
+@param_simd
+@param_vector
+@param_altchars_helper
+def test_dec_helper_unicode(altchars_id, vector_id, simd):
+    if altchars_id == URL and version_info < (3, 0):
+        pytest.skip(
+            'decoding urlsafe unicode strings is not supported in python 2.x')
+    vector = test_vectors_b64[altchars_id][vector_id]
+    test = dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
+    base = ref_dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
+    assert test == base
+
+
+@param_simd
+@param_vector
+@param_altchars_helper
+def test_rnd_helper(altchars_id, vector_id, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    test = dec_helper_lut[altchars_id](vector)
+    test = enc_helper_lut[altchars_id](test)
+    assert test == vector
+
+
+@param_simd
+@param_vector
+@param_altchars_helper
+def test_rnd_helper_unicode(altchars_id, vector_id, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    test = dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
+    test = enc_helper_lut[altchars_id](test)
+    assert test == vector
+
+
+@param_simd
+@param_vector
+def test_encbytes(vector_id, simd):
+    vector = test_vectors_bin[STD][vector_id]
+    test = pybase64.encodebytes(vector)
+    base = b64encodebytes(vector)
+    assert test == base
+
+
+@param_simd
+@param_vector
+@param_altchars
+def test_enc(altchars_id, vector_id, simd):
+    vector = test_vectors_bin[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    test = pybase64.b64encode(vector, altchars)
+    base = base64.b64encode(vector, altchars)
+    assert test == base
+
+
+@param_simd
+@param_vector
+@param_altchars
+@param_validate
+def test_dec(altchars_id, vector_id, validate, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    if validate:
+        if version_info < (3, 0):
+            pytest.skip('validate is not supported in python 2.x')
+        base = base64.b64decode(vector, altchars, validate)
     else:
-        ualtchars = ''
-    if not validate:
-        return '%s%s_%s_%d_%s' % (testcase_func.__name__,
-                                  ualtchars,
-                                  name_lut[param.args[0]],
-                                  param.args[1],
-                                  simd_name)
-    return '%s%s_%s_validate_%d_%s' % (testcase_func.__name__,
-                                       ualtchars,
-                                       name_lut[param.args[0]],
-                                       param.args[1],
-                                       simd_name)
+        base = base64.b64decode(vector, altchars)
+    test = pybase64.b64decode(vector, altchars, validate)
+    assert test == base
 
 
-def tc_idx(testcase_func, param_num, param):
-    simd_name = get_simd_name(param.args[1])
-    return '%s_%d_%s' % (testcase_func.__name__, param.args[0], simd_name)
+@param_simd
+@param_vector
+@param_altchars
+@param_validate
+def test_dec_unicode(altchars_id, vector_id, validate, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    if altchars_id == STD:
+        altchars = None
+    if altchars_id != STD and version_info < (3, 0):
+        pytest.skip(
+            'decoding non standard unicode strings is not supported in '
+            'python 2.x')
+    if validate:
+        if version_info < (3, 0):
+            pytest.skip('validate is not supported in python 2.x')
+        base = base64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+    else:
+        base = base64.b64decode(text_type(vector, 'utf-8'), altchars)
+    test = pybase64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+    assert test == base
 
 
-class TestPyBase64(unittest.TestCase):
+@param_simd
+@param_vector
+@param_altchars
+@param_validate
+def test_rnd(altchars_id, vector_id, validate, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    test = pybase64.b64decode(vector, altchars, validate)
+    test = pybase64.b64encode(test, altchars)
+    assert test == vector
 
-    def simd_setup(self, simd_id):
-        if _has_extension:
-            flag = compile_flags[simd_id]
-            if flag != 0 and not flag & runtime_flags:  # pragma: no branch
-                raise unittest.SkipTest(
-                    'SIMD extension not available')  # pragma: no cover
-            _set_simd_path(flag)
-            self.assertEqual(_get_simd_path(), flag)
-        else:
-            self.assertEqual(0, simd_id)
 
-    @parameterized.expand([
-        [get_simd_name(s), s] for s in range(len(compile_flags))
-    ])
-    def test_version(self, _, simd_id):
-        self.simd_setup(simd_id)
-        self.assertTrue(
-            pybase64.get_version().startswith(pybase64.__version__)
-        )
+@param_simd
+@param_vector
+@param_altchars
+@param_validate
+def test_rnd_unicode(altchars_id, vector_id, validate, simd):
+    vector = test_vectors_b64[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    test = pybase64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+    test = pybase64.b64encode(test, altchars)
+    assert test == vector
 
-    @parameterized.expand(params_helper, testcase_func_name=tc_name)
-    def test_enc_helper(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_bin[altchars_id][vector_id]
-        self.assertEqual(
-            enc_helper_lut[altchars_id](vector),
-            ref_enc_helper_lut[altchars_id](vector)
-        )
 
-    @parameterized.expand(params_helper, testcase_func_name=tc_name)
-    def test_dec_helper(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        self.assertEqual(
-            dec_helper_lut[altchars_id](vector),
-            ref_dec_helper_lut[altchars_id](vector)
-        )
-
-    @parameterized.expand(params_helper, testcase_func_name=tc_name)
-    def test_dec_helper_unicode(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        if altchars_id == URL and version_info < (3, 0):
-            raise unittest.SkipTest(
-                'decoding urlsafe unicode strings is not supported in python '
-                '2.x')
-        vector = test_vectors_b64[altchars_id][vector_id]
-        self.assertEqual(
-            dec_helper_lut[altchars_id](text_type(vector, 'utf-8')),
-            ref_dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
-        )
-
-    @parameterized.expand(params_helper, testcase_func_name=tc_name)
-    def test_rnd_helper(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        self.assertEqual(
-            enc_helper_lut[altchars_id](dec_helper_lut[altchars_id](vector)),
-            vector
-        )
-
-    @parameterized.expand(params_helper, testcase_func_name=tc_name)
-    def test_rnd_helper_unicode(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        self.assertEqual(
-            enc_helper_lut[altchars_id](
-                dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))),
-            vector
-        )
-
-    @parameterized.expand(params_encbytes, testcase_func_name=tc_name)
-    def test_encbytes(self, altchars_id, vector_id, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_bin[altchars_id][vector_id]
-        self.assertEqual(
-            pybase64.encodebytes(vector),
-            b64encodebytes(vector)
-        )
-
-    @parameterized.expand(params_novalidate, testcase_func_name=tc_name)
-    def test_enc(self, altchars_id, vector_id, validate, ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_bin[altchars_id][vector_id]
+@param_simd
+@param_vector
+@param_altchars
+@param_validate
+def test_invalid_padding_dec(altchars_id, vector_id, validate, simd):
+    vector = test_vectors_b64[altchars_id][vector_id][1:]
+    if len(vector) > 0:
         altchars = altchars_lut[altchars_id]
-        self.assertEqual(
-            pybase64.b64encode(vector, altchars),
-            base64.b64encode(vector, altchars)
-        )
+        with pytest.raises(BinAsciiError):
+            pybase64.b64decode(vector, altchars, validate)
 
-    @parameterized.expand(params_validate, testcase_func_name=tc_name)
-    def test_dec(self, altchars_id, vector_id, validate, ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        altchars = altchars_lut[altchars_id]
-        if validate:
-            if version_info < (3, 0):
-                raise unittest.SkipTest(
-                    'validate is not supported in python 2.x')
-            self.assertEqual(
-                pybase64.b64decode(vector, altchars, validate),
-                base64.b64decode(vector, altchars, validate)
-            )
-        else:
-            self.assertEqual(
-                pybase64.b64decode(vector, altchars, validate),
-                base64.b64decode(vector, altchars)
-            )
 
-    @parameterized.expand(params_validate, testcase_func_name=tc_name)
-    def test_dec_unicode(self, altchars_id, vector_id,
-                         validate, ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        altchars = altchars_lut[altchars_id]
-        if altchars_id == STD:
-            altchars = None
-        if altchars_id != STD and version_info < (3, 0):
-            raise unittest.SkipTest(
-                'decoding non standard unicode strings is not supported in '
-                'python 2.x')
-        if validate:
-            if version_info < (3, 0):
-                raise unittest.SkipTest(
-                    'validate is not supported in python 2.x')
-            self.assertEqual(
-                pybase64.b64decode(text_type(vector, 'utf-8'),
-                                   altchars,
-                                   validate),
-                base64.b64decode(text_type(vector, 'utf-8'),
-                                 altchars,
-                                 validate)
-            )
-        else:
-            self.assertEqual(
-                pybase64.b64decode(text_type(vector, 'utf-8'),
-                                   altchars,
-                                   validate),
-                base64.b64decode(text_type(vector, 'utf-8'), altchars)
-            )
+params_invalid_altchars = [
+    [b'', AssertionError],
+    [b'-', AssertionError],
+    [b'-__', AssertionError],
+    [3.0, TypeError],
+    [u'-€', ValueError],
+]
+params_invalid_altchars = pytest.mark.parametrize(
+    "altchars,exception",
+    params_invalid_altchars,
+    ids=[str(i) for i in range(len(params_invalid_altchars))]
+)
 
-    @parameterized.expand(params_validate, testcase_func_name=tc_name)
-    def test_rnd(self, altchars_id, vector_id, validate, ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        altchars = altchars_lut[altchars_id]
-        self.assertEqual(
-            pybase64.b64encode(
-                pybase64.b64decode(vector, altchars, validate),
-                altchars_lut[altchars_id]),
-            vector
-        )
 
-    @parameterized.expand(params_validate, testcase_func_name=tc_name)
-    def test_rnd_unicode(self, altchars_id, vector_id,
-                         validate, ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id]
-        altchars = altchars_lut[altchars_id]
-        self.assertEqual(
-            pybase64.b64encode(
-                pybase64.b64decode(text_type(vector, 'utf-8'),
-                                   altchars,
-                                   validate),
-                altchars),
-            vector
-        )
+@param_simd
+@params_invalid_altchars
+def test_invalid_altchars_enc(altchars, exception, simd):
+    with pytest.raises(exception):
+        pybase64.b64encode(b'ABCD', altchars)
 
-    @parameterized.expand(params_invalid_altchars, testcase_func_name=tc_idx)
-    def test_invalid_altchars_enc(self, _, simd_id, altchars, exception):
-        self.simd_setup(simd_id)
-        with self.assertRaises(exception):
-            pybase64.b64encode(b'ABCD', altchars)
 
-    @parameterized.expand(params_invalid_altchars, testcase_func_name=tc_idx)
-    def test_invalid_altchars_dec(self, _, simd_id, altchars, exception):
-        self.simd_setup(simd_id)
-        with self.assertRaises(exception):
-            pybase64.b64decode(b'ABCD', altchars)
+@param_simd
+@params_invalid_altchars
+def test_invalid_altchars_dec(altchars, exception, simd):
+    with pytest.raises(exception):
+        pybase64.b64decode(b'ABCD', altchars)
 
-    @parameterized.expand(params_invalid_altchars, testcase_func_name=tc_idx)
-    def test_invalid_altchars_dec_validate(self, _, simd_id,
-                                           altchars, exception):
-        self.simd_setup(simd_id)
-        with self.assertRaises(exception):
-            pybase64.b64decode(b'ABCD', altchars, True)
 
-    @parameterized.expand(params_invalid_data, testcase_func_name=tc_idx)
-    def test_invalid_data_dec(self, _, simd_id, vector, altchars, exception):
-        self.simd_setup(simd_id)
-        with self.assertRaises(exception):
-            pybase64.b64decode(vector, altchars)
+@param_simd
+@params_invalid_altchars
+def test_invalid_altchars_dec_validate(altchars, exception, simd):
+    with pytest.raises(exception):
+        pybase64.b64decode(b'ABCD', altchars, True)
 
-    @parameterized.expand(params_invalid_data_validate,
-                          testcase_func_name=tc_idx)
-    def test_invalid_data_dec_skip(self, _, simd_id,
-                                   vector, altchars, exception):
-        self.simd_setup(simd_id)
-        self.assertEqual(
-            pybase64.b64decode(vector, altchars),
-            base64.b64decode(vector, altchars)
-        )
 
-    @parameterized.expand(params_invalid_data + params_invalid_data_validate,
-                          testcase_func_name=tc_idx)
-    def test_invalid_data_dec_validate(self, _, simd_id,
-                                       vector, altchars, exception):
-        self.simd_setup(simd_id)
-        with self.assertRaises(exception):
-            pybase64.b64decode(vector, altchars, True)
+params_invalid_data_novalidate = [
+    [b'A@@@@FG', None, BinAsciiError],
+    [u'ABC€', None, ValueError],
+    [3.0, None, TypeError],
+]
+params_invalid_data_validate = [
+    [b'\x00\x00\x00\x00', None, BinAsciiError],
+    [b'A@@@@FGHIJKLMNOPQRSTUVWXYZabcdef', b'-_', BinAsciiError],
+    [b'A@@@@FGH' * 10000, b'-_', BinAsciiError],
+    # [std, b'-_', BinAsciiError],  TODO does no fail with base64 module
+]
+params_invalid_data_all = pytest.mark.parametrize(
+    "vector,altchars,exception",
+    params_invalid_data_novalidate + params_invalid_data_validate,
+    ids=[str(i)for i in range(len(params_invalid_data_novalidate) +
+                              len(params_invalid_data_validate))]
+)
+params_invalid_data_novalidate = pytest.mark.parametrize(
+    "vector,altchars,exception",
+    params_invalid_data_novalidate,
+    ids=[str(i)for i in range(len(params_invalid_data_novalidate))]
+)
+params_invalid_data_validate = pytest.mark.parametrize(
+    "vector,altchars,exception",
+    params_invalid_data_validate,
+    ids=[str(i)for i in range(len(params_invalid_data_validate))]
+)
 
-    @parameterized.expand(params_validate, testcase_func_name=tc_name)
-    def test_invalid_padding_dec(self, altchars_id, vector_id, validate,
-                                 ualtchars, simd_id):
-        self.simd_setup(simd_id)
-        vector = test_vectors_b64[altchars_id][vector_id][1:]
-        if len(vector) > 0:
-            altchars = altchars_lut[altchars_id]
-            with self.assertRaises(BinAsciiError):
-                pybase64.b64decode(vector, altchars, validate)
 
-    def test_invalid_data_enc_0(self):
-        with self.assertRaises(TypeError):
-            pybase64.b64encode(u'this is a test')
+@param_simd
+@params_invalid_data_novalidate
+def test_invalid_data_dec(vector, altchars, exception, simd):
+    with pytest.raises(exception):
+        pybase64.b64decode(vector, altchars)
 
-    def test_invalid_args_enc_0(self):
-        with self.assertRaises(TypeError):
+
+@param_simd
+@params_invalid_data_validate
+def test_invalid_data_dec_skip(vector, altchars, exception, simd):
+    test = pybase64.b64decode(vector, altchars)
+    base = base64.b64decode(vector, altchars)
+    assert test == base
+
+
+@param_simd
+@params_invalid_data_all
+def test_invalid_data_dec_validate(vector, altchars, exception, simd):
+    with pytest.raises(exception):
+        pybase64.b64decode(vector, altchars, True)
+
+
+def test_invalid_data_enc_0():
+    with pytest.raises(TypeError):
+        pybase64.b64encode(u'this is a test')
+
+
+def test_invalid_args_enc_0():
+    with pytest.raises(TypeError):
             pybase64.b64encode()
 
-    def test_invalid_args_dec_0(self):
-        with self.assertRaises(TypeError):
-            pybase64.b64decode()
+
+def test_invalid_args_dec_0():
+    with pytest.raises(TypeError):
+        pybase64.b64decode()
