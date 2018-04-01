@@ -21,10 +21,12 @@ import sys
 
 import sphinx_rtd_theme
 
+here = os.path.abspath(os.path.dirname(__file__))
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(os.path.join(here, '..')))
 
 # -- General configuration ------------------------------------------------
 
@@ -64,7 +66,7 @@ copyright = '2017-{}, Matthieu Darbois'.format(datetime.date.today().year)
 # built documents.
 # Get version
 _version = runpy.run_path(
-    path.join(here, '..', 'pybase64', '_version.py'))['__version__']
+    os.path.join(here, '..', 'pybase64', '_version.py'))['__version__']
 # The short X.Y version.
 version = _version
 # The full version, including alpha/beta/rc tags.
