@@ -20,6 +20,8 @@ matrix:
     - dist: trusty
       env: PYBASE64_TOX=1
     - dist: trusty
+      env: PYBASE64_DOC=1
+    - dist: trusty
       env: PYBASE64_VALGRIND=1
       addons:
         apt:
@@ -58,11 +60,14 @@ script:
     elif [ "${PYBASE64_VALGRIND}" != "" ]; then
       CFLAGS="-O0" python setup.py build_ext -fiv
       PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(pyenv which python) -m pytest
+    elif [ "${PYBASE64_DOC}" != "" ]; then
+      python setup.py develop
+      cd docs && make html
     else
       ./travis/build-source-dist.sh
     fi
   - |
-    if [ "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}" == "" ]; then
+    if [ "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}" == "" ]; then
       ls todeploy/
       if [ "${TRAVIS_TAG:-}" != "" ]; then
         python -m pip install twine
