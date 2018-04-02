@@ -3,9 +3,14 @@ environment:
     CIBW_TEST_REQUIRES: "pytest"
     CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
     CIBW_SKIP: cp27-win* cp33-win* cp34-win*
-    TWINE_USERNAME: mayeut
+    PYPI_USER: mayeut
+    PYPI_TEST_PASSWD:
+      secure: ZRIjeYLVIKQk/C14I2QdcODmKwGUGmxznT4xLuZIZvM=
+    PYPI_PROD_PASSWD:
+      secure: XQEaBWE6RLDsHKi0mUhvkEwBRIpixpmt5bPh/uAKNFs=
 install:
   - git submodule update --init --recursive
+  - python -m pip install --upgrade pip
   - pip install -r requirements.txt cibuildwheel==0.7.0
 build_script:
 # Test with cp27, extension shall fail to build silently (optional)
@@ -14,13 +19,61 @@ build_script:
   - pytest
 # Build wheels
   - cibuildwheel --output-dir todeploy
-  - >
-    IF "%APPVEYOR_REPO_TAG%" == "true"
-    (
-    python -m pip install twine
-    &&
-    python -m twine upload --skip-existing todeploy/*.whl
-    )
+  - set
 artifacts:
   - path: "todeploy\\*.whl"
     name: Wheels
+
+on_success:
+  # Deploy master non-tags to test PyPI
+  - ps: |
+      $deploy = $true
+      if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) {
+        $deploy = $false
+        Write-Host "Skipping a deployment because the current build is a pull request." -ForegroundColor Yellow
+      }
+      else {
+        if($env:APPVEYOR_REPO_NAME -ne 'mayeut/pybase64') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this repo's name does not match 'mayeut/pybase64'." -ForegroundColor Yellow
+        }
+        if($env:APPVEYOR_REPO_BRANCH -ne 'master') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this branch is not permitted." -ForegroundColor Yellow
+        }
+      }
+      if($deploy) {
+        Write-Output ("Deploying master to Test PyPI...")
+        pip install --upgrade twine
+        twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWD --repository-url https://test.pypi.org/legacy/ --skip-existing todeploy\*.whl
+      }
+  # Deploy on tags to PyPI
+  - ps: |
+      $deploy = $true
+      if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) {
+        $deploy = $false
+        Write-Host "Skipping a deployment because the current build is a pull request." -ForegroundColor Yellow
+      }
+      else {
+        if($env:APPVEYOR_REPO_NAME -ne 'mayeut/pybase64') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this repo's name does not match 'mayeut/pybase64'." -ForegroundColor Yellow
+        }
+        if($env:APPVEYOR_REPO_TAG -ne 'true') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this is not a tagged commit." -ForegroundColor Yellow
+        }
+      }
+      if($deploy) {
+        Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
+        pip install --upgrade twine
+        twine upload -u $env:PYPI_USER -p $env:PYPI_PROD_PASSWD --skip-existing todeploy\*.whl
+      }
+
+deploy:
+  # Deploy on tags to GitHub Releases
+  - provider: GitHub
+    auth_token:
+      secure: 71pdcFLN8gBXqMQAwl2aljOGurSWGu8adyvyy+H40jSGuJ5TRt5hOz6eRk3Y/uoM
+    on:
+      appveyor_repo_tag: true
