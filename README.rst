@@ -62,7 +62,7 @@ To get the fastest decoding, it is recommended to use the ``pybase64.b64decode``
 
 A command-line tool is also provided. It has encode, decode and benchmark subcommands.
 
-.. code-block:: none
+.. code::
 
     usage: pybase64 [-h] [-V] {benchmark,encode,decode} ...
 
@@ -90,7 +90,7 @@ Benchmark
 
 Running Python 3.6.0, Apple LLVM version 9.1.0 (clang-902.0.39.1), Mac OS X 10.13.3 on an Intel Core i7-4870HQ @ 2.50GHz
 
-.. code-block:: none
+.. code::
 
     pybase64 0.3.0 (C extension active - AVX2)
     bench: altchars=None, validate=False
