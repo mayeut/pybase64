@@ -43,50 +43,13 @@ To get the fastest decoding, it is recommended to use the :func:`~pybase64.b64de
 
 Check :doc:`api` for more details.
 
-A command-line tool is also provided. It has encode, decode and benchmark subcommands.
-
-.. code-block:: none
-
-    usage: pybase64 [-h] [-V] {benchmark,encode,decode} ...
-
-    pybase64 command-line tool.
-
-    positional arguments:
-      {benchmark,encode,decode}
-                            tool help
-        benchmark           -h for usage
-        encode              -h for usage
-        decode              -h for usage
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -V, --version         show program's version number and exit
+.. include:: ../README.rst
+    :start-after: .. begin cli
+    :end-before: .. end cli
 
 Benchmark
 ---------
+.. include:: ../README.rst
+    :start-after: .. begin benchmark
+    :end-before: .. end benchmark
 
-Running Python 3.6.0, Apple LLVM version 8.1.0 (clang-802.0.42), Mac OS X 10.12.6 on an Intel Core i7-4870HQ @ 2.50GHz
-
-.. code-block:: none
-
-    pybase64 0.2.0 (C extension active - AVX2)
-    bench: altchars=None, validate=False
-    pybase64._pybase64.b64encode:     2941.397 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:      328.250 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  565.744 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  327.075 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    bench: altchars=None, validate=True
-    pybase64._pybase64.b64encode:     2995.909 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     3996.267 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  577.565 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  104.835 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    bench: altchars=b'-_', validate=False
-    pybase64._pybase64.b64encode:     2237.740 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:      262.021 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  313.977 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  219.487 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    bench: altchars=b'-_', validate=True
-    pybase64._pybase64.b64encode:     2349.481 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     2790.047 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  314.182 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                   89.855 MB/s (17,695,296 bytes -> 13,271,472 bytes)
