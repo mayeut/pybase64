@@ -25,28 +25,28 @@ artifacts:
     name: Wheels
 
 on_success:
-#  # Deploy master non-tags to test PyPI
-#  - ps: |
-#      $deploy = $true
-#      if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) {
-#        $deploy = $false
-#        Write-Host "Skipping a deployment because the current build is a pull request." -ForegroundColor Yellow
-#      }
-#      else {
-#        if($env:APPVEYOR_REPO_NAME -ne 'mayeut/pybase64') {
-#          $deploy = $false
-#          Write-Host "Skipping a deployment because this repo's name does not match 'mayeut/pybase64'." -ForegroundColor Yellow
-#        }
-#        if($env:APPVEYOR_REPO_BRANCH -ne 'master') {
-#          $deploy = $false
-#          Write-Host "Skipping a deployment because this branch is not permitted." -ForegroundColor Yellow
-#        }
-#      }
-#      if($deploy) {
-#        Write-Output ("Deploying master to Test PyPI...")
-#        pip install --upgrade twine
-#        twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWD --repository-url https://test.pypi.org/legacy/ --skip-existing todeploy\*.whl
-#      }
+  # Deploy master non-tags to test PyPI
+  - ps: |
+      $deploy = $true
+      if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) {
+        $deploy = $false
+        Write-Host "Skipping a deployment because the current build is a pull request." -ForegroundColor Yellow
+      }
+      else {
+        if($env:APPVEYOR_REPO_NAME -ne 'mayeut/pybase64') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this repo's name does not match 'mayeut/pybase64'." -ForegroundColor Yellow
+        }
+        if($env:APPVEYOR_REPO_BRANCH -ne 'master') {
+          $deploy = $false
+          Write-Host "Skipping a deployment because this branch is not permitted." -ForegroundColor Yellow
+        }
+      }
+      if($deploy) {
+        Write-Output ("Deploying master to Test PyPI...")
+        pip install --upgrade twine
+        twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWD --repository-url https://test.pypi.org/legacy/ --skip-existing todeploy\*.whl
+      }
   # Deploy on tags to PyPI
   - ps: |
       $deploy = $true

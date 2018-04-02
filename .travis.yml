@@ -80,20 +80,20 @@ deploy:
       repo: mayeut/pybase64
       tags: true
       condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
-#  # Deploy master non-tags to test PyPI
-#  - provider: pypi
-#    server: https://test.pypi.org/legacy/
-#    user: mayeut
-#    password:
-#      secure: CUdAYN7ely3JCsSrM7cuSOcGgy0hEr2y0WzN1a6Gfc5VT2r/hiCp9+tlj2Ahuo4WKuz0TVJP65Zce8hg+4BZ6N0yDC1Cd8qjyBIPxo7Sjl4OubIepjfr3kftD8fxnoQ1R4Uv4ZKKULT70p7IBxZxS42YiGtCznmQdHJGcGG//Zfws0wZ1TMJzngFRMST0+MYDyGm88+raQavpxoDEs8gI2qBhV2gRr5w7axH8dY9IqRIGxnBJlT919hOOF8+hjT7skxrBCqgH9/Tq9TFcM9SA375tTEBsk6RCEujT0+7zjWvTKHcHL//4609lc3fYfQfpVlffvqU+HgvHjIpU03SB6izCKyfHNVwTOp7PfS4QhmKPbHTuIiId9iw2gaDU0OdY90pi16AoeiKnBQIaY+iR9xKyeSivm6UXM7NMqP53FPh1HEOuzBYj0cFe8suthu1pQltEq6XQC6v+0hhCLxVQAeltiqsz09zoaffBXWzfQRxN4FJBM2MWCQEdUJ8jVfrq+83uwf+u22g2GUYgjchcrTQF0u5uUlBcqpCKq5Jc8psALzWYhJ0pZPj6q8Kd3jkA5b9hmylkR69N+nTHwkSVh1zxg5JG3/Nd0pMypfq7OQn7HqflG6nA0vAgpdo6jT0STGRmsD9LisvqoktAbsMzVUAK1WFIZKAyq/d4Nx6nys=
-#    distributions: clean_ext
-#    skip_existing: true
-#    skip_cleanup: true
-#    on:
-#      repo: mayeut/pybase64
-#      tags: false
-#      branch: master
-#      condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
+  # Deploy master non-tags to test PyPI
+  - provider: pypi
+    server: https://test.pypi.org/legacy/
+    user: mayeut
+    password:
+      secure: CUdAYN7ely3JCsSrM7cuSOcGgy0hEr2y0WzN1a6Gfc5VT2r/hiCp9+tlj2Ahuo4WKuz0TVJP65Zce8hg+4BZ6N0yDC1Cd8qjyBIPxo7Sjl4OubIepjfr3kftD8fxnoQ1R4Uv4ZKKULT70p7IBxZxS42YiGtCznmQdHJGcGG//Zfws0wZ1TMJzngFRMST0+MYDyGm88+raQavpxoDEs8gI2qBhV2gRr5w7axH8dY9IqRIGxnBJlT919hOOF8+hjT7skxrBCqgH9/Tq9TFcM9SA375tTEBsk6RCEujT0+7zjWvTKHcHL//4609lc3fYfQfpVlffvqU+HgvHjIpU03SB6izCKyfHNVwTOp7PfS4QhmKPbHTuIiId9iw2gaDU0OdY90pi16AoeiKnBQIaY+iR9xKyeSivm6UXM7NMqP53FPh1HEOuzBYj0cFe8suthu1pQltEq6XQC6v+0hhCLxVQAeltiqsz09zoaffBXWzfQRxN4FJBM2MWCQEdUJ8jVfrq+83uwf+u22g2GUYgjchcrTQF0u5uUlBcqpCKq5Jc8psALzWYhJ0pZPj6q8Kd3jkA5b9hmylkR69N+nTHwkSVh1zxg5JG3/Nd0pMypfq7OQn7HqflG6nA0vAgpdo6jT0STGRmsD9LisvqoktAbsMzVUAK1WFIZKAyq/d4Nx6nys=
+    distributions: clean_ext
+    skip_existing: true
+    skip_cleanup: true
+    on:
+      repo: mayeut/pybase64
+      tags: false
+      branch: master
+      condition: -z "${PYBASE64_TOX:-}${PYBASE64_VALGRIND:-}${PYBASE64_DOC:-}"
   # Deploy on tags to PyPI
   - provider: pypi
     user: mayeut
