@@ -279,9 +279,12 @@ def test_dec(altchars_id, vector_id, validate, simd):
 @param_validate
 def test_dec_unicode(altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
+    vector = text_type(vector, 'utf-8')
     altchars = altchars_lut[altchars_id]
     if altchars_id == STD:
         altchars = None
+    else:
+        altchars = text_type(altchars, 'utf-8')
     if altchars_id != STD and version_info < (3, 0):
         pytest.skip(
             'decoding non standard unicode strings is not supported in '
@@ -289,10 +292,10 @@ def test_dec_unicode(altchars_id, vector_id, validate, simd):
     if validate:
         if version_info < (3, 0):
             pytest.skip('validate is not supported in python 2.x')
-        base = base64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+        base = base64.b64decode(vector, altchars, validate)
     else:
-        base = base64.b64decode(text_type(vector, 'utf-8'), altchars)
-    test = pybase64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+        base = base64.b64decode(vector, altchars)
+    test = pybase64.b64decode(vector, altchars, validate)
     assert test == base
 
 
