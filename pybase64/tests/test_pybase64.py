@@ -375,6 +375,10 @@ params_invalid_data_novalidate = [
 params_invalid_data_validate = [
     [b'\x00\x00\x00\x00', None, BinAsciiError],
     [b'A@@@@FGHIJKLMNOPQRSTUVWXYZabcdef', b'-_', BinAsciiError],
+    [b'A@@@=FGHIJKLMNOPQRSTUVWXYZabcdef', b'-_', BinAsciiError],
+    [b'A@@=@FGHIJKLMNOPQRSTUVWXYZabcdef', b'-_', BinAsciiError],
+    [b'A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=', b'-_', BinAsciiError],
+    [b'A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==', b'-_', BinAsciiError],
     [b'A@@@@FGH' * 10000, b'-_', BinAsciiError],
     # [std, b'-_', BinAsciiError],  TODO does no fail with base64 module
 ]

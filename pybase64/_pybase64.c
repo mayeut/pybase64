@@ -3,6 +3,7 @@
 #include <Python.h>
 #include <config.h>
 #include <libbase64.h>
+#include <codecs.h>
 #include <string.h> /* memset */
 #include <assert.h>
 
@@ -157,6 +158,134 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
     }
 }
 
+
+static int next_valid_padding(const uint8_t *src, size_t srclen)
+{
+    int ret = 255;
+
+    while (srclen && (ret == 255))
+    {
+        ret = base64_table_dec[*src++];
+        srclen--;
+    }
+
+    return ret;
+}
+
+static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, size_t*outlen)
+{
+    uint8_t* out_start = out;
+    uint8_t carry;
+
+    while (srclen > 0U)
+    {
+        /* case bytes == 0 */
+        while (srclen > 4U)
+        {
+            union {
+                uint32_t asint;
+                uint8_t  aschar[4];
+            } x;
+
+            x.asint = base64_table_dec_d0[src[0]]
+                    | base64_table_dec_d1[src[1]]
+                    | base64_table_dec_d2[src[2]]
+                    | base64_table_dec_d3[src[3]];
+#if BASE64_LITTLE_ENDIAN
+            /* LUTs for little-endian set Most Significant Bit
+               in case of invalid character */
+            if (x.asint & 0x80000000U) break;
+#else
+            /* LUTs for big-endian set Least Significant Bit
+               in case of invalid character */
+            if (x.asint & 1U) break;
+#endif
+
+#if HAVE_FAST_UNALIGNED_ACCESS
+            /* This might segfault or be too slow on
+               some architectures, do this only if specified
+               with HAVE_FAST_UNALIGNED_ACCESS macro
+               We write one byte more than needed */
+            *(uint32_t*)out = x.asint;
+#else
+            /* Fallback, write bytes one by one */
+            out[0] = x.aschar[0];
+            out[1] = x.aschar[1];
+            out[2] = x.aschar[2];
+#endif
+            src += 4;
+            out += 3;
+            srclen -= 4;
+        }
+        /* case bytes == 0, remainder */
+        {
+            uint8_t c = *src++; srclen--;
+            uint8_t q;
+            if ((q = base64_table_dec[c]) >= 254) {
+                continue;
+            }
+            carry = q << 2;
+        }
+        /* case bytes == 1 */
+        for(;;)
+        {
+            if (srclen-- == 0) {
+                return 1;
+            }
+            uint8_t c = *src++;
+            uint8_t q;
+            if ((q = base64_table_dec[c]) >= 254) {
+                continue;
+            }
+            *out++ = carry | (q >> 4);
+            carry = q << 4;
+            break;
+        }
+        /* case bytes == 2 */
+        for(;;)
+        {
+            if (srclen-- == 0) {
+                return 1;
+            }
+            uint8_t c = *src++;
+            uint8_t q;
+            if ((q = base64_table_dec[c]) >= 254) {
+                if (q == 254) {
+                    /* if the next valid byte is '=' => end */
+                    if (next_valid_padding(src, srclen) == 254) {
+                        goto END;
+                    }
+                }
+                continue;
+            }
+            *out++ = carry | (q >> 2);
+            carry = q << 6;
+            break;
+        }
+        /* case bytes == 3 */
+        for(;;)
+        {
+            if (srclen-- == 0) {
+                return 1;
+            }
+            uint8_t c = *src++;
+            uint8_t q;
+            if ((q = base64_table_dec[c]) >= 254) {
+                if (q == 254) {
+                    srclen = 0U;
+                    break;
+                }
+                continue;
+            }
+            *out++ = carry | q;
+            break;
+        }
+    }
+END:
+    *outlen = out - out_start;
+    return 0;
+}
+
 static PyObject* pybase64_encode(PyObject* self, PyObject* args, PyObject *kwds)
 {
     static const char *kwlist[] = { "", "altchars", NULL };
@@ -282,9 +411,10 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
             Py_DECREF(in_object);
             in_object = translate_object;
         }
-        out_object = PyObject_CallFunctionObjArgs(g_fallbackDecode, in_object, NULL);
-        Py_DECREF(in_object);
-        return out_object;
+        if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+            Py_DECREF(in_object);
+            return NULL;
+        }
     }
 
     /* No overflow check needed, exact out_len recomputed at the end */
@@ -296,7 +426,13 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         goto EXCEPT;
     }
 
-    if (use_alphabet) {
+    if (!validation) {
+        if (decode_novalidate(buffer.buf, buffer.len, (uint8_t*)PyBytes_AS_STRING(out_object), &out_len) != 0) {
+            PyErr_SetString(g_BinAsciiError, "Incorrect padding");
+            goto EXCEPT;
+        }
+    }
+    else if (use_alphabet) {
         /* TODO, make this more efficient */
         const Py_ssize_t src_slice = 16 * 1024;
         const size_t dst_slice = (src_slice / 4) * 3;
