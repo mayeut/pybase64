@@ -92,29 +92,29 @@ Running Python 3.6.0, Apple LLVM version 9.1.0 (clang-902.0.39.1), Mac OS X 10.1
 
 .. code::
 
-    pybase64 0.3.0 (C extension active - AVX2)
+    pybase64 0.4.0 (C extension active - AVX2)
     bench: altchars=None, validate=False
-    pybase64._pybase64.encodebytes:   1671.633 MB/s (13,271,472 bytes -> 17,928,129 bytes)
-    pybase64._pybase64.b64encode:     3355.630 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:      313.357 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.encodebytes:                 84.229 MB/s (13,271,472 bytes -> 17,928,129 bytes)
-    base64.b64encode:                  594.513 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  316.510 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.encodebytes:   1754.370 MB/s (13,271,472 bytes -> 17,928,129 bytes)
+    pybase64._pybase64.b64encode:     3592.168 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     1675.739 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.encodebytes:                 84.960 MB/s (13,271,472 bytes -> 17,928,129 bytes)
+    base64.b64encode:                  633.833 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  320.977 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=None, validate=True
-    pybase64._pybase64.b64encode:     3447.100 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     3513.827 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  592.162 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  103.155 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     3725.047 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     3813.267 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  644.642 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  108.308 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=b'-_', validate=False
-    pybase64._pybase64.b64encode:     2440.743 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:      285.376 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  344.905 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  224.162 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     2719.946 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     1135.939 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  363.010 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  221.476 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=b'-_', validate=True
-    pybase64._pybase64.b64encode:     2566.995 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     2522.613 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  342.011 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                   89.865 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     2661.688 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     2561.590 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  349.590 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                   96.113 MB/s (17,695,296 bytes -> 13,271,472 bytes)
 
 .. end benchmark
 
@@ -122,6 +122,10 @@ Running Python 3.6.0, Apple LLVM version 9.1.0 (clang-902.0.39.1), Mac OS X 10.1
 
 Changelog
 =========
+0.4.0
+-----
+- Speed-up decoding when validate==False
+
 0.3.1
 -----
 - Fix deployment issues
