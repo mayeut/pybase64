@@ -3,6 +3,7 @@
   :target: https://github.com/mayeut/pybase64/blob/master/LICENSE
 .. |pypi-status| image:: https://img.shields.io/pypi/v/pybase64.svg
   :target: https://pypi.python.org/pypi/pybase64
+.. |python-versions| image:: https://img.shields.io/pypi/pyversions/pybase64.svg
 .. |rtd-status| image:: https://readthedocs.org/projects/pybase64/badge/?version=stable
   :target: http://pybase64.readthedocs.io/en/stable/?badge=stable
   :alt: Documentation Status
@@ -17,7 +18,7 @@
 Fast Base64 implementation
 ==========================
 
-|license-status| |pypi-status| |rtd-status| |travis-status| |appveyor-status| |codecov-status|
+|license-status| |pypi-status| |python-versions| |rtd-status| |travis-status| |appveyor-status| |codecov-status|
 
 This project is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
 
