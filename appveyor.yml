@@ -11,7 +11,7 @@ environment:
 install:
   - git submodule update --init --recursive
   - python -m pip install --upgrade pip
-  - pip install -r requirements.txt cibuildwheel==0.7.1
+  - pip install -r requirements.txt -r requirements-cibuildwheel.txt
 build_script:
 # Test with cp27, extension shall fail to build silently (optional)
   - python setup.py build_ext -i -f -v

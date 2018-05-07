@@ -42,7 +42,7 @@ matrix:
 install:
   - |
     if [ "${PYBASE64_BUILD_WHEEL:-}" != "" ]; then
-      pip install cibuildwheel==0.7.1
+      pip install -r requirements-cibuildwheel.txt
     elif [ "${PYBASE64_TOX:-}" != "" ]; then
       pip install -r requirements.txt codecov
     else
