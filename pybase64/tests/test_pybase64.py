@@ -388,8 +388,8 @@ params_invalid_data_validate = [
 params_invalid_data_all = pytest.mark.parametrize(
     "vector,altchars,exception",
     params_invalid_data_novalidate + params_invalid_data_validate,
-    ids=[str(i)for i in range(len(params_invalid_data_novalidate) +
-                              len(params_invalid_data_validate))]
+    ids=[str(i)for i in range(len(params_invalid_data_novalidate)
+                              + len(params_invalid_data_validate))]
 )
 params_invalid_data_novalidate = pytest.mark.parametrize(
     "vector,altchars,exception",

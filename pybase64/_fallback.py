@@ -102,8 +102,8 @@ def b64encode(s, altchars=None):
         assert len(altchars) == 2, repr(altchars)
     if version_info < (3, 0):
         if isinstance(s, text_type):
-            raise TypeError('a bytes-like object is required, not \'' +
-                            type(s).__name__ + '\'')
+            raise TypeError('a bytes-like object is required, not \''
+                            + type(s).__name__ + '\'')
     return builtin_encode(s, altchars)
 
 
