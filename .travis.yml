@@ -31,12 +31,11 @@ matrix:
       language: generic
       env: PYBASE64_BUILD_WHEEL=1
       before_install:
-        - brew update && brew bundle
-        # Make sure CA certificates are up-to-date
+        # make sure CA certificates are up-to-date
         - brew postinstall openssl
         - SSL_CERT_FILE=$(brew --prefix)/etc/openssl/cert.pem
-        # Need to use a virtualenv for deployement
-        - python3 -m venv venv
+        # need to use a virtualenv for deployement
+        - python2 -m virtualenv venv
         - source venv/bin/activate
 
 install:

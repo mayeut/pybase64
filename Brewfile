@@ -1,2 +1,0 @@
-brew 'openssl'
-brew 'python'
