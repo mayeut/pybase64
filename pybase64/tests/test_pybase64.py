@@ -432,7 +432,7 @@ def test_invalid_data_enc_0():
 
 def test_invalid_args_enc_0():
     with pytest.raises(TypeError):
-            pybase64.b64encode()
+        pybase64.b64encode()
 
 
 def test_invalid_args_dec_0():
