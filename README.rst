@@ -89,33 +89,33 @@ Benchmark
 
 .. begin benchmark
 
-Running Python 3.6.0, Apple LLVM version 9.1.0 (clang-902.0.39.1), Mac OS X 10.13.3 on an Intel Core i7-4870HQ @ 2.50GHz
+Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 10.14.2 on an Intel Core i7-4870HQ @ 2.50GHz
 
 .. code::
 
-    pybase64 0.4.0 (C extension active - AVX2)
+    pybase64 0.5.0 (C extension active - AVX2)
     bench: altchars=None, validate=False
-    pybase64._pybase64.encodebytes:   1754.370 MB/s (13,271,472 bytes -> 17,928,129 bytes)
-    pybase64._pybase64.b64encode:     3592.168 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     1675.739 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.encodebytes:                 84.960 MB/s (13,271,472 bytes -> 17,928,129 bytes)
-    base64.b64encode:                  633.833 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  320.977 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.encodebytes:   1734.776 MB/s (13,271,472 bytes -> 17,928,129 bytes)
+    pybase64._pybase64.b64encode:     4039.539 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     1854.423 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.encodebytes:                 78.352 MB/s (13,271,472 bytes -> 17,928,129 bytes)
+    base64.b64encode:                  539.840 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  287.826 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=None, validate=True
-    pybase64._pybase64.b64encode:     3725.047 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     3813.267 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  644.642 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  108.308 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     4156.607 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     4107.997 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  559.342 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  143.674 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=b'-_', validate=False
-    pybase64._pybase64.b64encode:     2719.946 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     1135.939 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  363.010 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                  221.476 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     2786.776 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     1124.136 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  322.427 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  205.195 MB/s (17,695,296 bytes -> 13,271,472 bytes)
     bench: altchars=b'-_', validate=True
-    pybase64._pybase64.b64encode:     2661.688 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    pybase64._pybase64.b64decode:     2561.590 MB/s (17,695,296 bytes -> 13,271,472 bytes)
-    base64.b64encode:                  349.590 MB/s (13,271,472 bytes -> 17,695,296 bytes)
-    base64.b64decode:                   96.113 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    pybase64._pybase64.b64encode:     2806.271 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    pybase64._pybase64.b64decode:     2740.456 MB/s (17,695,296 bytes -> 13,271,472 bytes)
+    base64.b64encode:                  314.709 MB/s (13,271,472 bytes -> 17,695,296 bytes)
+    base64.b64decode:                  121.803 MB/s (17,695,296 bytes -> 13,271,472 bytes)
 
 .. end benchmark
 
@@ -123,6 +123,11 @@ Running Python 3.6.0, Apple LLVM version 9.1.0 (clang-902.0.39.1), Mac OS X 10.1
 
 Changelog
 =========
+0.5.0
+-----
+- Publish python 3.7 wheels
+- Drop python 3.3 support
+
 0.4.0
 -----
 - Speed-up decoding when validate==False
