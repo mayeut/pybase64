@@ -1,7 +1,5 @@
-setuptools>=34.1.1
-wheel>=0.29.0
-pytest>=3.2.1
-six>=1.10.0
-sphinx>=1.6.3
-sphinx_rtd_theme>=0.2.4
-tox>=2.7.0
+setuptools==40.8.0
+wheel==0.32.3
+pytest==4.2.0
+six==1.12.0
+tox==3.7.0
