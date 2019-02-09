@@ -10,17 +10,17 @@ env:
 
 matrix:
   include:
-    - dist: trusty
+    - dist: xenial
       sudo: required
       services:
         - docker
       env: PYBASE64_BUILD_WHEEL=1
-    - dist: trusty
-    - dist: trusty
+    - dist: xenial
+    - dist: xenial
       env: PYBASE64_TOX=1
-    - dist: trusty
+    - dist: xenial
       env: PYBASE64_DOC=1
-    - dist: trusty
+    - dist: xenial
       env: PYBASE64_VALGRIND=1
       addons:
         apt:
