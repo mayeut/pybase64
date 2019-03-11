@@ -1,5 +1,6 @@
 from ._version import __version__
 
+
 try:
     __PYBASE64_SETUP__
 except NameError:

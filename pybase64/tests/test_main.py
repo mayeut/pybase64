@@ -6,10 +6,10 @@ import sys
 from contextlib import contextmanager
 from sys import version_info
 
+import pytest
+
 import pybase64
 from pybase64.__main__ import main
-
-import pytest
 
 
 try:

@@ -4,10 +4,10 @@ import base64
 from binascii import Error as BinAsciiError
 from sys import version_info
 
-import pybase64
+import pytest
 from six import binary_type, text_type
 
-import pytest
+import pybase64
 
 
 try:
