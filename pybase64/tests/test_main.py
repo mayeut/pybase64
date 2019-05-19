@@ -6,9 +6,8 @@ import sys
 from contextlib import contextmanager
 from sys import version_info
 
-import pytest
-
 import pybase64
+import pytest
 from pybase64.__main__ import main
 
 
