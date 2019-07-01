@@ -74,24 +74,35 @@ def bench_one(duration, data, enc, dec, encbytes, altchars=None,
 
 
 def readall(file):
-    try:
-        # Python 3 does not honor the binary flag when using standard streams
-        if file == sys.__stdin__:
+    if file == sys.stdin:
+        if hasattr(file, 'buffer'):
+            # Python 3 does not honor the binary flag,
+            # read from the underlying buffer
             return file.buffer.read()
-        return file.read()
-    finally:
-        file.close()
+        else:
+            return file.read()
+        # do not close the file
+    else:
+        try:
+            return file.read()
+        finally:
+            file.close()
 
 
 def writeall(file, data):
-    try:
-        # Python 3 does not honor the binary flag when using standard streams
-        if file == sys.__stdout__:
+    if file == sys.stdout:
+        if hasattr(file, 'buffer'):
+            # Python 3 does not honor the binary flag,
+            # write to the underlying buffer
             file.buffer.write(data)
-            return
-        file.write(data)
-    finally:
-        file.close()
+        else:
+            file.write(data)
+        # do not close the file
+    else:
+        try:
+            file.write(data)
+        finally:
+            file.close()
 
 
 def benchmark(args):
