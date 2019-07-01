@@ -1,28 +1,17 @@
 from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
+from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
-from sys import version_info
-
-from six import binary_type, text_type
-
-
-try:
-    from base64 import encodebytes as builtin_encodebytes
-except ImportError:
-    from base64 import encodestring as builtin_encodebytes
 
 
 __all__ = ['b64decode', 'b64encode', 'encodebytes']
 
 
-if version_info < (3, 0):
-    from string import maketrans
-
-_bytes_types = (binary_type, bytearray)  # Types acceptable as binary data
+_bytes_types = (bytes, bytearray)  # Types acceptable as binary data
 
 
 def _get_bytes(s):
-    if isinstance(s, text_type):
+    if isinstance(s, str):
         try:
             return s.encode('ascii')
         except UnicodeEncodeError:
@@ -57,33 +46,30 @@ def b64decode(s, altchars=None, validate=False):
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
-    if version_info < (3, 0) or validate:
-        if validate and len(s) % 4 != 0:
+    if validate:
+        if len(s) % 4 != 0:
             raise BinAsciiError('Incorrect padding')
         s = _get_bytes(s)
         if altchars is not None:
             altchars = _get_bytes(altchars)
             assert len(altchars) == 2, repr(altchars)
-            if version_info < (3, 0):
-                map = maketrans(altchars, b'+/')
-            else:
-                map = bytes.maketrans(altchars, b'+/')
+            map = bytes.maketrans(altchars, b'+/')
             s = s.translate(map)
         try:
-            result = builtin_decode(s, altchars)
+            result = builtin_decode(s, altchars, validate=False)
         except TypeError as e:
             raise BinAsciiError(str(e))
-        if validate:
-            # check length of result vs length of input
-            padding = 0
-            if len(s) > 1 and s[-2] in (b'=', 61):
-                padding = padding + 1
-            if len(s) > 0 and s[-1] in (b'=', 61):
-                padding = padding + 1
-            if 3 * (len(s) / 4) - padding != len(result):
-                raise BinAsciiError('Non-base64 digit found')
+
+        # check length of result vs length of input
+        padding = 0
+        if len(s) > 1 and s[-2] in (b'=', 61):
+            padding = padding + 1
+        if len(s) > 0 and s[-1] in (b'=', 61):
+            padding = padding + 1
+        if 3 * (len(s) / 4) - padding != len(result):
+            raise BinAsciiError('Non-base64 digit found')
         return result
-    return builtin_decode(s, altchars)
+    return builtin_decode(s, altchars, validate=False)
 
 
 def b64encode(s, altchars=None):
@@ -100,10 +86,6 @@ def b64encode(s, altchars=None):
     if altchars is not None:
         altchars = _get_bytes(altchars)
         assert len(altchars) == 2, repr(altchars)
-    if version_info < (3, 0):
-        if isinstance(s, text_type):
-            raise TypeError('a bytes-like object is required, not \''
-                            + type(s).__name__ + '\'')
     return builtin_encode(s, altchars)
 
 

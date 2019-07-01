@@ -1,10 +1,8 @@
 # coding: utf-8
 
 import base64
+from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
-from sys import version_info
-
-from six import binary_type, text_type
 
 import pybase64
 import pytest
@@ -18,12 +16,6 @@ try:
     _has_extension = True
 except ImportError:
     _has_extension = False
-
-if version_info < (3, 0):
-    from base64 import encodestring as b64encodebytes
-    from string import maketrans
-else:
-    from base64 import encodebytes as b64encodebytes
 
 
 STD = 0
@@ -89,10 +81,7 @@ test_vectors_b64_list = [
 
 test_vectors_b64 = []
 for altchars in altchars_lut:
-    if version_info < (3, 0):
-        trans = maketrans(b'+/', altchars)
-    else:
-        trans = binary_type.maketrans(b'+/', altchars)
+    trans = bytes.maketrans(b'+/', altchars)
     test_vectors_b64.append(
         [vector.translate(trans)
             for vector in test_vectors_b64_list])
@@ -207,12 +196,9 @@ def test_dec_helper(altchars_id, vector_id, simd):
 @param_vector
 @param_altchars_helper
 def test_dec_helper_unicode(altchars_id, vector_id, simd):
-    if altchars_id == URL and version_info < (3, 0):
-        pytest.skip(
-            'decoding urlsafe unicode strings is not supported in python 2.x')
     vector = test_vectors_b64[altchars_id][vector_id]
-    test = dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
-    base = ref_dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
+    test = dec_helper_lut[altchars_id](str(vector, 'utf-8'))
+    base = ref_dec_helper_lut[altchars_id](str(vector, 'utf-8'))
     assert test == base
 
 
@@ -231,7 +217,7 @@ def test_rnd_helper(altchars_id, vector_id, simd):
 @param_altchars_helper
 def test_rnd_helper_unicode(altchars_id, vector_id, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
-    test = dec_helper_lut[altchars_id](text_type(vector, 'utf-8'))
+    test = dec_helper_lut[altchars_id](str(vector, 'utf-8'))
     test = enc_helper_lut[altchars_id](test)
     assert test == vector
 
@@ -264,8 +250,6 @@ def test_dec(altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     if validate:
-        if version_info < (3, 0):
-            pytest.skip('validate is not supported in python 2.x')
         base = base64.b64decode(vector, altchars, validate)
     else:
         base = base64.b64decode(vector, altchars)
@@ -279,19 +263,13 @@ def test_dec(altchars_id, vector_id, validate, simd):
 @param_validate
 def test_dec_unicode(altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
-    vector = text_type(vector, 'utf-8')
+    vector = str(vector, 'utf-8')
     altchars = altchars_lut[altchars_id]
     if altchars_id == STD:
         altchars = None
     else:
-        altchars = text_type(altchars, 'utf-8')
-    if altchars_id != STD and version_info < (3, 0):
-        pytest.skip(
-            'decoding non standard unicode strings is not supported in '
-            'python 2.x')
+        altchars = str(altchars, 'utf-8')
     if validate:
-        if version_info < (3, 0):
-            pytest.skip('validate is not supported in python 2.x')
         base = base64.b64decode(vector, altchars, validate)
     else:
         base = base64.b64decode(vector, altchars)
@@ -318,7 +296,7 @@ def test_rnd(altchars_id, vector_id, validate, simd):
 def test_rnd_unicode(altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
-    test = pybase64.b64decode(text_type(vector, 'utf-8'), altchars, validate)
+    test = pybase64.b64decode(str(vector, 'utf-8'), altchars, validate)
     test = pybase64.b64encode(test, altchars)
     assert test == vector
 

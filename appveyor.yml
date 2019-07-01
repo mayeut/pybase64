@@ -2,7 +2,7 @@ environment:
   global:
     CIBW_TEST_REQUIRES: "pytest"
     CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
-    CIBW_SKIP: cp27-win* cp33-win* cp34-win*
+    CIBW_SKIP: cp27* cp34*
     PYPI_USER: mayeut
     PYPI_TEST_PASSWD:
       secure: ZRIjeYLVIKQk/C14I2QdcODmKwGUGmxznT4xLuZIZvM=
@@ -11,12 +11,8 @@ environment:
 install:
   - git submodule update --init --recursive
   - python -m pip install --upgrade pip
-  - pip install -r requirements.txt -r requirements-cibuildwheel.txt
+  - pip install -r requirements-cibuildwheel.txt
 build_script:
-# Test with cp27, extension shall fail to build silently (optional)
-  - python setup.py build_ext -i -f -v
-# But still, tests shall pass
-  - pytest
 # Build wheels
   - cibuildwheel --output-dir todeploy
   - set

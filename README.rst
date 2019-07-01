@@ -123,6 +123,11 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.0.0
+-----
+- Drop python 3.4 support
+- Drop python 2.7 support
+
 0.5.0
 -----
 - Publish python 3.7 wheels

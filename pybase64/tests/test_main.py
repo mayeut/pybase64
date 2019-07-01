@@ -4,7 +4,6 @@ import os
 import re
 import sys
 from contextlib import contextmanager
-from sys import version_info
 
 import pybase64
 import pytest
@@ -138,12 +137,8 @@ def test_help(args):
 
 def test_version():
     with capture(['-V']) as c:
-        if version_info < (3, 4):
-            assert c.out == ''
-            assert c.err.startswith('pybase64 ' + pybase64.__version__)
-        else:
-            assert c.err == ''
-            assert c.out.startswith('pybase64 ' + pybase64.__version__)
+        assert c.err == ''
+        assert c.out.startswith('pybase64 ' + pybase64.__version__)
         assert c.exception.code == 0
 
 

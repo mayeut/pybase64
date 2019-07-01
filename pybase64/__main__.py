@@ -1,21 +1,15 @@
 import argparse
 import base64
 import sys
+from base64 import b64decode as b64decodeValidate
+from base64 import encodebytes as b64encodebytes
 from timeit import default_timer as timer
 
 import pybase64
 
 
-if sys.version_info < (3, 0):
-    from pybase64._fallback import b64decode as b64decodeValidate
-    from base64 import encodestring as b64encodebytes
-else:
-    from base64 import b64decode as b64decodeValidate
-    from base64 import encodebytes as b64encodebytes
-
-
-def bench_one(duration, data, enc, dec, encbytes,
-              altchars=None, validate=False):
+def bench_one(duration, data, enc, dec, encbytes, altchars=None,
+              validate=False):
     duration = duration / 2.0
 
     if not validate and altchars is None:
@@ -82,9 +76,8 @@ def bench_one(duration, data, enc, dec, encbytes,
 def readall(file):
     try:
         # Python 3 does not honor the binary flag when using standard streams
-        if sys.version_info >= (3, 0):
-            if file == sys.__stdin__:
-                return file.buffer.read()
+        if file == sys.__stdin__:
+            return file.buffer.read()
         return file.read()
     finally:
         file.close()
@@ -93,10 +86,9 @@ def readall(file):
 def writeall(file, data):
     try:
         # Python 3 does not honor the binary flag when using standard streams
-        if sys.version_info >= (3, 0):
-            if file == sys.__stdout__:
-                file.buffer.write(data)
-                return
+        if file == sys.__stdout__:
+            file.buffer.write(data)
+            return
         file.write(data)
     finally:
         file.close()

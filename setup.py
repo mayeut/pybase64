@@ -1,3 +1,4 @@
+import builtins
 import glob
 import os
 import runpy
@@ -13,10 +14,6 @@ from codecs import open
 from os import path
 from os import environ
 
-if sys.version_info[0] >= 3:
-    import builtins
-else:
-    import __builtin__ as builtins
 
 # Not to try loading things from the main module during setup
 builtins.__PYBASE64_SETUP__ = True
@@ -24,8 +21,8 @@ builtins.__PYBASE64_SETUP__ = True
 from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities
 
 
-if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 3):
-    raise RuntimeError("Python version 2.7 or >= 3.3 required.")
+if sys.version_info[:2] < (3, 5):
+    raise RuntimeError("Python version >= 3.5 required.")
 
 here = path.abspath(path.dirname(__file__))
 
@@ -65,8 +62,6 @@ pybase64_ext = Extension(
     include_dirs=["base64/include/", "base64/lib/"],
 )
 
-# optional is not supported by Python 2
-# manage this in the cutom build command
 pybase64_ext.optional = environ.get('CIBUILDWHEEL', '0') != '1'
 
 pybase64_ext.sources_ssse3 = ["base64/lib/arch/ssse3/codec.c"]
@@ -107,85 +102,78 @@ class pybase64_build_ext(build_ext):
                 "a list of source filenames" % ext.name)
         sources = list(sources)
 
+        simd_sources = dict()
+        simd_sources[CCompilerCapabilities.SIMD_SSSE3] = ext.sources_ssse3
+        simd_sources[CCompilerCapabilities.SIMD_SSE41] = ext.sources_sse41
+        simd_sources[CCompilerCapabilities.SIMD_SSE42] = ext.sources_sse42
+        simd_sources[CCompilerCapabilities.SIMD_AVX] = ext.sources_avx
+        simd_sources[CCompilerCapabilities.SIMD_AVX2] = ext.sources_avx2
+        simd_sources[CCompilerCapabilities.SIMD_NEON32] = \
+            ext.sources_neon32
+        simd_sources[CCompilerCapabilities.SIMD_NEON64] = \
+            ext.sources_neon64
+
+        ext_path = self.get_ext_fullpath(ext.name)
+        depends = sources + ext.depends
+
         try:
-            simd_sources = dict()
-            simd_sources[CCompilerCapabilities.SIMD_SSSE3] = ext.sources_ssse3
-            simd_sources[CCompilerCapabilities.SIMD_SSE41] = ext.sources_sse41
-            simd_sources[CCompilerCapabilities.SIMD_SSE42] = ext.sources_sse42
-            simd_sources[CCompilerCapabilities.SIMD_AVX] = ext.sources_avx
-            simd_sources[CCompilerCapabilities.SIMD_AVX2] = ext.sources_avx2
-            simd_sources[CCompilerCapabilities.SIMD_NEON32] = \
-                ext.sources_neon32
-            simd_sources[CCompilerCapabilities.SIMD_NEON64] = \
-                ext.sources_neon64
+            simd_sources_values = simd_sources.itervalues()
+        except AttributeError:
+            simd_sources_values = simd_sources.values()
+        for add_sources in simd_sources_values:
+            depends = depends + add_sources
 
-            ext_path = self.get_ext_fullpath(ext.name)
-            depends = sources + ext.depends
+        if not (self.force or newer_group(depends, ext_path, 'newer')):
+            log.debug("skipping '%s' extension (up-to-date)", ext.name)
+            return
+        else:
+            log.info("building '%s' extension", ext.name)
 
-            try:
-                simd_sources_values = simd_sources.itervalues()
-            except AttributeError:
-                simd_sources_values = simd_sources.values()
-            for add_sources in simd_sources_values:
-                depends = depends + add_sources
+        capabilities = CCompilerCapabilities(self.compiler)
+        pybase64_write_config(capabilities)
 
-            if not (self.force or newer_group(depends, ext_path, 'newer')):
-                log.debug("skipping '%s' extension (up-to-date)", ext.name)
-                return
+        objects = list()
+
+        for simd_opt in (CCompilerCapabilities.SIMD_SSSE3,
+                         CCompilerCapabilities.SIMD_SSE41,
+                         CCompilerCapabilities.SIMD_SSE42,
+                         CCompilerCapabilities.SIMD_AVX,
+                         CCompilerCapabilities.SIMD_AVX2,
+                         CCompilerCapabilities.SIMD_NEON32,
+                         CCompilerCapabilities.SIMD_NEON64):
+            if len(simd_sources[simd_opt]) == 0:
+                continue
+            if capabilities.has(simd_opt):
+                objects = objects + self.compiler.compile(
+                    simd_sources[simd_opt],
+                    output_dir=self.build_temp,
+                    include_dirs=ext.include_dirs,
+                    debug=self.debug,
+                    extra_postargs=capabilities.flags(simd_opt),
+                    depends=ext.depends)
             else:
-                log.info("building '%s' extension", ext.name)
+                sources = sources + simd_sources[simd_opt]
 
-            capabilities = CCompilerCapabilities(self.compiler)
-            pybase64_write_config(capabilities)
+        objects = objects + self.compiler.compile(
+            sources,
+            output_dir=self.build_temp,
+            include_dirs=ext.include_dirs,
+            debug=self.debug,
+            extra_postargs=[],
+            depends=ext.depends)
 
-            objects = list()
+        # Detect target language, if not provided
+        language = ext.language or self.compiler.detect_language(sources)
 
-            for simd_opt in (CCompilerCapabilities.SIMD_SSSE3,
-                             CCompilerCapabilities.SIMD_SSE41,
-                             CCompilerCapabilities.SIMD_SSE42,
-                             CCompilerCapabilities.SIMD_AVX,
-                             CCompilerCapabilities.SIMD_AVX2,
-                             CCompilerCapabilities.SIMD_NEON32,
-                             CCompilerCapabilities.SIMD_NEON64):
-                if len(simd_sources[simd_opt]) == 0:
-                    continue
-                if capabilities.has(simd_opt):
-                    objects = objects + self.compiler.compile(
-                        simd_sources[simd_opt],
-                        output_dir=self.build_temp,
-                        include_dirs=ext.include_dirs,
-                        debug=self.debug,
-                        extra_postargs=capabilities.flags(simd_opt),
-                        depends=ext.depends)
-                else:
-                    sources = sources + simd_sources[simd_opt]
-
-            objects = objects + self.compiler.compile(
-                sources,
-                output_dir=self.build_temp,
-                include_dirs=ext.include_dirs,
-                debug=self.debug,
-                extra_postargs=[],
-                depends=ext.depends)
-
-            # Detect target language, if not provided
-            language = ext.language or self.compiler.detect_language(sources)
-
-            self.compiler.link_shared_object(
-                objects, ext_path,
-                libraries=self.get_libraries(ext),
-                library_dirs=ext.library_dirs,
-                runtime_library_dirs=ext.runtime_library_dirs,
-                export_symbols=self.get_export_symbols(ext),
-                debug=self.debug,
-                build_temp=self.build_temp,
-                target_lang=language)
-        except:  # noqa
-            if ext.optional:
-                log.warn("warning: Extension %s could not be built" % ext.name)
-            else:
-                log.error("error: Extension %s could not be built" % ext.name)
-                raise
+        self.compiler.link_shared_object(
+            objects, ext_path,
+            libraries=self.get_libraries(ext),
+            library_dirs=ext.library_dirs,
+            runtime_library_dirs=ext.runtime_library_dirs,
+            export_symbols=self.get_export_symbols(ext),
+            debug=self.debug,
+            build_temp=self.build_temp,
+            target_lang=language)
 
 
 # Let's define a class to clean in-place built extensions
@@ -212,10 +200,8 @@ class CleanExtensionCommand(Command):
 
 
 # Get the C code
-exts = []
-exts.append(
-    pybase64_ext
-)
+exts = [pybase64_ext]
+
 
 setup(
     name='pybase64',
@@ -272,7 +258,7 @@ setup(
     ],
 
     # Supported python versions
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    python_requires='>=3.5',
 
     # What does your project relate to?
     keywords='base64',
@@ -280,14 +266,13 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(),
-    install_requires=['six>=1.10.0'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'test': ['pytest>=3.2.1'],
+        'test': ['pytest>=5.0.0'],
     },
 
     # To provide executable scripts, use entry points in preference to the

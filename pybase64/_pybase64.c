@@ -695,7 +695,6 @@ static PyMethodDef _pybase64_methods[] = {
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
-#if PY_MAJOR_VERSION >= 3
 /* Initialize this module. */
 static struct PyModuleDef _pybase64_module = {
         PyModuleDef_HEAD_INIT,
@@ -717,37 +716,17 @@ PyInit__pybase64(void)
     if ((m = PyModule_Create(&_pybase64_module)) == NULL) {
         return NULL;
     }
-#else
-
-void
-init_pybase64(void)
-{
-    PyObject *m = NULL;
-    if ((m = Py_InitModule3("pybase64._pybase64", _pybase64_methods, NULL)) == NULL) {
-        return;
-    }
-#endif
 
     simd_flags = pybase64_get_simd_flags();
     set_simd_path(simd_flags);
 
     if ((m != NULL) && ((g_BinAsciiError = pybase64_import_BinAsciiError(m)) == NULL)) {
-#if PY_MAJOR_VERSION >= 3
         Py_DECREF(m);
-#endif
         m = NULL;
     }
-
     if ((m != NULL) && ((g_fallbackDecode = pybase64_import_fallbackDecode(m)) == NULL)) {
-#if PY_MAJOR_VERSION >= 3
         Py_DECREF(m);
-#endif
         m = NULL;
     }
-
-#if PY_MAJOR_VERSION >= 3
     return m;
-#else
-    return;
-#endif
 }
