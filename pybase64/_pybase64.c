@@ -13,7 +13,6 @@
 
 
 static PyObject* g_BinAsciiError = NULL;
-static PyObject* g_fallbackDecode = NULL;
 static int libbase64_simd_flag = 0;
 static uint32_t active_simd_flag = 0U;
 static uint32_t simd_flags;
@@ -669,21 +668,6 @@ static PyObject* pybase64_import_BinAsciiError(PyObject* module)
     return binAsciiError;
 }
 
-static PyObject* pybase64_import_fallbackDecode(PyObject* module)
-{
-    PyObject* fallbackDecode;
-
-    fallbackDecode = pybase64_import("pybase64._fallback", "b64decode");
-    if (fallbackDecode == NULL) {
-        return NULL;
-    }
-    if (PyModule_AddObject(module, "_fallbackDecode", fallbackDecode) != 0) {
-        Py_DECREF(fallbackDecode);
-        return NULL;
-    }
-    return fallbackDecode;
-}
-
 static PyMethodDef _pybase64_methods[] = {
     { "b64encode", (PyCFunction)pybase64_encode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
@@ -724,9 +708,6 @@ PyInit__pybase64(void)
         Py_DECREF(m);
         m = NULL;
     }
-    if ((m != NULL) && ((g_fallbackDecode = pybase64_import_fallbackDecode(m)) == NULL)) {
-        Py_DECREF(m);
-        m = NULL;
-    }
+
     return m;
 }
