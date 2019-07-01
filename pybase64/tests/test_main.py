@@ -101,6 +101,16 @@ def test_encode(capsysbinary, hellofile, args, expect):
     assert captured.out == expect
 
 
+def test_encode_ouputfile(capsys, emptyfile, hellofile):
+    main(['encode', '-o', hellofile, emptyfile])
+    captured = capsys.readouterr()
+    assert captured.err == ''
+    assert captured.out == ''
+    with open(hellofile, 'rb') as f:
+        data = f.read()
+    assert data == b''
+
+
 @pytest.mark.parametrize(
     "args,b64string",
     [
