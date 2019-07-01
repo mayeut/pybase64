@@ -221,6 +221,11 @@ setup(
 
     # The project's main homepage.
     url='https://github.com/mayeut/pybase64',
+    project_urls={
+        'Source': 'https://github.com/mayeut/pybase64',
+        'Tracker': 'https://github.com/mayeut/pybase64/issues',
+        'Documentation': 'https://pybase64.readthedocs.io/en/stable',
+    },
 
     # Author details
     author='Matthieu Darbois',
