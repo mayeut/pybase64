@@ -10,8 +10,8 @@ environment:
       secure: o55rJbXfXp0VJy6ug4QfxfTc1ixFmtm0Bivh4yVTkXtBhzIpSJpXnx4bnV8XjYFpPuimXV+ndlLf6wqDSt66n76xKjrqm9kycdSs6fRuPioYQVGzRJyADZJ3+MHxXJHlXwt5/f3DsV2KvBmqZ0YO7NZJX6kWHSS4eBhNoW/cdTkMSGAjG3rLl/ln6Xi+n1j89R11z80tAzUOUIUZ5B1Ync8aW3Ze0TyToQm8EPM+gxW/Ded+B1MV89KXSpjQTUy2Hwb/pEgFubA9ffP1LXVhJQ==
 install:
   - git submodule update --init --recursive
-  - C:\\Python37-x64\\python.exe -m pip install --upgrade pip
-  - C:\\Python37-x64\\python.exe -m pip install -r requirements-cibuildwheel.txt
+  - C:\\Python37-x64\\python.exe -m pip install --no-warn-script-location --upgrade pip
+  - C:\\Python37-x64\\python.exe -m pip install --no-warn-script-location -r requirements-cibuildwheel.txt
 build_script:
 # Build wheels
   - C:\\Python37-x64\\python.exe -m cibuildwheel --output-dir todeploy
@@ -40,7 +40,7 @@ on_success:
       }
       if($deploy) {
         Write-Output ("Deploying master to Test PyPI...")
-        C:\\Python37-x64\\python.exe -m pip install --upgrade twine
+        C:\\Python37-x64\\python.exe -m pip install --no-warn-script-location --upgrade twine
         C:\\Python37-x64\\python.exe -m twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWD --repository-url https://test.pypi.org/legacy/ --skip-existing todeploy\*.whl
       }
   # Deploy on tags to PyPI
@@ -62,7 +62,7 @@ on_success:
       }
       if($deploy) {
         Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
-        C:\\Python37-x64\\python.exe -m pip install --upgrade twine
+        C:\\Python37-x64\\python.exe -m pip install --no-warn-script-location --upgrade twine
         C:\\Python37-x64\\python.exe -m twine upload -u $env:PYPI_USER -p $env:PYPI_PROD_PASSWD --skip-existing todeploy\*.whl
       }
 
