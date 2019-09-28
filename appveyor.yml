@@ -3,11 +3,11 @@ environment:
     CIBW_TEST_REQUIRES: "pytest"
     CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
     CIBW_SKIP: cp27* cp34*
-    PYPI_USER: mayeut
+    PYPI_USER: __token__
     PYPI_TEST_PASSWD:
-      secure: ZRIjeYLVIKQk/C14I2QdcODmKwGUGmxznT4xLuZIZvM=
+      secure: vzTOZI7pPw7eb6riTdTkEJW18jtkP5Y/i5qwW4JaAhTLVRqHVydYBOTJyJJ9icjdLMEYpfrg8/yIgN6nYnkfq0QvfJGtuB/5eIHnPNUWI0u/JXvPL+tMOS8kDM8f5/lyRfcNyO9McBxs0BV3rZXGITuMEhrXSrxHbBGGjCVBxGfQLIEor0FSSwbz9g0bEo1EJ8SYtusuBF/ww6PYChX4DL3BAq14trvK07QWFuNQ7Og33bHyS8hHQXQBtYImgIQL1rAP6HoJJfeFuA1pyMMoHA==
     PYPI_PROD_PASSWD:
-      secure: XQEaBWE6RLDsHKi0mUhvkEwBRIpixpmt5bPh/uAKNFs=
+      secure: o55rJbXfXp0VJy6ug4QfxfTc1ixFmtm0Bivh4yVTkXtBhzIpSJpXnx4bnV8XjYFpPuimXV+ndlLf6wqDSt66n76xKjrqm9kycdSs6fRuPioYQVGzRJyADZJ3+MHxXJHlXwt5/f3DsV2KvBmqZ0YO7NZJX6kWHSS4eBhNoW/cdTkMSGAjG3rLl/ln6Xi+n1j89R11z80tAzUOUIUZ5B1Ync8aW3Ze0TyToQm8EPM+gxW/Ded+B1MV89KXSpjQTUy2Hwb/pEgFubA9ffP1LXVhJQ==
 install:
   - git submodule update --init --recursive
   - python -m pip install --upgrade pip
