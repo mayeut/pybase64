@@ -28,7 +28,7 @@ matrix:
           packages:
             - valgrind
     - os: osx
-      osx_image: xcode9.2
+      osx_image: xcode9.4
       language: generic
       env: PYBASE64_BUILD_WHEEL=1
       before_install:
@@ -36,7 +36,7 @@ matrix:
         - brew postinstall openssl
         - SSL_CERT_FILE=$(brew --prefix)/etc/openssl/cert.pem
         # need to use a virtualenv for deployement
-        - python2 -m virtualenv venv
+        - python3 -m venv venv
         - source venv/bin/activate
 
 install:
