@@ -1,4 +1,4 @@
-setuptools==45.1.0
+setuptools==45.2.0
 wheel==0.34.2
 pytest==5.3.5
 tox==3.14.3
