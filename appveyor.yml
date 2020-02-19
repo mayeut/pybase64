@@ -1,3 +1,9 @@
+# Don't build the depandabot branches that dependabot creates; it's redundant
+# with the PR builds that AppVeyor also does.
+branches:
+  except:
+    - /^dependabot/
+
 environment:
   global:
     CIBW_TEST_REQUIRES: "pytest"

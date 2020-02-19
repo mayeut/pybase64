@@ -3,6 +3,12 @@ python: "3.7"
 notifications:
   email: false
 
+# Don't build the depandabot branches that dependabot creates; it's redundant
+# with the PR builds that Travis also does.
+branches:
+  except:
+    - /^dependabot/
+
 env:
   global:
     - CIBW_TEST_REQUIRES="pytest"
