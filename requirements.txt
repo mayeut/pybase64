@@ -1,4 +1,4 @@
 setuptools==46.0.0
 wheel==0.34.2
-pytest==5.3.5
+pytest==5.4.0
 tox==3.14.5
