@@ -13,7 +13,7 @@ env:
   global:
     - CIBW_TEST_REQUIRES="pytest"
     - CIBW_TEST_COMMAND="pytest --pyargs pybase64"
-    - CIBW_SKIP="cp27* cp34*"
+    - CIBW_SKIP="?p27* pp*"
 
 matrix:
   include:

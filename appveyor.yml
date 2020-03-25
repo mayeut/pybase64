@@ -8,7 +8,7 @@ environment:
   global:
     CIBW_TEST_REQUIRES: "pytest"
     CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
-    CIBW_SKIP: cp27* cp34*
+    CIBW_SKIP: ?p27* pp*
     PYPI_USER: __token__
     PYPI_TEST_PASSWD:
       secure: vzTOZI7pPw7eb6riTdTkEJW18jtkP5Y/i5qwW4JaAhTLVRqHVydYBOTJyJJ9icjdLMEYpfrg8/yIgN6nYnkfq0QvfJGtuB/5eIHnPNUWI0u/JXvPL+tMOS8kDM8f5/lyRfcNyO9McBxs0BV3rZXGITuMEhrXSrxHbBGGjCVBxGfQLIEor0FSSwbz9g0bEo1EJ8SYtusuBF/ww6PYChX4DL3BAq14trvK07QWFuNQ7Og33bHyS8hHQXQBtYImgIQL1rAP6HoJJfeFuA1pyMMoHA==
