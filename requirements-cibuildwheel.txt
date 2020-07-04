@@ -1,1 +1,1 @@
-cibuildwheel==1.5.0
+cibuildwheel==1.5.1
