@@ -4,15 +4,15 @@ import base64
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 
-import pybase64
 import pytest
+
+import pybase64
 
 
 try:
-    from pybase64._pybase64 import _get_simd_path
-    from pybase64._pybase64 import _set_simd_path
-    from pybase64._pybase64 import _get_simd_flags_compile
-    from pybase64._pybase64 import _get_simd_flags_runtime
+    from pybase64._pybase64 import (_get_simd_flags_compile,
+                                    _get_simd_flags_runtime, _get_simd_path,
+                                    _set_simd_path)
     _has_extension = True
 except ImportError:
     _has_extension = False

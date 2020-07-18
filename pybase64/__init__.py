@@ -10,15 +10,12 @@ except NameError:
 if not __PYBASE64_SETUP__:
     from ._license import _license
     try:
-        from ._pybase64 import b64encode
-        from ._pybase64 import b64decode
         from ._pybase64 import encodebytes  # noqa: F401
-        from ._pybase64 import _get_simd_path
+        from ._pybase64 import _get_simd_path, b64decode, b64encode
         _has_extension = True
     except ImportError:
-        from ._fallback import b64encode
-        from ._fallback import b64decode
         from ._fallback import encodebytes  # noqa: F401
+        from ._fallback import b64decode, b64encode
         _has_extension = False
 
     def get_license_text():

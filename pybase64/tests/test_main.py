@@ -4,8 +4,9 @@ import os
 import re
 import sys
 
-import pybase64
 import pytest
+
+import pybase64
 from pybase64.__main__ import main
 
 
