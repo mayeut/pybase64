@@ -57,7 +57,8 @@ pybase64_ext = Extension(
         "pybase64/_pybase64_get_simd_flags.c",
         "base64/lib/lib.c",
         "base64/lib/codec_choose.c",
-        "base64/lib/arch/generic/codec.c"
+        "base64/lib/arch/generic/codec.c",
+        "base64/lib/tables/tables.c",
     ],
     include_dirs=["base64/include/", "base64/lib/"],
 )
