@@ -4,6 +4,7 @@
 #include <config.h>
 #include <libbase64.h>
 #include <codecs.h>
+#include <tables/tables.h>
 #include <string.h> /* memset */
 #include <assert.h>
 
@@ -164,7 +165,7 @@ static int next_valid_padding(const uint8_t *src, size_t srclen)
 
     while (srclen && (ret == 255))
     {
-        ret = base64_table_dec[*src++];
+        ret = base64_table_dec_8bit[*src++];
         srclen--;
     }
 
@@ -186,10 +187,10 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
                 uint8_t  aschar[4];
             } x;
 
-            x.asint = base64_table_dec_d0[src[0]]
-                    | base64_table_dec_d1[src[1]]
-                    | base64_table_dec_d2[src[2]]
-                    | base64_table_dec_d3[src[3]];
+            x.asint = base64_table_dec_32bit_d0[src[0]]
+                    | base64_table_dec_32bit_d1[src[1]]
+                    | base64_table_dec_32bit_d2[src[2]]
+                    | base64_table_dec_32bit_d3[src[3]];
 #if BASE64_LITTLE_ENDIAN
             /* LUTs for little-endian set Most Significant Bit
                in case of invalid character */
@@ -220,7 +221,7 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
         {
             uint8_t c = *src++; srclen--;
             uint8_t q;
-            if ((q = base64_table_dec[c]) >= 254) {
+            if ((q = base64_table_dec_8bit[c]) >= 254) {
                 continue;
             }
             carry = q << 2;
@@ -233,7 +234,7 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             }
             uint8_t c = *src++;
             uint8_t q;
-            if ((q = base64_table_dec[c]) >= 254) {
+            if ((q = base64_table_dec_8bit[c]) >= 254) {
                 continue;
             }
             *out++ = carry | (q >> 4);
@@ -248,7 +249,7 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             }
             uint8_t c = *src++;
             uint8_t q;
-            if ((q = base64_table_dec[c]) >= 254) {
+            if ((q = base64_table_dec_8bit[c]) >= 254) {
                 if (q == 254) {
                     /* if the next valid byte is '=' => end */
                     if (next_valid_padding(src, srclen) == 254) {
@@ -269,7 +270,7 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             }
             uint8_t c = *src++;
             uint8_t q;
-            if ((q = base64_table_dec[c]) >= 254) {
+            if ((q = base64_table_dec_8bit[c]) >= 254) {
                 if (q == 254) {
                     srclen = 0U;
                     break;
