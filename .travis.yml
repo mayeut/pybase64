@@ -17,15 +17,15 @@ env:
 
 matrix:
   include:
-    - dist: xenial
+    - dist: focal
       sudo: required
       services:
         - docker
       env: PYBASE64_BUILD_WHEEL=1
-    - dist: xenial
-    - dist: xenial
+    - dist: focal
+    - dist: focal
       env: PYBASE64_TOX=1
-    - dist: xenial
+    - dist: focal
       env: PYBASE64_DOC=1
     - dist: xenial
       env: PYBASE64_VALGRIND=1
