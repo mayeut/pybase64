@@ -388,6 +388,9 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     PyObject* in_alphabet = NULL;
     PyObject* in_object;
     PyObject* out_object = NULL;
+    const void* source = NULL;
+    Py_ssize_t source_len;
+    int source_use_buffer = 0;
 
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", kwlist, &in_object, &in_alphabet, &validation)) {
@@ -399,53 +402,61 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     }
 
     if (PyUnicode_Check(in_object)) {
-        //buffer.buf = PyUnicode_AsUTF8AndSize(in_object, &buffer.len);
-        //if (buffer.buf == NULL) {
-        //    return NULL;
-        //}
-        in_object = PyUnicode_AsASCIIString(in_object);
-        if (in_object == NULL) {
-            if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) {
-                PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
+        if ((PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
+            source = PyUnicode_1BYTE_DATA(in_object);
+            source_len = PyUnicode_GET_LENGTH(in_object);
+        }
+        else {
+            in_object = PyUnicode_AsASCIIString(in_object);
+            if (in_object == NULL) {
+                if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) {
+                    PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
+                }
+                return NULL;
             }
-            return NULL;
         }
     }
     else {
         Py_INCREF(in_object);
     }
-
-    if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
-        Py_DECREF(in_object);
-        return NULL;
-    }
-
-/* TRY: */
-    if (!validation) {
-        PyObject* translate_object = NULL;
-
-        if (use_alphabet) {
-            translate_object = PyBytes_FromStringAndSize(NULL, buffer.len);
-            if (translate_object == NULL) {
-                goto EXCEPT;
-            }
-            translate(buffer.buf, PyBytes_AS_STRING(translate_object), buffer.len, alphabet);
-        }
-        PyBuffer_Release(&buffer);
-        if (translate_object != NULL) {
-            Py_DECREF(in_object);
-            in_object = translate_object;
-        }
+    if (source == NULL) {
         if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
             Py_DECREF(in_object);
             return NULL;
         }
+        source = buffer.buf;
+        source_len = buffer.len;
+        source_use_buffer = 1;
+    }
+
+/* TRY: */
+    if (!validation && use_alphabet) {
+        PyObject* translate_object;
+
+        translate_object = PyBytes_FromStringAndSize(NULL, source_len);
+        if (translate_object == NULL) {
+            goto EXCEPT;
+        }
+        translate(source, PyBytes_AS_STRING(translate_object), source_len, alphabet);
+
+        if (source_use_buffer) {
+            PyBuffer_Release(&buffer);
+            Py_DECREF(in_object);
+        }
+        in_object = translate_object;
+        if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+            Py_DECREF(in_object);
+            return NULL;
+        }
+        source = buffer.buf;
+        source_len = buffer.len;
+        source_use_buffer = 1;
     }
 
     /* No overflow check needed, exact out_len recomputed at the end */
     /* out_len is ceildiv(len / 4) * 3  when len % 4 != 0*/
     /* else out_len is (ceildiv(len / 4) + 1) * 3 */
-    out_len = (size_t)((buffer.len / 4) * 3) + 3U;
+    out_len = (size_t)((source_len / 4) * 3) + 3U;
     out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
     //out_object = PyByteArray_FromStringAndSize(NULL, (Py_ssize_t)out_len);
     if (out_object == NULL) {
@@ -453,8 +464,8 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     }
 
     if (!validation) {
-        if (decode_novalidate(buffer.buf, buffer.len, (uint8_t*)PyBytes_AS_STRING(out_object), &out_len) != 0) {
-        //if (decode_novalidate(buffer.buf, buffer.len, (uint8_t*)PyByteArray_AS_STRING(out_object), &out_len) != 0) {
+        if (decode_novalidate(source, source_len, (uint8_t*)PyBytes_AS_STRING(out_object), &out_len) != 0) {
+        //if (decode_novalidate(source, source_len, (uint8_t*)PyByteArray_AS_STRING(out_object), &out_len) != 0) {
             PyErr_SetString(g_BinAsciiError, "Incorrect padding");
             goto EXCEPT;
         }
@@ -464,8 +475,8 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         const Py_ssize_t src_slice = 16 * 1024;
         const size_t dst_slice = (src_slice / 4) * 3;
         char cache[16 * 1024];
-        Py_ssize_t len = buffer.len;
-        const char* src = (const char*)buffer.buf;
+        Py_ssize_t len = source_len;
+        const char* src = source;
         char* dst = PyBytes_AS_STRING(out_object);
         //char* dst = PyByteArray_AS_STRING(out_object);
 
@@ -492,8 +503,8 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         //out_len += (dst - PyByteArray_AS_STRING(out_object));
     }
     else {
-        if (base64_decode(buffer.buf, buffer.len, PyBytes_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
-        //if (base64_decode(buffer.buf, buffer.len, PyByteArray_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
+        if (base64_decode(source, source_len, PyBytes_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
+        //if (base64_decode(source, source_len, PyByteArray_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
@@ -507,8 +518,10 @@ EXCEPT:
         out_object = NULL;
     }
 FINALLY:
-    PyBuffer_Release(&buffer);
-    Py_DECREF(in_object);
+    if (source_use_buffer) {
+        PyBuffer_Release(&buffer);
+        Py_DECREF(in_object);
+    }
     return out_object;
 }
 
