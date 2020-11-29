@@ -4,7 +4,7 @@ from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
 
 
-__all__ = ['b64decode', 'b64encode', 'encodebytes']
+__all__ = ['b64decode', 'b64encode', 'b64encode_as_string', 'encodebytes']
 
 
 _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
@@ -87,6 +87,20 @@ def b64encode(s, altchars=None):
         altchars = _get_bytes(altchars)
         assert len(altchars) == 2, repr(altchars)
     return builtin_encode(s, altchars)
+
+
+def b64encode_as_string(s, altchars=None):
+    """Encode bytes using the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` to encode.
+
+    Optional ``altchars`` must be a byte string of length 2 which specifies
+    an alternative alphabet for the '+' and '/' characters.  This allows an
+    application to e.g. generate url or filesystem safe Base64 strings.
+
+    The result is returned as a :class:`str` object.
+    """
+    return b64encode(s, altchars).decode('ascii')
 
 
 def encodebytes(s):

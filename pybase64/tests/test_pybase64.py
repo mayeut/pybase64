@@ -161,6 +161,15 @@ param_simd = pytest.mark.parametrize('simd',
                                      indirect=True)
 
 
+param_encode_functions = pytest.mark.parametrize(
+    'efn, ecast',
+    [
+        (pybase64.b64encode, lambda x: x),
+        (pybase64.b64encode_as_string, lambda x: x.encode('ascii'))
+    ]
+)
+
+
 @pytest.fixture
 def simd(request):
     simd_setup(request.param)
@@ -234,10 +243,11 @@ def test_encbytes(vector_id, simd):
 @param_simd
 @param_vector
 @param_altchars
-def test_enc(altchars_id, vector_id, simd):
+@param_encode_functions
+def test_enc(efn, ecast, altchars_id, vector_id, simd):
     vector = test_vectors_bin[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
-    test = pybase64.b64encode(vector, altchars)
+    test = ecast(efn(vector, altchars))
     base = base64.b64encode(vector, altchars)
     assert test == base
 
@@ -281,11 +291,12 @@ def test_dec_unicode(altchars_id, vector_id, validate, simd):
 @param_vector
 @param_altchars
 @param_validate
-def test_rnd(altchars_id, vector_id, validate, simd):
+@param_encode_functions
+def test_rnd(efn, ecast, altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     test = pybase64.b64decode(vector, altchars, validate)
-    test = pybase64.b64encode(test, altchars)
+    test = ecast(efn(test, altchars))
     assert test == vector
 
 
@@ -293,11 +304,12 @@ def test_rnd(altchars_id, vector_id, validate, simd):
 @param_vector
 @param_altchars
 @param_validate
-def test_rnd_unicode(altchars_id, vector_id, validate, simd):
+@param_encode_functions
+def test_rnd_unicode(efn, ecast, altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     test = pybase64.b64decode(str(vector, 'utf-8'), altchars, validate)
-    test = pybase64.b64encode(test, altchars)
+    test = ecast(efn(test, altchars))
     assert test == vector
 
 
@@ -329,9 +341,10 @@ params_invalid_altchars = pytest.mark.parametrize(
 
 @param_simd
 @params_invalid_altchars
-def test_invalid_altchars_enc(altchars, exception, simd):
+@param_encode_functions
+def test_invalid_altchars_enc(efn, ecast, altchars, exception, simd):
     with pytest.raises(exception):
-        pybase64.b64encode(b'ABCD', altchars)
+        efn(b'ABCD', altchars)
 
 
 @param_simd
@@ -403,14 +416,16 @@ def test_invalid_data_dec_validate(vector, altchars, exception, simd):
         pybase64.b64decode(vector, altchars, True)
 
 
-def test_invalid_data_enc_0():
+@param_encode_functions
+def test_invalid_data_enc_0(efn, ecast):
     with pytest.raises(TypeError):
-        pybase64.b64encode(u'this is a test')
+        efn(u'this is a test')
 
 
-def test_invalid_args_enc_0():
+@param_encode_functions
+def test_invalid_args_enc_0(efn, ecast):
     with pytest.raises(TypeError):
-        pybase64.b64encode()
+        efn()
 
 
 def test_invalid_args_dec_0():

@@ -123,6 +123,10 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.1.0
+-----
+- Add b64encode_as_string, same as b64encode but returns a str object instead of a bytes object
+
 1.0.2
 -----
 - Update base64 library
