@@ -7,10 +7,8 @@
 .. |rtd-status| image:: https://readthedocs.org/projects/pybase64/badge/?version=stable
   :target: http://pybase64.readthedocs.io/en/stable/?badge=stable
   :alt: Documentation Status
-.. |travis-status| image:: https://travis-ci.org/mayeut/pybase64.svg?branch=master
-  :target: https://travis-ci.org/mayeut/pybase64
-.. |appveyor-status| image:: https://ci.appveyor.com/api/projects/status/kj3l1f3ys2teg9ha/branch/master?svg=true
-  :target: https://ci.appveyor.com/project/mayeut/pybase64/branch/master
+.. |gha-status| image:: https://github.com/mayeut/pybase64/workflows/Build%20and%20upload%20to%20PyPI/badge.svg
+  :target: https://github.com/mayeut/pybase64/actions?query=workflow%3A%22Build+and+upload+to+PyPI%22
 .. |codecov-status| image:: https://codecov.io/gh/mayeut/pybase64/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/mayeut/pybase64/branch/master
 .. END OF SETUP
@@ -18,7 +16,7 @@
 Fast Base64 implementation
 ==========================
 
-|license-status| |pypi-status| |python-versions| |rtd-status| |travis-status| |appveyor-status| |codecov-status|
+|license-status| |pypi-status| |python-versions| |rtd-status| |gha-status| |codecov-status|
 
 This project is a wrapper on `libbase64 <https://github.com/aklomp/base64>`_.
 
