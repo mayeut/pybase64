@@ -376,7 +376,7 @@ static PyObject* pybase64_encode_as_string(PyObject* self, PyObject* args, PyObj
     return pybase64_encode_impl(self, args, kwds, 1);
 }
 
-static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_bytearray)
 {
     static const char *kwlist[] = { "", "altchars", "validate", NULL };
 
@@ -391,6 +391,7 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     const void* source = NULL;
     Py_ssize_t source_len;
     int source_use_buffer = 0;
+    void* dest;
 
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", kwlist, &in_object, &in_alphabet, &validation)) {
@@ -457,15 +458,24 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
     /* out_len is ceildiv(len / 4) * 3  when len % 4 != 0*/
     /* else out_len is (ceildiv(len / 4) + 1) * 3 */
     out_len = (size_t)((source_len / 4) * 3) + 3U;
-    out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-    //out_object = PyByteArray_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+    if (return_bytearray) {
+        out_object = PyByteArray_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+    }
+    else {
+        out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+    }
     if (out_object == NULL) {
         goto EXCEPT;
     }
+    if (return_bytearray) {
+        dest = PyByteArray_AS_STRING(out_object);
+    }
+    else {
+        dest = PyBytes_AS_STRING(out_object);
+    }
 
     if (!validation) {
-        if (decode_novalidate(source, source_len, (uint8_t*)PyBytes_AS_STRING(out_object), &out_len) != 0) {
-        //if (decode_novalidate(source, source_len, (uint8_t*)PyByteArray_AS_STRING(out_object), &out_len) != 0) {
+        if (decode_novalidate(source, source_len, dest, &out_len) != 0) {
             PyErr_SetString(g_BinAsciiError, "Incorrect padding");
             goto EXCEPT;
         }
@@ -477,8 +487,7 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
         char cache[16 * 1024];
         Py_ssize_t len = source_len;
         const char* src = source;
-        char* dst = PyBytes_AS_STRING(out_object);
-        //char* dst = PyByteArray_AS_STRING(out_object);
+        char* dst = dest;
 
         while (len > src_slice) {
             size_t dst_len = dst_slice;
@@ -499,18 +508,20 @@ static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
-        out_len += (dst - PyBytes_AS_STRING(out_object));
-        //out_len += (dst - PyByteArray_AS_STRING(out_object));
+        out_len += (dst - (char*)dest);
     }
     else {
-        if (base64_decode(source, source_len, PyBytes_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
-        //if (base64_decode(source, source_len, PyByteArray_AS_STRING(out_object), &out_len, libbase64_simd_flag) <= 0) {
+        if (base64_decode(source, source_len, dest, &out_len, libbase64_simd_flag) <= 0) {
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
     }
-    _PyBytes_Resize(&out_object, (Py_ssize_t)out_len);
-    //PyByteArray_Resize(out_object, (Py_ssize_t)out_len);
+    if (return_bytearray) {
+        PyByteArray_Resize(out_object, (Py_ssize_t)out_len);
+    }
+    else {
+        _PyBytes_Resize(&out_object, (Py_ssize_t)out_len);
+    }
     goto FINALLY;
 EXCEPT:
     if (out_object != NULL) {
@@ -523,6 +534,16 @@ FINALLY:
         Py_DECREF(in_object);
     }
     return out_object;
+}
+
+static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    return pybase64_decode_impl(self, args, kwds, 0);
+}
+
+static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    return pybase64_decode_impl(self, args, kwds, 1);
 }
 
 static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
@@ -717,6 +738,7 @@ static PyMethodDef _pybase64_methods[] = {
     { "b64encode", (PyCFunction)pybase64_encode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64encode_as_string", (PyCFunction)pybase64_encode_as_string, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
+    { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_VARARGS | METH_KEYWORDS, NULL },
     { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },

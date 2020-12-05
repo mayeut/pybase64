@@ -11,10 +11,12 @@ if not __PYBASE64_SETUP__:
     from ._license import _license
     try:
         from ._pybase64 import (_get_simd_path, b64decode,  # noqa: F401
-                                b64encode, b64encode_as_string, encodebytes)
+                                b64decode_as_bytearray, b64encode,
+                                b64encode_as_string, encodebytes)
         _has_extension = True
     except ImportError:
-        from ._fallback import (b64decode, b64encode,  # noqa: F401
+        from ._fallback import (_get_simd_path, b64decode,  # noqa: F401
+                                b64decode_as_bytearray, b64encode,
                                 b64encode_as_string, encodebytes)
         _has_extension = False
 

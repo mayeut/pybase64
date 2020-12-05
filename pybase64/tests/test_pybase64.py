@@ -170,6 +170,15 @@ param_encode_functions = pytest.mark.parametrize(
 )
 
 
+param_decode_functions = pytest.mark.parametrize(
+    'dfn, dcast',
+    [
+        (pybase64.b64decode, lambda x: x),
+        (pybase64.b64decode_as_bytearray, lambda x: bytes(x))
+    ]
+)
+
+
 @pytest.fixture
 def simd(request):
     simd_setup(request.param)
@@ -256,14 +265,15 @@ def test_enc(efn, ecast, altchars_id, vector_id, simd):
 @param_vector
 @param_altchars
 @param_validate
-def test_dec(altchars_id, vector_id, validate, simd):
+@param_decode_functions
+def test_dec(dfn, dcast, altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     if validate:
         base = base64.b64decode(vector, altchars, validate)
     else:
         base = base64.b64decode(vector, altchars)
-    test = pybase64.b64decode(vector, altchars, validate)
+    test = dcast(dfn(vector, altchars, validate))
     assert test == base
 
 
@@ -271,7 +281,8 @@ def test_dec(altchars_id, vector_id, validate, simd):
 @param_vector
 @param_altchars
 @param_validate
-def test_dec_unicode(altchars_id, vector_id, validate, simd):
+@param_decode_functions
+def test_dec_unicode(dfn, dcast, altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     vector = str(vector, 'utf-8')
     altchars = altchars_lut[altchars_id]
@@ -283,7 +294,7 @@ def test_dec_unicode(altchars_id, vector_id, validate, simd):
         base = base64.b64decode(vector, altchars, validate)
     else:
         base = base64.b64decode(vector, altchars)
-    test = pybase64.b64decode(vector, altchars, validate)
+    test = dcast(dfn(vector, altchars, validate))
     assert test == base
 
 
@@ -292,10 +303,11 @@ def test_dec_unicode(altchars_id, vector_id, validate, simd):
 @param_altchars
 @param_validate
 @param_encode_functions
-def test_rnd(efn, ecast, altchars_id, vector_id, validate, simd):
+@param_decode_functions
+def test_rnd(dfn, dcast, efn, ecast, altchars_id, vector_id, validate, simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
-    test = pybase64.b64decode(vector, altchars, validate)
+    test = dcast(dfn(vector, altchars, validate))
     test = ecast(efn(test, altchars))
     assert test == vector
 
@@ -305,10 +317,12 @@ def test_rnd(efn, ecast, altchars_id, vector_id, validate, simd):
 @param_altchars
 @param_validate
 @param_encode_functions
-def test_rnd_unicode(efn, ecast, altchars_id, vector_id, validate, simd):
+@param_decode_functions
+def test_rnd_unicode(dfn, dcast, efn, ecast, altchars_id, vector_id, validate,
+                     simd):
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
-    test = pybase64.b64decode(str(vector, 'utf-8'), altchars, validate)
+    test = dcast(dfn(str(vector, 'utf-8'), altchars, validate))
     test = ecast(efn(test, altchars))
     assert test == vector
 
@@ -317,12 +331,14 @@ def test_rnd_unicode(efn, ecast, altchars_id, vector_id, validate, simd):
 @param_vector
 @param_altchars
 @param_validate
-def test_invalid_padding_dec(altchars_id, vector_id, validate, simd):
+@param_decode_functions
+def test_invalid_padding_dec(dfn, dcast, altchars_id, vector_id, validate,
+                             simd):
     vector = test_vectors_b64[altchars_id][vector_id][1:]
     if len(vector) > 0:
         altchars = altchars_lut[altchars_id]
         with pytest.raises(BinAsciiError):
-            pybase64.b64decode(vector, altchars, validate)
+            dfn(vector, altchars, validate)
 
 
 params_invalid_altchars = [
@@ -349,16 +365,18 @@ def test_invalid_altchars_enc(efn, ecast, altchars, exception, simd):
 
 @param_simd
 @params_invalid_altchars
-def test_invalid_altchars_dec(altchars, exception, simd):
+@param_decode_functions
+def test_invalid_altchars_dec(dfn, dcast, altchars, exception, simd):
     with pytest.raises(exception):
-        pybase64.b64decode(b'ABCD', altchars)
+        dfn(b'ABCD', altchars)
 
 
 @param_simd
 @params_invalid_altchars
-def test_invalid_altchars_dec_validate(altchars, exception, simd):
+@param_decode_functions
+def test_invalid_altchars_dec_validate(dfn, dcast, altchars, exception, simd):
     with pytest.raises(exception):
-        pybase64.b64decode(b'ABCD', altchars, True)
+        dfn(b'ABCD', altchars, True)
 
 
 params_invalid_data_novalidate = [
@@ -396,24 +414,28 @@ params_invalid_data_validate = pytest.mark.parametrize(
 
 @param_simd
 @params_invalid_data_novalidate
-def test_invalid_data_dec(vector, altchars, exception, simd):
+@param_decode_functions
+def test_invalid_data_dec(dfn, dcast, vector, altchars, exception, simd):
     with pytest.raises(exception):
-        pybase64.b64decode(vector, altchars)
+        dfn(vector, altchars)
 
 
 @param_simd
 @params_invalid_data_validate
-def test_invalid_data_dec_skip(vector, altchars, exception, simd):
-    test = pybase64.b64decode(vector, altchars)
+@param_decode_functions
+def test_invalid_data_dec_skip(dfn, dcast, vector, altchars, exception, simd):
+    test = dcast(dfn(vector, altchars))
     base = base64.b64decode(vector, altchars)
     assert test == base
 
 
 @param_simd
 @params_invalid_data_all
-def test_invalid_data_dec_validate(vector, altchars, exception, simd):
+@param_decode_functions
+def test_invalid_data_dec_validate(dfn, dcast, vector, altchars, exception,
+                                   simd):
     with pytest.raises(exception):
-        pybase64.b64decode(vector, altchars, True)
+        dfn(vector, altchars, True)
 
 
 @param_encode_functions
@@ -428,6 +450,7 @@ def test_invalid_args_enc_0(efn, ecast):
         efn()
 
 
-def test_invalid_args_dec_0():
+@param_decode_functions
+def test_invalid_args_dec_0(dfn, dcast):
     with pytest.raises(TypeError):
-        pybase64.b64decode()
+        dfn()

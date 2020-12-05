@@ -4,10 +4,15 @@ from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
 
 
-__all__ = ['b64decode', 'b64encode', 'b64encode_as_string', 'encodebytes']
+__all__ = ['_get_simd_path', 'b64decode', 'b64encode', 'b64encode_as_string',
+           'encodebytes']
 
 
 _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
+
+
+def _get_simd_path():
+    return None
 
 
 def _get_bytes(s):
@@ -70,6 +75,29 @@ def b64decode(s, altchars=None, validate=False):
             raise BinAsciiError('Non-base64 digit found')
         return result
     return builtin_decode(s, altchars, validate=False)
+
+
+def b64decode_as_bytearray(s, altchars=None, validate=False):
+    """Decode bytes encoded with the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` or ASCII string to
+    decode.
+
+    Optional ``altchars`` must be a :term:`bytes-like object` or ASCII
+    string of length 2 which specifies the alternative alphabet used instead
+    of the '+' and '/' characters.
+
+    If ``validate`` is ``False`` (the default), characters that are neither in
+    the normal base-64 alphabet nor the alternative alphabet are discarded
+    prior to the padding check.
+    If ``validate`` is ``True``, these non-alphabet characters in the input
+    result in a :exc:`binascii.Error`.
+
+    The result is returned as a :class:`bytearray` object.
+
+    A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
+    """
+    return bytearray(b64decode(s, altchars=altchars, validate=validate))
 
 
 def b64encode(s, altchars=None):

@@ -126,6 +126,7 @@ Changelog
 1.1.0
 -----
 - Add b64encode_as_string, same as b64encode but returns a str object instead of a bytes object
+- Add b64decode_as_bytearray, same as b64decode but returns a bytarray object instead of a bytes object
 - Speed-Up decoding from UCS1 strings
 
 1.0.2
