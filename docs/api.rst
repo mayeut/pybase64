@@ -6,7 +6,11 @@ Main API Reference
 
 .. autofunction:: pybase64.b64encode
 
+.. autofunction:: pybase64.b64encode_as_string
+
 .. autofunction:: pybase64.b64decode
+
+.. autofunction:: pybase64.b64decode_as_bytearray
 
 Helpers API Reference
 ---------------------
