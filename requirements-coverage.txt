@@ -2,4 +2,4 @@
 gcovr==4.2
 pytest_cov==2.10.1
 coverage==5.3
-codecov==2.1.10
+codecov==2.1.11
