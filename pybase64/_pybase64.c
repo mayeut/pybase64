@@ -675,7 +675,13 @@ static void set_simd_path(uint32_t flag)
 #endif
     else {
         active_simd_flag = PYBASE64_NONE;
+#if HAVE_NEON64
+        libbase64_simd_flag = BASE64_FORCE_NEON64;
+#elif HAVE_NEON32
+        libbase64_simd_flag = BASE64_FORCE_NEON32;
+#else
         libbase64_simd_flag = BASE64_FORCE_PLAIN;
+#endif
     }
 }
 

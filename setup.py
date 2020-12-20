@@ -87,9 +87,12 @@ def pybase64_write_config(capabilities):
                 capabilities.has(CCompilerCapabilities.SIMD_AVX))
         f.write('\n#define HAVE_AVX2                  %i' %
                 capabilities.has(CCompilerCapabilities.SIMD_AVX2))
-        f.write('\n#define HAVE_NEON32                %i' % False)
-        f.write('\n#define HAVE_NEON64                %i' % False)
-        f.write('\n#define HAVE_FAST_UNALIGNED_ACCESS %i' % True)
+        f.write('\n#define HAVE_NEON32                %i' %
+                capabilities.has(CCompilerCapabilities.SIMD_NEON32))
+        f.write('\n#define HAVE_NEON64                %i' %
+                capabilities.has(CCompilerCapabilities.SIMD_NEON64))
+        f.write('\n#define HAVE_FAST_UNALIGNED_ACCESS %i' %
+                capabilities.has(CCompilerCapabilities.SIMD_SSSE3))  # on x86
         f.write('\n')
 
 

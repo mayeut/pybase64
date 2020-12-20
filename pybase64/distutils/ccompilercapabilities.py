@@ -113,7 +113,7 @@ int main (int argc, char **argv) {
                 'return _mm_cvtsi128_si32(t);'
         )
         log.info(
-            "SSSE3: %s" %
+            "SSSE3:  %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_SSSE3
             ]['support'])
@@ -129,7 +129,7 @@ int main (int argc, char **argv) {
                 'return _mm_cvtsi128_si32(t);'
         )
         log.info(
-            "SSE41: %s" %
+            "SSE41:  %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_SSE41
             ]['support'])
@@ -144,7 +144,7 @@ int main (int argc, char **argv) {
                 'return _mm_cmpistra(t, t, 0);'
         )
         log.info(
-            "SSE42: %s" %
+            "SSE42:  %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_SSE42
             ]['support'])
@@ -159,7 +159,7 @@ int main (int argc, char **argv) {
                 'return _mm256_testz_si256(y, y);'
         )
         log.info(
-            "AVX:   %s" %
+            "AVX:    %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_AVX
             ]['support'])
@@ -175,9 +175,27 @@ int main (int argc, char **argv) {
                 'return _mm_cvtsi128_si32(_mm256_castsi256_si128(y));'
         )
         log.info(
-            "AVX2:  %s" %
+            "AVX2:   %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_AVX2
+            ]['support'])
+        )
+        self.__capabilities[CCompilerCapabilities.SIMD_NEON64] = \
+            self.__has_simd_support(
+                compiler,
+                [''],
+                [],
+                'arm_neon.h',
+                'uint8x16_t t = vdupq_n_u8(1);'
+                'uint8x16x4_t t4 = {'
+                '    .val[0]=t, .val[1]=t, .val[2]=t, .val[3]=t};'
+                'uint8x16_t o = vqtbx4q_u8(t, t4, t);'
+                'return vgetq_lane_s32(vreinterpretq_s32_u8(o), 0);'
+        )
+        log.info(
+            "NEON64: %s" %
+            str(self.__capabilities[
+                CCompilerCapabilities.SIMD_NEON64
             ]['support'])
         )
         self.__capabilities[CCompilerCapabilities.SIMD_NEON32] = \
@@ -187,10 +205,13 @@ int main (int argc, char **argv) {
                 [],
                 'arm_neon.h',
                 'uint8x16_t t = vdupq_n_u8(1);'
-                'return vgetq_lane_s32(vreinterpretq_s32_u8(t));'
+                'return vgetq_lane_s32(vreinterpretq_s32_u8(t), 0);'
         )
+        self.__capabilities[CCompilerCapabilities.SIMD_NEON32]['support'] &= \
+            not self.__capabilities[CCompilerCapabilities.SIMD_NEON64][
+                'support']
         log.info(
-            "NEON32:  %s" %
+            "NEON32: %s" %
             str(self.__capabilities[
                 CCompilerCapabilities.SIMD_NEON32
             ]['support'])
