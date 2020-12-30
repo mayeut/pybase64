@@ -26,7 +26,7 @@ def bench_one(duration, data, enc, dec, encbytes, altchars=None, validate=False)
             iter -= 1
         time = timer() - time
         print(
-            "{0:<32s} {1:9.3f} MB/s ({2:,d} bytes -> {3:,d} bytes)".format(
+            "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
                 encbytes.__module__ + "." + encbytes.__name__ + ":",
                 ((number * len(data)) / (1024.0 * 1024.0)) / time,
                 len(data),
@@ -48,7 +48,7 @@ def bench_one(duration, data, enc, dec, encbytes, altchars=None, validate=False)
         iter -= 1
     time = timer() - time
     print(
-        "{0:<32s} {1:9.3f} MB/s ({2:,d} bytes -> {3:,d} bytes)".format(
+        "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
             enc.__module__ + "." + enc.__name__ + ":",
             ((number * len(data)) / (1024.0 * 1024.0)) / time,
             len(data),
@@ -118,7 +118,7 @@ def benchmark(args):
     for altchars in [None, b"-_"]:
         for validate in [False, True]:
             print(
-                "bench: altchars={0:s}, validate={1:s}".format(
+                "bench: altchars={:s}, validate={:s}".format(
                     repr(altchars), repr(validate)
                 )
             )
@@ -163,7 +163,7 @@ class LicenseAction(argparse.Action):
         default=argparse.SUPPRESS,
         help="show license information and exit",
     ):
-        super(LicenseAction, self).__init__(
+        super().__init__(
             option_strings=option_strings,
             dest=dest,
             default=default,

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import base64
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
@@ -344,7 +342,7 @@ params_invalid_altchars = [
     [b"-", AssertionError],
     [b"-__", AssertionError],
     [3.0, TypeError],
-    [u"-€", ValueError],
+    ["-€", ValueError],
 ]
 params_invalid_altchars = pytest.mark.parametrize(
     "altchars,exception",
@@ -379,7 +377,7 @@ def test_invalid_altchars_dec_validate(dfn, dcast, altchars, exception, simd):
 
 params_invalid_data_novalidate = [
     [b"A@@@@FG", None, BinAsciiError],
-    [u"ABC€", None, ValueError],
+    ["ABC€", None, ValueError],
     [3.0, None, TypeError],
 ]
 params_invalid_data_validate = [
@@ -442,7 +440,7 @@ def test_invalid_data_dec_validate(dfn, dcast, vector, altchars, exception, simd
 @param_encode_functions
 def test_invalid_data_enc_0(efn, ecast):
     with pytest.raises(TypeError):
-        efn(u"this is a test")
+        efn("this is a test")
 
 
 @param_encode_functions

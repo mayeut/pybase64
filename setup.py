@@ -35,12 +35,12 @@ with open(path.join(here, "pybase64/_license.py"), "wt") as f:
     f.write('_license = """')
     f.write("pybase64\n")
     f.write("=" * 79 + "\n")
-    with open(path.join(here, "LICENSE"), "rt") as license:
+    with open(path.join(here, "LICENSE")) as license:
         f.write(license.read())
     f.write("=" * 79 + "\n\n")
     f.write("libbase64\n")
     f.write("=" * 79 + "\n")
-    with open(path.join(here, "base64/LICENSE"), "rt") as license:
+    with open(path.join(here, "base64/LICENSE")) as license:
         f.write(license.read())
     f.write("=" * 74)
     f.write('""" \\\n')
