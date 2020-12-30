@@ -1,4 +1,4 @@
--r requirements.txt
+-r requirements-dev.txt
 gcovr==4.2
 pytest_cov==2.10.1
 coverage==5.3.1

@@ -1,0 +1,30 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+  - id: check-builtin-literals
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-toml
+  - id: check-yaml
+  - id: debug-statements
+  - id: end-of-file-fixer
+  - id: forbid-new-submodules
+  - id: trailing-whitespace
+
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+  - id: black
+
+- repo: https://gitlab.com/pycqa/flake8
+  rev: 3.8.4
+  hooks:
+  - id: flake8
+
+- repo: https://github.com/PyCQA/isort
+  rev: 5.6.4
+  hooks:
+  - id: isort

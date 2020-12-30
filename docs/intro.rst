@@ -52,4 +52,3 @@ Benchmark
 .. include:: ../README.rst
     :start-after: .. begin benchmark
     :end-before: .. end benchmark
-

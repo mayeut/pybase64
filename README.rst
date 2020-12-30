@@ -191,4 +191,3 @@ Changelog
 - First public release
 
 .. end changelog
-

@@ -34,4 +34,3 @@ Information API Reference
 .. autofunction:: pybase64.get_version
 
 .. autofunction:: pybase64.get_license_text
-

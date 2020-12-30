@@ -3,9 +3,13 @@ from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
 
-
-__all__ = ['_get_simd_path', 'b64decode', 'b64encode', 'b64encode_as_string',
-           'encodebytes']
+__all__ = [
+    "_get_simd_path",
+    "b64decode",
+    "b64encode",
+    "b64encode_as_string",
+    "encodebytes",
+]
 
 
 _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
@@ -18,17 +22,18 @@ def _get_simd_path():
 def _get_bytes(s):
     if isinstance(s, str):
         try:
-            return s.encode('ascii')
+            return s.encode("ascii")
         except UnicodeEncodeError:
-            raise ValueError('string argument should contain only ASCII '
-                             'characters')
+            raise ValueError("string argument should contain only ASCII " "characters")
     if isinstance(s, _bytes_types):
         return s
     try:
         return memoryview(s).tobytes()
     except TypeError:
-        raise TypeError('argument should be a bytes-like object or ASCII '
-                        'string, not %r' % s.__class__.__name__)
+        raise TypeError(
+            "argument should be a bytes-like object or ASCII "
+            "string, not %r" % s.__class__.__name__
+        )
 
 
 def b64decode(s, altchars=None, validate=False):
@@ -53,12 +58,12 @@ def b64decode(s, altchars=None, validate=False):
     """
     if validate:
         if len(s) % 4 != 0:
-            raise BinAsciiError('Incorrect padding')
+            raise BinAsciiError("Incorrect padding")
         s = _get_bytes(s)
         if altchars is not None:
             altchars = _get_bytes(altchars)
             assert len(altchars) == 2, repr(altchars)
-            map = bytes.maketrans(altchars, b'+/')
+            map = bytes.maketrans(altchars, b"+/")
             s = s.translate(map)
         try:
             result = builtin_decode(s, altchars, validate=False)
@@ -67,12 +72,12 @@ def b64decode(s, altchars=None, validate=False):
 
         # check length of result vs length of input
         padding = 0
-        if len(s) > 1 and s[-2] in (b'=', 61):
+        if len(s) > 1 and s[-2] in (b"=", 61):
             padding = padding + 1
-        if len(s) > 0 and s[-1] in (b'=', 61):
+        if len(s) > 0 and s[-1] in (b"=", 61):
             padding = padding + 1
         if 3 * (len(s) / 4) - padding != len(result):
-            raise BinAsciiError('Non-base64 digit found')
+            raise BinAsciiError("Non-base64 digit found")
         return result
     return builtin_decode(s, altchars, validate=False)
 
@@ -128,16 +133,16 @@ def b64encode_as_string(s, altchars=None):
 
     The result is returned as a :class:`str` object.
     """
-    return b64encode(s, altchars).decode('ascii')
+    return b64encode(s, altchars).decode("ascii")
 
 
 def encodebytes(s):
     """Encode bytes into a bytes object with newlines (b'\n') inserted after
-every 76 bytes of output, and ensuring that there is a trailing newline,
-as per :rfc:`2045` (MIME).
+    every 76 bytes of output, and ensuring that there is a trailing newline,
+    as per :rfc:`2045` (MIME).
 
-Argument ``s`` is a :term:`bytes-like object` to encode.
+    Argument ``s`` is a :term:`bytes-like object` to encode.
 
-The result is returned as a :class:`bytes` object.
+    The result is returned as a :class:`bytes` object.
     """
     return builtin_encodebytes(s)
