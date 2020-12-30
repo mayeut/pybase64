@@ -34,6 +34,8 @@ jobs:
 
       - name: Build wheels
         env:
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
           CIBW_SKIP: "?p27* pp*"
