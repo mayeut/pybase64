@@ -1,7 +1,9 @@
+from typing import Any
+
 from ._version import __version__
 
 try:
-    __PYBASE64_SETUP__
+    __PYBASE64_SETUP__  # type: ignore
 except NameError:
     __PYBASE64_SETUP__ = False
 
@@ -32,21 +34,20 @@ if not __PYBASE64_SETUP__:
 
         _has_extension = False
 
-    def get_license_text():
+    def get_license_text() -> str:
         """Returns pybase64 license information as a :class:`str` object.
 
         The result includes libbase64 license information as well.
         """
         return _license
 
-    def get_version():
+    def get_version() -> str:
         """Returns pybase64 version as a :class:`str` object.
 
         The result reports if the C extension is used or not.
         e.g. `1.0.0 (C extension active - AVX2)`
         """
         if _has_extension:
-            simd_name = None
             simd_flag = _get_simd_path()
             if simd_flag == 0:
                 simd_name = "No SIMD"
@@ -65,7 +66,7 @@ if not __PYBASE64_SETUP__:
             return __version__ + " (C extension active - " + simd_name + ")"
         return __version__ + " (C extension inactive)"
 
-    def standard_b64encode(s):
+    def standard_b64encode(s: Any) -> bytes:
         """Encode bytes using the standard Base64 alphabet.
 
         Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -74,7 +75,7 @@ if not __PYBASE64_SETUP__:
         """
         return b64encode(s)
 
-    def standard_b64decode(s):
+    def standard_b64decode(s: Any) -> bytes:
         """Decode bytes encoded with the standard Base64 alphabet.
 
         Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -89,7 +90,7 @@ if not __PYBASE64_SETUP__:
         """
         return b64decode(s)
 
-    def urlsafe_b64encode(s):
+    def urlsafe_b64encode(s: Any) -> bytes:
         """Encode bytes using the URL- and filesystem-safe Base64 alphabet.
 
         Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -100,7 +101,7 @@ if not __PYBASE64_SETUP__:
         """
         return b64encode(s, b"-_")
 
-    def urlsafe_b64decode(s):
+    def urlsafe_b64decode(s: Any) -> bytes:
         """Decode bytes using the URL- and filesystem-safe Base64 alphabet.
 
         Argument ``s`` is a :term:`bytes-like object` or ASCII string to

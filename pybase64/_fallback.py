@@ -2,6 +2,7 @@ from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
+from typing import Any, Optional, Union
 
 __all__ = [
     "_get_simd_path",
@@ -15,11 +16,11 @@ __all__ = [
 _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
 
 
-def _get_simd_path():
+def _get_simd_path() -> Optional[int]:
     return None
 
 
-def _get_bytes(s):
+def _get_bytes(s: Any) -> Union[bytes, bytearray]:
     if isinstance(s, str):
         try:
             return s.encode("ascii")
@@ -36,7 +37,7 @@ def _get_bytes(s):
         )
 
 
-def b64decode(s, altchars=None, validate=False):
+def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -82,7 +83,9 @@ def b64decode(s, altchars=None, validate=False):
     return builtin_decode(s, altchars, validate=False)
 
 
-def b64decode_as_bytearray(s, altchars=None, validate=False):
+def b64decode_as_bytearray(
+    s: Any, altchars: Any = None, validate: bool = False
+) -> bytearray:
     """Decode bytes encoded with the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -105,7 +108,7 @@ def b64decode_as_bytearray(s, altchars=None, validate=False):
     return bytearray(b64decode(s, altchars=altchars, validate=validate))
 
 
-def b64encode(s, altchars=None):
+def b64encode(s: Any, altchars: Any = None) -> bytes:
     """Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -122,7 +125,7 @@ def b64encode(s, altchars=None):
     return builtin_encode(s, altchars)
 
 
-def b64encode_as_string(s, altchars=None):
+def b64encode_as_string(s: Any, altchars: Any = None) -> str:
     """Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -136,7 +139,7 @@ def b64encode_as_string(s, altchars=None):
     return b64encode(s, altchars).decode("ascii")
 
 
-def encodebytes(s):
+def encodebytes(s: Any) -> bytes:
     """Encode bytes into a bytes object with newlines (b'\n') inserted after
     every 76 bytes of output, and ensuring that there is a trailing newline,
     as per :rfc:`2045` (MIME).
