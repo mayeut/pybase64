@@ -29,17 +29,14 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Install cibuildwheel
-        run: python -m pip install -r requirements-cibuildwheel.txt
-
       - name: Build wheels
+        uses: joerick/cibuildwheel@d394386318c554707946a2ad99d8bc1e5e99757c
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_MANYLINUX_I686_IMAGE: manylinux2014
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
           CIBW_SKIP: "?p27* pp*"
-        run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v2
         with:
