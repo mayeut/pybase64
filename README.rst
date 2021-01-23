@@ -121,6 +121,11 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.1.2
+-----
+- Add PyPy wheels
+- Add aarch64, ppc64le & s390x manylinux wheels
+
 1.1.1
 -----
 - Move CI from TravisCI/AppVeyor to GitHub Actions
