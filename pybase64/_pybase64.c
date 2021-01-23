@@ -695,6 +695,7 @@ static PyObject* pybase64_import(const char* from, const char* object)
 {
     PyObject* subModules;
     PyObject* subModuleName;
+    PyObject* moduleName;
     PyObject* imports;
     PyObject* importedObject;
 
@@ -702,14 +703,21 @@ static PyObject* pybase64_import(const char* from, const char* object)
     if (subModules == NULL) {
         return NULL;
     }
+    moduleName = PyUnicode_FromString(from);
+    if (moduleName == NULL) {
+        Py_DECREF(subModules);
+        return NULL;
+    }
     subModuleName = PyUnicode_FromString(object);
     if (subModuleName == NULL) {
+        Py_DECREF(moduleName);
         Py_DECREF(subModules);
         return NULL;
     }
     Py_INCREF(subModuleName);
     PyList_SET_ITEM(subModules, 0, subModuleName);
-    imports = PyImport_ImportModuleEx(from, NULL, NULL, subModules);
+    imports = PyImport_ImportModuleLevelObject(moduleName, NULL, NULL, subModules, 0);
+    Py_DECREF(moduleName);
     Py_DECREF(subModules);
     if (imports == NULL) {
         Py_DECREF(subModuleName);
