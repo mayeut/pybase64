@@ -59,7 +59,6 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 i686 aarch64 ppc64le s390x"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD: "${{ matrix.build }}"
-          CIBW_SKIP: "?p2*"
 
       - uses: actions/upload-artifact@v2
         with:
