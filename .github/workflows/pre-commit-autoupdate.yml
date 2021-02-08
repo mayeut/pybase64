@@ -20,7 +20,7 @@ jobs:
         run: pre-commit autoupdate
       - name: Create Pull Request
         if: github.ref == 'refs/heads/master'
-        uses: peter-evans/create-pull-request@v3.8.0
+        uses: peter-evans/create-pull-request@v3.8.1
         with:
           commit-message: Auto-update pre-commit hooks
           title: '[Bot] Auto-update pre-commit hooks'
