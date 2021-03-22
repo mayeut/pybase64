@@ -25,7 +25,7 @@ repos:
   - id: flake8
 
 - repo: https://github.com/PyCQA/isort
-  rev: 5.7.0
+  rev: 5.8.0
   hooks:
   - id: isort
 
