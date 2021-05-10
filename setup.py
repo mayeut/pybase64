@@ -18,8 +18,8 @@ builtins.__PYBASE64_SETUP__ = True
 
 from pybase64.distutils.ccompilercapabilities import CCompilerCapabilities  # noqa: E402
 
-if sys.version_info[:2] < (3, 5):
-    raise RuntimeError("Python version >= 3.5 required.")
+if sys.version_info[:2] < (3, 6):
+    raise RuntimeError("Python version >= 3.6 required.")
 
 here = path.abspath(path.dirname(__file__))
 
@@ -268,14 +268,13 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         "Programming Language :: C",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
     # Supported python versions
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     # What does your project relate to?
     keywords="base64",
     # You can just specify the packages manually here if your project is
