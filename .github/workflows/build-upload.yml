@@ -36,7 +36,7 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           submodules: recursive
 
@@ -68,7 +68,7 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           submodules: recursive
 
