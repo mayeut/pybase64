@@ -41,7 +41,7 @@ jobs:
           submodules: recursive
 
       - name: Install Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v2.2.2
         with:
           python-version: '3.9'
 
@@ -72,7 +72,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2.2.2
         name: Install Python
         with:
           python-version: '3.9'
