@@ -1,5 +1,5 @@
 -r requirements-dev.txt
 gcovr==4.2
-pytest_cov==2.11.1
+pytest_cov==2.12.0
 coverage==5.5
 codecov==2.1.11
