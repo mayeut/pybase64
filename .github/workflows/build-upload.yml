@@ -50,7 +50,7 @@ jobs:
         if: runner.os == 'Linux'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@a972ee9fc74c26a70d821b6f3ffaf9ae4d1e4338
+        uses: pypa/cibuildwheel@v2.0.0a2
         env:
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
