@@ -1,5 +1,5 @@
 -r requirements-dev.txt
-gcovr==4.2
+gcovr==5.0
 pytest_cov==2.12.1
 coverage==5.5
 codecov==2.1.11
