@@ -335,6 +335,9 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         dst = PyBytes_AS_STRING(out_object);
     }
 
+    /* not interacting with Python objects from here, release the GIL */
+    Py_BEGIN_ALLOW_THREADS
+
     if (use_alphabet) {
         /* TODO, make this more efficient */
         const size_t dst_slice = 16U * 1024U;
@@ -361,6 +364,10 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     else {
         base64_encode(buffer.buf, buffer.len, dst, &out_len, libbase64_simd_flag);
     }
+
+    /* restore the GIL */
+    Py_END_ALLOW_THREADS
+
     PyBuffer_Release(&buffer);
 
     return out_object;
@@ -433,12 +440,21 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 /* TRY: */
     if (!validation && use_alphabet) {
         PyObject* translate_object;
+        char* translate_dst;
 
         translate_object = PyBytes_FromStringAndSize(NULL, source_len);
         if (translate_object == NULL) {
             goto EXCEPT;
         }
-        translate(source, PyBytes_AS_STRING(translate_object), source_len, alphabet);
+        translate_dst = PyBytes_AS_STRING(translate_object);
+
+        /* not interacting with Python objects from here, release the GIL */
+        Py_BEGIN_ALLOW_THREADS
+
+        translate(source, translate_dst, source_len, alphabet);
+
+        /* restore the GIL */
+        Py_END_ALLOW_THREADS
 
         if (source_use_buffer) {
             PyBuffer_Release(&buffer);
@@ -475,7 +491,17 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     }
 
     if (!validation) {
-        if (decode_novalidate(source, source_len, dest, &out_len) != 0) {
+        int result;
+
+        /* not interacting with Python objects from here, release the GIL */
+        Py_BEGIN_ALLOW_THREADS
+
+        result = decode_novalidate(source, source_len, dest, &out_len);
+
+        /* restore the GIL */
+        Py_END_ALLOW_THREADS
+
+        if (result != 0) {
             PyErr_SetString(g_BinAsciiError, "Incorrect padding");
             goto EXCEPT;
         }
@@ -488,14 +514,18 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_ssize_t len = source_len;
         const char* src = source;
         char* dst = dest;
+        int result = 1;
+
+        /* not interacting with Python objects from here, release the GIL */
+        Py_BEGIN_ALLOW_THREADS
 
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
             translate(src, cache, src_slice, alphabet);
-            if (base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag) <= 0) {
-                PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
-                goto EXCEPT;
+            result = base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag);
+            if (result <= 0) {
+                break;
             }
 
             len -= src_slice;
@@ -503,15 +533,32 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             out_len -= dst_slice;
             dst += dst_slice;
         }
-        translate(src, cache, len, alphabet);
-        if (base64_decode(cache, len, dst, &out_len, libbase64_simd_flag) <= 0) {
+        if (result > 0) {
+            translate(src, cache, len, alphabet);
+            result = base64_decode(cache, len, dst, &out_len, libbase64_simd_flag);
+        }
+
+        /* restore the GIL */
+        Py_END_ALLOW_THREADS
+
+        if (result <= 0) {
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
         out_len += (dst - (char*)dest);
     }
     else {
-        if (base64_decode(source, source_len, dest, &out_len, libbase64_simd_flag) <= 0) {
+        int result;
+
+        /* not interacting with Python objects from here, release the GIL */
+        Py_BEGIN_ALLOW_THREADS
+
+        result = base64_decode(source, source_len, dest, &out_len, libbase64_simd_flag);
+
+        /* restore the GIL */
+        Py_END_ALLOW_THREADS
+
+        if (result <= 0) {
             PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
@@ -585,6 +632,9 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         char* dst = PyBytes_AS_STRING(out_object);
         size_t remainder;
 
+        /* not interacting with Python objects from here, release the GIL */
+        Py_BEGIN_ALLOW_THREADS
+
         while (out_len > dst_slice) {
             size_t dst_len = dst_slice - 1U;
 
@@ -599,6 +649,9 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         remainder = out_len - 1;
         base64_encode(src, len, dst, &remainder, libbase64_simd_flag);
         dst[out_len - 1] = '\n';
+
+        /* restore the GIL */
+        Py_END_ALLOW_THREADS
     }
 
     PyBuffer_Release(&buffer);
