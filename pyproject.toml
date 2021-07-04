@@ -1,5 +1,17 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 
+[tool.cibuildwheel]
+test-requires = "pytest"
+test-command = "pytest --pyargs pybase64"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "i686", "aarch64", "ppc64le", "s390x"]
+manylinux-x86_64-image = "manylinux2014"
+manylinux-i686-image = "manylinux2014"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
 [tool.isort]
 profile = "black"

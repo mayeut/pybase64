@@ -52,12 +52,6 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.0.0a4
         env:
-          CIBW_TEST_REQUIRES: "pytest"
-          CIBW_TEST_COMMAND: "pytest --pyargs pybase64"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
-          CIBW_ARCHS_LINUX: "x86_64 i686 aarch64 ppc64le s390x"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_BUILD: "${{ matrix.build }}"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
