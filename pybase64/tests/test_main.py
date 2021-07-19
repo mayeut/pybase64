@@ -45,7 +45,7 @@ def idfn_test_help(args):
 )
 def test_help(capsys, args):
     if len(args) == 2:
-        usage = "usage: pybase64 {} [-h]".format(args[0])
+        usage = f"usage: pybase64 {args[0]} [-h]"
     else:
         usage = "usage: pybase64 [-h]"
     with pytest.raises(SystemExit) as exit_info:
