@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pybase64 documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 29 22:06:28 2017.
@@ -58,7 +57,7 @@ master_doc = "index"
 # General information about the project.
 project = "pybase64"
 author = "Matthieu Darbois"
-copyright = "2017-{}, Matthieu Darbois".format(datetime.date.today().year)
+copyright = f"2017-{datetime.date.today().year}, Matthieu Darbois"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
