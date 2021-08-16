@@ -11,3 +11,11 @@ manylinux-i686-image = "manylinux2014"
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+python_version = 3.6
+follow_imports = "silent"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_unused_ignores = true
