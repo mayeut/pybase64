@@ -35,7 +35,7 @@ jobs:
           pytest --cov=pybase64 --cov-append --cov-branch --cov-report=
           python setup.py clean_ext
           pytest --cov=pybase64 --cov-append --cov-branch --cov-report=
-          python -m coverage report --show-missing --fail-under=99  # no AVX+ on CI...
+          python -m coverage report --show-missing --fail-under=98  # no AVX+ on CI...
           gcovr -r . -s -e base64 # waiting for fail under option
 
       - name: Upload coverage to codecov
