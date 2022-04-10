@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event_name == 'push' && github.repository == 'mayeut/pybase64'
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist
