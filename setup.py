@@ -57,6 +57,7 @@ pybase64_ext = Extension(
         "base64/lib/tables/tables.c",
     ],
     include_dirs=["base64/include/", "base64/lib/"],
+    define_macros=[("BASE64_STATIC_DEFINE", "1")],
 )
 
 pybase64_ext.optional = environ.get("CIBUILDWHEEL", "0") != "1"
@@ -169,6 +170,7 @@ class pybase64_build_ext(build_ext):
                     debug=self.debug,
                     extra_postargs=capabilities.flags(simd_opt),
                     depends=ext.depends,
+                    macros=ext.define_macros,
                 )
             else:
                 sources = sources + simd_sources[simd_opt]
@@ -180,6 +182,7 @@ class pybase64_build_ext(build_ext):
             debug=self.debug,
             extra_postargs=[],
             depends=ext.depends,
+            macros=ext.define_macros,
         )
 
         # Detect target language, if not provided
