@@ -2,7 +2,6 @@
 requires = ["setuptools", "wheel"]
 
 [tool.cibuildwheel]
-skip = "*-musllinux*"
 test-requires = "pytest"
 test-command = "pytest --pyargs pybase64"
 
