@@ -121,6 +121,11 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.2.2
+-----
+- Fix C extension build on musl distros
+- Publish musllinux wheels
+
 1.2.1
 -----
 - Publish PyPy 3.8 (pypy38_pp73) wheels
