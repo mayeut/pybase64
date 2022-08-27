@@ -121,8 +121,14 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.2.3
+-----
+- Update base64 library
+- Publish python 3.11 wheels
+
 1.2.2
 -----
+- Update base64 library
 - Fix C extension build on musl distros
 - Publish musllinux wheels
 
