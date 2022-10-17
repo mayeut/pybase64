@@ -31,7 +31,7 @@ with open(path.join(here, "README.rst"), encoding="utf-8") as f:
     long_description = f.read()
 
 # Generate license text
-with open(path.join(here, "pybase64/_license.py"), "wt") as f:
+with open(path.join(here, "pybase64/_license.py"), "w") as f:
     f.write('_license = """')
     f.write("pybase64\n")
     f.write("=" * 79 + "\n")
@@ -73,7 +73,7 @@ pybase64_ext.sources_neon64 = ["base64/lib/arch/neon64/codec.c"]
 
 def pybase64_write_config(capabilities):
     log.info("creating 'base64/lib/config.h'")
-    with open(path.join(here, "base64/lib/config.h"), mode="wt") as f:
+    with open(path.join(here, "base64/lib/config.h"), mode="w") as f:
         f.write(
             "\n#define HAVE_SSSE3                 %i"
             % capabilities.has(CCompilerCapabilities.SIMD_SSSE3)
