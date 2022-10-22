@@ -12,6 +12,12 @@
 #include <emmintrin.h>
 #endif
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
+#define HAVE_FAST_UNALIGNED_ACCESS 1
+#else
+#define HAVE_FAST_UNALIGNED_ACCESS 0
+#endif
+
 
 static PyObject* g_BinAsciiError = NULL;
 static int libbase64_simd_flag = 0;
@@ -673,23 +679,23 @@ static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
 {
     uint32_t result = 0U;
 
-#if HAVE_NEON64 || HAVE_NEON32
+#if BASE64_WITH_NEON64 || BASE64_WITH_NEON32
     result |= PYBASE64_NEON;
 #endif
 
-#if HAVE_AVX2
+#if BASE64_WITH_AVX2
     result |= PYBASE64_AVX2;
 #endif
-#if HAVE_AVX
+#if BASE64_WITH_AVX
     result |= PYBASE64_AVX;
 #endif
-#if HAVE_SSE42
+#if BASE64_WITH_SSE42
     result |= PYBASE64_SSE42;
 #endif
-#if HAVE_SSE41
+#if BASE64_WITH_SSE41
     result |= PYBASE64_SSE41;
 #endif
-#if HAVE_SSSE3
+#if BASE64_WITH_SSSE3
     result |= PYBASE64_SSSE3;
 #endif
     return PyLong_FromUnsignedLong(result);
@@ -701,43 +707,43 @@ static void set_simd_path(uint32_t flag)
 
     if (0) {
     }
-#if HAVE_NEON64
+#if BASE64_WITH_NEON64
     else if (flag & PYBASE64_NEON) {
         active_simd_flag = PYBASE64_NEON;
         libbase64_simd_flag = BASE64_FORCE_NEON64;
     }
 #endif
-#if HAVE_NEON32
+#if BASE64_WITH_NEON32
     else if (flag & PYBASE64_NEON) {
         active_simd_flag = PYBASE64_NEON;
         libbase64_simd_flag = BASE64_FORCE_NEON32;
     }
 #endif
-#if HAVE_AVX2
+#if BASE64_WITH_AVX2
     else if (flag & PYBASE64_AVX2) {
         active_simd_flag = PYBASE64_AVX2;
         libbase64_simd_flag = BASE64_FORCE_AVX2;
     }
 #endif
-#if HAVE_AVX
+#if BASE64_WITH_AVX
     else if (flag & PYBASE64_AVX) {
         active_simd_flag = PYBASE64_AVX;
         libbase64_simd_flag = BASE64_FORCE_AVX;
     }
 #endif
-#if HAVE_SSE42
+#if BASE64_WITH_SSE42
     else if (flag & PYBASE64_SSE42) {
         active_simd_flag = PYBASE64_SSE42;
         libbase64_simd_flag = BASE64_FORCE_SSE42;
     }
 #endif
-#if HAVE_SSE41
+#if BASE64_WITH_SSE41
     else if (flag & PYBASE64_SSE41) {
         active_simd_flag = PYBASE64_SSE41;
         libbase64_simd_flag = BASE64_FORCE_SSE41;
     }
 #endif
-#if HAVE_SSSE3
+#if BASE64_WITH_SSSE3
     else if (flag & PYBASE64_SSSE3) {
         active_simd_flag = PYBASE64_SSSE3;
         libbase64_simd_flag = BASE64_FORCE_SSSE3;

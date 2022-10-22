@@ -1,9 +1,11 @@
 [build-system]
 requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 test-requires = "pytest"
 test-command = "pytest --pyargs pybase64"
+build-verbosity = 1
 
 [tool.isort]
 profile = "black"

@@ -7,6 +7,7 @@ __pycache__/
 *$py.class
 
 # C extensions
+.base64_build/
 *.so
 
 # Distribution / packaging
@@ -23,6 +24,7 @@ lib64/
 parts/
 sdist/
 var/
+wheelhouse/
 *.egg-info/
 .installed.cfg
 *.egg

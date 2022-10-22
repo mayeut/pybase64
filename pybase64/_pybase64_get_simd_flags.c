@@ -118,7 +118,7 @@ uint32_t pybase64_get_simd_flags(void)
 /* default version */
 uint32_t pybase64_get_simd_flags(void)
 {
-#if HAVE_NEON64 || defined(__ARM_NEON__) || defined(__ARM_NEON)
+#if BASE64_WITH_NEON64 || defined(__ARM_NEON__) || defined(__ARM_NEON)
     return PYBASE64_NEON;
 #endif
 	return 0U;

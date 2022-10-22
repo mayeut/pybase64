@@ -1,4 +1,5 @@
 import base64
+import os
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 
@@ -16,6 +17,9 @@ try:
 
     _has_extension = True
 except ImportError:
+    if os.environ.get("CIBUILDWHEEL", "0") == "1":
+        # the native extension must be importable within cibuildwheel
+        raise
     _has_extension = False
 
 
