@@ -118,6 +118,8 @@ def get_simd_name(simd_id):
             simd_name = "avx"
         elif simd_flag == 64:
             simd_name = "avx2"
+        elif simd_flag == 65536:
+            simd_name = "neon"
         else:  # pragma: no branch
             simd_name = "unk"  # pragma: no cover
     else:
