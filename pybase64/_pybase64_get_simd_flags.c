@@ -1,4 +1,5 @@
 #include "_pybase64_get_simd_flags.h"
+#include <config.h>
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
 /* x86 version */
@@ -97,6 +98,9 @@ uint32_t pybase64_get_simd_flags(void)
 /* default version */
 uint32_t pybase64_get_simd_flags(void)
 {
+#if HAVE_NEON64 || defined(__ARM_NEON__) || defined(__ARM_NEON)
+    return PYBASE64_NEON;
+#endif
 	return 0U;
 }
 #endif

@@ -672,6 +672,11 @@ static PyObject* pybase64_get_simd_flags_runtime(PyObject* self, PyObject* arg)
 static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
 {
     uint32_t result = 0U;
+
+#if HAVE_NEON64 || HAVE_NEON32
+    result |= PYBASE64_NEON;
+#endif
+
 #if HAVE_AVX2
     result |= PYBASE64_AVX2;
 #endif
@@ -696,6 +701,18 @@ static void set_simd_path(uint32_t flag)
 
     if (0) {
     }
+#if HAVE_NEON64
+    else if (flag & PYBASE64_NEON) {
+        active_simd_flag = PYBASE64_NEON;
+        libbase64_simd_flag = BASE64_FORCE_NEON64;
+    }
+#endif
+#if HAVE_NEON32
+    else if (flag & PYBASE64_NEON) {
+        active_simd_flag = PYBASE64_NEON;
+        libbase64_simd_flag = BASE64_FORCE_NEON32;
+    }
+#endif
 #if HAVE_AVX2
     else if (flag & PYBASE64_AVX2) {
         active_simd_flag = PYBASE64_AVX2;
@@ -728,13 +745,7 @@ static void set_simd_path(uint32_t flag)
 #endif
     else {
         active_simd_flag = PYBASE64_NONE;
-#if HAVE_NEON64
-        libbase64_simd_flag = BASE64_FORCE_NEON64;
-#elif HAVE_NEON32
-        libbase64_simd_flag = BASE64_FORCE_NEON32;
-#else
         libbase64_simd_flag = BASE64_FORCE_PLAIN;
-#endif
     }
 }
 

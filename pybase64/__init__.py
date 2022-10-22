@@ -61,6 +61,8 @@ if not __PYBASE64_SETUP__:
                 simd_name = "AVX"
             elif simd_flag == 64:
                 simd_name = "AVX2"
+            elif simd_flag == 65536:
+                simd_name = "NEON"
             else:  # pragma: no branch
                 simd_name = "Unknown"  # pragma: no cover
             return __version__ + " (C extension active - " + simd_name + ")"

@@ -6,6 +6,7 @@
 #define PYBASE64_SSE42 0x00000010
 #define PYBASE64_AVX   0x00000020
 #define PYBASE64_AVX2  0x00000040
+#define PYBASE64_NEON  0x00010000
 
 #include <stdint.h>
 
