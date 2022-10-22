@@ -455,3 +455,17 @@ def test_invalid_args_enc_0(efn, ecast):
 def test_invalid_args_dec_0(dfn, dcast):
     with pytest.raises(TypeError):
         dfn()
+
+
+def test_flags(request):
+    cpu = request.config.getoption("--sde-cpu", skip=True)
+    if not cpu:
+        pytest.skip("needs --sde-cpu option to run")
+    assert {
+        "p4p": 1 | 2,  # SSE3
+        "mrm": 1 | 2 | 4,  # SSSE3
+        "pnr": 1 | 2 | 4 | 8,  # SSE41
+        "nhm": 1 | 2 | 4 | 8 | 16,  # SSE42
+        "snb": 1 | 2 | 4 | 8 | 16 | 32,  # AVX
+        "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
+    }[cpu] == runtime_flags

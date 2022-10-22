@@ -21,7 +21,12 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: python -m pip install -r requirements-coverage.txt
+        run: |
+          python -m pip install -r requirements-coverage.txt
+          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/732268/sde-external-9.7.0-2022-05-09-lin.tar.xz
+          mkdir ${HOME}/sde
+          tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
+          echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
 
       - name: Run coverage tests
         env:
@@ -33,6 +38,10 @@ jobs:
           python -m coverage erase
           python -m coverage run -a --branch --source=pybase64 setup.py clean_ext build_ext -v -i -f
           pytest --cov=pybase64 --cov-append --cov-branch --cov-report=
+          sde -- pytest --cov=pybase64 --cov-append --cov-branch --cov-report=
+          for CPU in p4p mrm pnr nhm snb hsw; do
+            sde -${CPU} -- pytest --sde-cpu ${CPU} -k test_flags --cov=pybase64 --cov-append --cov-branch --cov-report=
+          done
           python setup.py clean_ext
           pytest --cov=pybase64 --cov-append --cov-branch --cov-report=
           python -m coverage report --show-missing --fail-under=97  # no AVX+, NEON on CI...
