@@ -5,6 +5,7 @@ from ._version import __version__
 
 try:
     from ._pybase64 import (  # noqa: F401
+        _get_simd_name,
         _get_simd_path,
         b64decode,
         b64decode_as_bytearray,
@@ -12,10 +13,9 @@ try:
         b64encode_as_string,
         encodebytes,
     )
-
-    _has_extension = True
 except ImportError:
     from ._fallback import (  # noqa: F401
+        _get_simd_name,
         _get_simd_path,
         b64decode,
         b64decode_as_bytearray,
@@ -23,8 +23,6 @@ except ImportError:
         b64encode_as_string,
         encodebytes,
     )
-
-    _has_extension = False
 
 
 def get_license_text() -> str:
@@ -41,26 +39,10 @@ def get_version() -> str:
     The result reports if the C extension is used or not.
     e.g. `1.0.0 (C extension active - AVX2)`
     """
-    if _has_extension:
-        simd_flag = _get_simd_path()
-        if simd_flag == 0:
-            simd_name = "No SIMD"
-        elif simd_flag == 4:
-            simd_name = "SSSE3"
-        elif simd_flag == 8:
-            simd_name = "SSE41"
-        elif simd_flag == 16:
-            simd_name = "SSE42"
-        elif simd_flag == 32:
-            simd_name = "AVX"
-        elif simd_flag == 64:
-            simd_name = "AVX2"
-        elif simd_flag == 65536:
-            simd_name = "NEON"
-        else:  # pragma: no branch
-            simd_name = "Unknown"  # pragma: no cover
-        return __version__ + " (C extension active - " + simd_name + ")"
-    return __version__ + " (C extension inactive)"
+    simd_name = _get_simd_name(_get_simd_path())
+    if simd_name != "fallback":
+        return f"{__version__} (C extension active - {simd_name})"
+    return f"{__version__} (C extension inactive)"
 
 
 def standard_b64encode(s: Any) -> bytes:

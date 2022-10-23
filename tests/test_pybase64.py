@@ -11,6 +11,7 @@ try:
     from pybase64._pybase64 import (
         _get_simd_flags_compile,
         _get_simd_flags_runtime,
+        _get_simd_name,
         _get_simd_path,
         _set_simd_path,
     )
@@ -107,25 +108,12 @@ if _has_extension:
 
 
 def get_simd_name(simd_id):
-    simd_name = None
     if _has_extension:
         simd_flag = compile_flags[simd_id]
         if simd_flag == 0:
             simd_name = "c"
-        elif simd_flag == 4:
-            simd_name = "ssse3"
-        elif simd_flag == 8:
-            simd_name = "sse41"
-        elif simd_flag == 16:
-            simd_name = "sse42"
-        elif simd_flag == 32:
-            simd_name = "avx"
-        elif simd_flag == 64:
-            simd_name = "avx2"
-        elif simd_flag == 65536:
-            simd_name = "neon"
-        else:  # pragma: no branch
-            simd_name = "unk"  # pragma: no cover
+        else:
+            simd_name = _get_simd_name(simd_flag).lower()
     else:
         simd_name = "py"
     return simd_name
@@ -472,4 +460,5 @@ def test_flags(request):
         "nhm": 1 | 2 | 4 | 8 | 16,  # SSE42
         "snb": 1 | 2 | 4 | 8 | 16 | 32,  # AVX
         "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
+        "spr": 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
     }[cpu] == runtime_flags

@@ -683,6 +683,9 @@ static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
     result |= PYBASE64_NEON;
 #endif
 
+#if BASE64_WITH_AVX512
+    result |= PYBASE64_AVX512VBMI;
+#endif
 #if BASE64_WITH_AVX2
     result |= PYBASE64_AVX2;
 #endif
@@ -717,6 +720,13 @@ static void set_simd_path(uint32_t flag)
     else if (flag & PYBASE64_NEON) {
         active_simd_flag = PYBASE64_NEON;
         libbase64_simd_flag = BASE64_FORCE_NEON32;
+    }
+#endif
+
+#if BASE64_WITH_AVX512
+    else if (flag & PYBASE64_AVX512VBMI) {
+        active_simd_flag = PYBASE64_AVX512VBMI;
+        libbase64_simd_flag = BASE64_FORCE_AVX512;
     }
 #endif
 #if BASE64_WITH_AVX2
@@ -759,6 +769,46 @@ static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
 {
     set_simd_path((uint32_t)PyLong_AsUnsignedLong(arg));
     Py_RETURN_NONE;
+}
+
+static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
+{
+    uint32_t flags = (uint32_t)PyLong_AsUnsignedLong(arg);
+
+    if (flags & PYBASE64_NEON) {
+        return PyUnicode_FromString("NEON");
+    }
+
+    if (flags & PYBASE64_AVX512VBMI) {
+        return PyUnicode_FromString("AVX512VBMI");
+    }
+    if (flags & PYBASE64_AVX2) {
+        return PyUnicode_FromString("AVX2");
+    }
+    if (flags & PYBASE64_AVX) {
+        return PyUnicode_FromString("AVX");
+    }
+    if (flags & PYBASE64_SSE42) {
+        return PyUnicode_FromString("SSE42");
+    }
+    if (flags & PYBASE64_SSE41) {
+        return PyUnicode_FromString("SSE41");
+    }
+    if (flags & PYBASE64_SSSE3) {
+        return PyUnicode_FromString("SSSE3");
+    }
+    if (flags & PYBASE64_SSE3) {
+        return PyUnicode_FromString("SSE3");
+    }
+    if (flags & PYBASE64_SSE2) {
+        return PyUnicode_FromString("SSE2");
+    }
+
+    if (flags != 0) {
+        return PyUnicode_FromString("unknown");
+    }
+
+    return PyUnicode_FromString("No SIMD");
 }
 
 static PyObject* pybase64_import(const char* from, const char* object)
@@ -828,6 +878,7 @@ static PyMethodDef _pybase64_methods[] = {
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
     { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },
     { "_get_simd_flags_runtime", (PyCFunction)pybase64_get_simd_flags_runtime, METH_NOARGS, NULL },
+    { "_get_simd_name", (PyCFunction)pybase64_get_simd_name, METH_O, NULL },
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 

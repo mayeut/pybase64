@@ -2,9 +2,10 @@ from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 __all__ = [
+    "_get_simd_name",
     "_get_simd_path",
     "b64decode",
     "b64encode",
@@ -16,8 +17,13 @@ __all__ = [
 _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
 
 
-def _get_simd_path() -> Optional[int]:
-    return None
+def _get_simd_name(flags: int) -> str:
+    assert flags == 0
+    return "fallback"
+
+
+def _get_simd_path() -> int:
+    return 0
 
 
 def _get_bytes(s: Any) -> Union[bytes, bytearray]:
