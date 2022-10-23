@@ -46,6 +46,26 @@ static uint64_t _xgetbv (uint32_t index)
 }
 #endif
 
+#define PB64_SSE2_BIT_LVL1_EDX    (UINT32_C(1) << 26)
+#define PB64_SSE3_BIT_LVL1_ECX    (UINT32_C(1) << 0)
+#define PB64_SSSE3_BIT_LVL1_ECX   (UINT32_C(1) << 9)
+#define PB64_SSE41_BIT_LVL1_ECX   (UINT32_C(1) << 19)
+#define PB64_SSE42_BIT_LVL1_ECX   (UINT32_C(1) << 20)
+#define PB64_AVX_BIT_LVL1_ECX     (UINT32_C(1) << 28)
+#define PB64_AVX2_BIT_LVL7_EBX    (UINT32_C(1) << 5)
+#define PB64_OSXSAVE_BIT_LVL1_ECX (UINT32_C(1) << 27)
+
+#define PB64_XCR0_SSE_BIT       (UINT64_C(1) << 1)
+#define PB64_XCR0_AVX_BIT       (UINT64_C(1) << 2)
+#define PB64_XCR0_OPMASK_BIT    (UINT64_C(1) << 5)
+#define PB64_XCR0_ZMM_HI256_BIT (UINT64_C(1) << 6)
+#define PB64_XCR0_HI16_ZMM_BIT  (UINT64_C(1) << 7)
+
+#define PB64_XCR0_AVX_SUPPORT_MASK    (PB64_XCR0_SSE_BIT | PB64_XCR0_AVX_BIT)
+#define PB64_XCR0_AVX512_SUPPORT_MASK (PB64_XCR0_AVX_SUPPORT_MASK | PB64_XCR0_OPMASK_BIT | PB64_XCR0_ZMM_HI256_BIT | PB64_XCR0_HI16_ZMM_BIT)
+
+#define PB64_CHECK(reg_, bits_) (((reg_) & (bits_)) == (bits_))
+
 uint32_t pybase64_get_simd_flags(void)
 {
 	uint32_t result = 0U;
@@ -57,26 +77,26 @@ uint32_t pybase64_get_simd_flags(void)
 
 	if (max_level >= 1) {
 		cpuid_(1U, 0U, &eax, &ebx, &ecx, &edx);
-		if (edx & 0x04000000U) {
+		if (PB64_CHECK(edx, PB64_SSE2_BIT_LVL1_EDX)) {
 			result |= PYBASE64_SSE2;
 		}
-		if (ecx & 0x00000001U) {
+		if (PB64_CHECK(ecx, PB64_SSE3_BIT_LVL1_ECX)) {
 			result |= PYBASE64_SSE3;
 		}
-		if (ecx & 0x00000200U) {
+		if (PB64_CHECK(ecx, PB64_SSSE3_BIT_LVL1_ECX)) {
 			result |= PYBASE64_SSSE3;
 		}
-		if (ecx & 0x00080000) {
+		if (PB64_CHECK(ecx, PB64_SSE41_BIT_LVL1_ECX)) {
 			result |= PYBASE64_SSE41;
 		}
-		if (ecx & 0x00100000) {
+		if (PB64_CHECK(ecx, PB64_SSE42_BIT_LVL1_ECX)) {
 			result |= PYBASE64_SSE42;
 		}
-		if (ecx & 0x08000000) { /* OSXSAVE (implies XSAVE/XRESTOR/XGETBV) */
-			uint64_t xcr_mask = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
+		if (PB64_CHECK(ecx, PB64_OSXSAVE_BIT_LVL1_ECX)) { /* OSXSAVE (implies XSAVE/XRESTOR/XGETBV) */
+			uint64_t xcr0 = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
 
-			if (xcr_mask & 6U) { /* XMM/YMM saved by OS */
-				if (ecx & 0x10000000U) {
+			if (PB64_CHECK(xcr0, PB64_XCR0_AVX_SUPPORT_MASK)){ /* XMM/YMM saved by OS */
+				if (ecx & PB64_AVX_BIT_LVL1_ECX) {
 					result |= PYBASE64_AVX;
 				}
 			}
@@ -86,7 +106,7 @@ uint32_t pybase64_get_simd_flags(void)
 	if (max_level >= 7) {
 		cpuid_(7U, 0U, &eax, &ebx, &ecx, &edx);
 		if (result & PYBASE64_AVX) { /* check AVX supported for YMM saved by OS */
-				if (ebx & 0x00000020U) {
+				if (PB64_CHECK(ebx, PB64_AVX2_BIT_LVL7_EBX)) {
 					result |= PYBASE64_AVX2;
 				}
 		}
