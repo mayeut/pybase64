@@ -55,6 +55,7 @@ pybase64_ext = Extension(
         "base64/lib/codec_choose.c",
         "base64/lib/arch/generic/codec.c",
         "base64/lib/tables/tables.c",
+        "base64/lib/arch/avx512/codec.c",  # always disabled
     ],
     include_dirs=["base64/include/", "base64/lib/"],
     define_macros=[("BASE64_STATIC_DEFINE", "1")],
@@ -94,6 +95,7 @@ def pybase64_write_config(capabilities):
             "\n#define HAVE_AVX2                  %i"
             % capabilities.has(CCompilerCapabilities.SIMD_AVX2)
         )
+        f.write("\n#define HAVE_AVX512                0")
         f.write(
             "\n#define HAVE_NEON32                %i"
             % capabilities.has(CCompilerCapabilities.SIMD_NEON32)
