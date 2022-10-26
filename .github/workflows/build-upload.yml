@@ -53,7 +53,7 @@ jobs:
         if: runner.os == 'Linux'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.1
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
