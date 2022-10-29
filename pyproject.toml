@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-test-requires = "pytest"
-test-command = "pytest --pyargs pybase64"
+test-requires = "-r requirements-test.txt"
+test-command = "pytest {project}/tests"
 build-verbosity = 1
 
 [tool.isort]

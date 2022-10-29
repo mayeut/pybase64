@@ -26,10 +26,10 @@ jobs:
           set -exuo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends valgrind
-          python -m pip install -r requirements-dev.txt
+          python -m pip install -r requirements-test.txt
 
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
-          CFLAGS="-O0" python setup.py build_ext -fiv
+          CFLAGS="-O0" CIBUILDWHEEL=1 python -m pip install -e .
           PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(which python) -m pytest

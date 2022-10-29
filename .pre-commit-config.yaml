@@ -39,4 +39,4 @@ repos:
   rev: v0.982
   hooks:
   - id: mypy
-    exclude: docs|pybase64/__main__.py|conftest.py|pybase64/tests|pybase64/distutils|setup.py
+    exclude: docs|src/pybase64/__main__.py|conftest.py|tests|setup.py

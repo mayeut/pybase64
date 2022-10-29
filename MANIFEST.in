@@ -2,7 +2,7 @@
 include LICENSE
 
 # Include headers
-include pybase64/_pybase64_get_simd_flags.h
+include src/pybase64/_pybase64_get_simd_flags.h
 
 # Include full base64 folder
 graft base64

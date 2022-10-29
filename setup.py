@@ -12,7 +12,7 @@ import sysconfig
 from contextlib import contextmanager
 from pathlib import Path
 
-from setuptools import Command, Extension, find_packages, setup
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 HERE = Path(__file__).resolve().parent
@@ -25,14 +25,14 @@ log = logging.getLogger("pybase64-setup")
 
 # Get version
 version_dict = {}
-exec(HERE.joinpath("pybase64", "_version.py").read_text(), {}, version_dict)
+exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)
 version = version_dict["__version__"]
 
 # Get the long description from the README file
 long_description = HERE.joinpath("README.rst").read_text()
 
 # Generate license text
-with HERE.joinpath("pybase64", "_license.py").open("w") as f:
+with HERE.joinpath("src", "pybase64", "_license.py").open("w") as f:
     f.write('_license = """')
     f.write("pybase64\n")
     f.write("=" * 79 + "\n")
@@ -48,8 +48,8 @@ with HERE.joinpath("pybase64", "_license.py").open("w") as f:
 pybase64_ext = Extension(
     "pybase64._pybase64",
     [
-        "pybase64/_pybase64.c",
-        "pybase64/_pybase64_get_simd_flags.c",
+        "src/pybase64/_pybase64.c",
+        "src/pybase64/_pybase64_get_simd_flags.c",
     ],
     include_dirs=["base64/include/", "base64/lib/", ".base64_build"],
     library_dirs=[".base64_build"],
@@ -172,6 +172,14 @@ def base64_build(plat_name):
 
 
 class BuildExt(build_ext):
+    def finalize_options(self):
+        if "-coverage" in os.environ.get("CFLAGS", "").split():
+            coverage_build = HERE / "build" / "coverage"
+            if coverage_build.exists():
+                shutil.rmtree(coverage_build)
+            self.build_temp = str(coverage_build)
+        super().finalize_options()
+
     def run(self):
         plat_name = None
         if hasattr(self, "plat_name"):
@@ -180,35 +188,9 @@ class BuildExt(build_ext):
             super().run()
 
 
-# Let's define a class to clean in-place built extensions
-class CleanExt(Command):
-    """A custom command to clean all in-place built C extensions."""
-
-    description = "clean all in-place built C extensions"
-    user_options = []
-
-    def initialize_options(self):
-        """Set default values for options."""
-
-    def finalize_options(self):
-        """Post-process options."""
-
-    def run(self):
-        """Run command."""
-        for ext in ["*.so", "*.pyd"]:
-            for file in HERE.glob(f"pybase64/{ext}"):
-                log.info("removing '%s'", file)
-                if self.dry_run:
-                    continue
-                os.remove(file)
-
-
 setup(
     name="pybase64",
-    cmdclass={
-        "build_ext": BuildExt,
-        "clean_ext": CleanExt,
-    },
+    cmdclass={"build_ext": BuildExt},
     ext_modules=[pybase64_ext],
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -259,14 +241,8 @@ setup(
     keywords="base64",
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(),
-    # List additional groups of dependencies here (e.g. development
-    # dependencies). You can install these using the following syntax,
-    # for example:
-    # $ pip install -e .[dev,test]
-    extras_require={
-        "test": ["pytest>=5.0.0"],
-    },
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.

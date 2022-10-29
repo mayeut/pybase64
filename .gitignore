@@ -1,5 +1,5 @@
 # Genertaed files
-pybase64/_license.py
+src/pybase64/_license.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
