@@ -82,7 +82,7 @@ def coverage(session: nox.Session) -> None:
     }
     update_env_macos(session, env)
     session.install("-e", ".", env=env)
-    session.run("python", "-m", "coverage", "erase", env=env)
+    session.run("coverage", "erase", env=env)
     session.run(*pytest_command, env=env)
     if with_sde:
         session.run("sde", "--", *pytest_command, env=env, external=True)
@@ -97,9 +97,14 @@ def coverage(session: nox.Session) -> None:
     session.run(*pytest_command, env=env)
 
     # reports
+    session.run("coverage", "report", "--show-missing", "--fail-under=93")
+    session.run("coverage", "xml", "-ocoverage-python.xml")
+    gcovr_config = ("-r=.", "-e=base64", "-e=.base64_build")
     session.run(
-        "python", "-m", "coverage", "report", "--show-missing", "--fail-under=93"
-    )
-    session.run(
-        "gcovr", "-r=.", "-s", "-e=base64", "-e=.base64_build", "--fail-under-line=90"
+        "gcovr",
+        *gcovr_config,
+        "--fail-under-line=90",
+        "--txt",
+        "-s",
+        "--xml=coverage-native.xml",
     )
