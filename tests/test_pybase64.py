@@ -20,7 +20,7 @@ try:
 except ImportError:
     if os.environ.get("CIBUILDWHEEL", "0") == "1":
         # the native extension must be importable within cibuildwheel
-        raise
+        raise  # pragma: no cover
     _has_extension = False
 
 
@@ -451,8 +451,6 @@ def test_invalid_args_dec_0(dfn, dcast):
 
 def test_flags(request):
     cpu = request.config.getoption("--sde-cpu", skip=True)
-    if not cpu:
-        pytest.skip("needs --sde-cpu option to run")
     assert {
         "p4p": 1 | 2,  # SSE3
         "mrm": 1 | 2 | 4,  # SSSE3

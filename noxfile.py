@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from typing import Dict
@@ -66,7 +67,13 @@ def _coverage(session: nox.Session) -> None:
     with_sde = "--with-sde" in session.posargs
     clean = "--clean" in session.posargs
     report = "--report" in session.posargs
-    coverage_args = ("--cov=pybase64", "--cov-append", "--cov-branch", "--cov-report=")
+    coverage_args = (
+        "--cov=pybase64",
+        "--cov=tests",
+        "--cov-append",
+        "--cov-branch",
+        "--cov-report=",
+    )
     pytest_command = ("pytest", *coverage_args)
 
     session.install("-r", "requirements-test.txt", "-r", "requirements-coverage.txt")
@@ -99,7 +106,8 @@ def _coverage(session: nox.Session) -> None:
 
     # reports
     if report:
-        session.run("coverage", "report", "--show-missing", "--fail-under=100")
+        threshold = 100.0 if "CI" in os.environ else 99.8
+        session.run("coverage", "report", "--show-missing", f"--fail-under={threshold}")
         session.run("coverage", "xml", "-ocoverage-python.xml")
         gcovr_config = ("-r=.", "-e=base64", "-e=.base64_build")
         session.run(
