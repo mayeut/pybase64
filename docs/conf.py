@@ -63,7 +63,7 @@ copyright = f"2017-{datetime.date.today().year}, Matthieu Darbois"
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 # Get version
-_version = runpy.run_path(os.path.join(here, "..", "pybase64", "_version.py"))[
+_version = runpy.run_path(os.path.join(here, "..", "src", "pybase64", "_version.py"))[
     "__version__"
 ]
 # The short X.Y version.
