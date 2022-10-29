@@ -82,28 +82,29 @@ def bench_one(duration, data, enc, dec, encbytes, altchars=None, validate=False)
 
 def readall(file):
     if file == sys.stdin:
+        # Python 3 < 3.9 does not honor the binary flag,
+        # read from the underlying buffer
         if hasattr(file, "buffer"):
-            # Python 3 does not honor the binary flag,
-            # read from the underlying buffer
             return file.buffer.read()
         else:
-            return file.read()
+            return file.read()  # pragma: no cover
         # do not close the file
     else:
         try:
-            return file.read()
+            data = file.read()
         finally:
             file.close()
+        return data
 
 
 def writeall(file, data):
     if file == sys.stdout:
+        # Python 3 does not honor the binary flag,
+        # write to the underlying buffer
         if hasattr(file, "buffer"):
-            # Python 3 does not honor the binary flag,
-            # write to the underlying buffer
             file.buffer.write(data)
         else:
-            file.write(data)
+            file.write(data)  # pragma: no cover
         # do not close the file
     else:
         try:
