@@ -72,10 +72,7 @@ def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
             assert len(altchars) == 2, repr(altchars)
             map = bytes.maketrans(altchars, b"+/")
             s = s.translate(map)
-        try:
-            result = builtin_decode(s, altchars, validate=False)
-        except TypeError as e:
-            raise BinAsciiError(str(e))
+        result = builtin_decode(s, altchars, validate=False)
 
         # check length of result vs length of input
         padding = 0
