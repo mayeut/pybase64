@@ -1,0 +1,8 @@
+project: pybase64
+target: pybase64-fuzz
+image: ghcr.io/omkarxpatel/fuzz_pybase64:latest
+
+
+cmds:
+  - cmd: /fuzz_pybase64.py
+    libfuzzer: true
