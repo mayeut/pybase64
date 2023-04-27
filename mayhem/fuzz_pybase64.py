@@ -18,7 +18,7 @@ def TestOneInput(data):
 
     if data != decoded:
         pdb.set_trace()
-        raise RuntimeError("Encoded and decoded data are not equal")
+        raise RuntimeError("Decoded data not equal to original data")
 
 
 def main():
@@ -27,6 +27,6 @@ def main():
 
 
 if __name__ == "__main__":
-    print("starting")
+    # print("starting")
     main()
-    print("ending")
+    # print("ending")
