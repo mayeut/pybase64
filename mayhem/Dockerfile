@@ -1,18 +1,18 @@
-# FROM fuzzers/atheris:2.0.7-python3.9
-
-# RUN apt-get update
-
-# ADD . /src
-# WORKDIR /src
-
-# RUN pip install pybase64
-# # RUN chmod +x /src/mayhem/fuzz_pybase64.py
-
-
 FROM fuzzers/atheris:2.0.7-python3.9
 
+RUN apt-get update
+
+ADD . /src
+WORKDIR /src
+
 RUN pip install pybase64
+# RUN chmod +x /src/mayhem/fuzz_pybase64.py
 
-ADD fuzz_pybase64.py /fuzz_pybase64.py
 
-CMD ["/fuzz_pybase64.py"]
+# FROM fuzzers/atheris:2.0.7-python3.9
+
+# RUN pip install pybase64
+
+# ADD fuzz_pybase64.py /fuzz_pybase64.py
+
+# CMD ["/fuzz_pybase64.py"]
