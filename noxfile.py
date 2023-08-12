@@ -129,3 +129,28 @@ def coverage(session: nox.Session) -> None:
     posargs.add("--report")
     session.notify("_coverage-3.8", ["--clean"])
     session.notify("_coverage-3.11", posargs)
+
+
+@nox.session(python="3.11")
+def docs(session: nox.Session) -> None:
+    """
+    Build the docs.
+    """
+    session.install("-r", "requirements-doc.txt", ".")
+    session.run("pip", "list")
+    session.chdir("docs")
+    session.run(
+        "python",
+        "-m",
+        "sphinx",
+        "-T",
+        "-E",
+        "-b",
+        "html",
+        "-d",
+        "_build/doctrees",
+        "-D",
+        "language=en",
+        ".",
+        "build",
+    )
