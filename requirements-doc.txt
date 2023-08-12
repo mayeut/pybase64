@@ -1,2 +1,2 @@
-sphinx==6.2.1
-sphinx_rtd_theme==1.2.2
+sphinx==7.1.2
+furo==2023.7.26

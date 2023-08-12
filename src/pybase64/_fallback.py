@@ -143,7 +143,7 @@ def b64encode_as_string(s: Any, altchars: Any = None) -> str:
 
 
 def encodebytes(s: Any) -> bytes:
-    """Encode bytes into a bytes object with newlines (b'\n') inserted after
+    """Encode bytes into a bytes object with newlines (b'\\\\n') inserted after
     every 76 bytes of output, and ensuring that there is a trailing newline,
     as per :rfc:`2045` (MIME).
 
