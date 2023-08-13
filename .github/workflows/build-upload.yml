@@ -113,8 +113,8 @@ jobs:
       - name: Upload to Test PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.10
         with:
-          skip_existing: true
-          repository_url: https://test.pypi.org/legacy/
+          skip-existing: true
+          repository-url: https://test.pypi.org/legacy/
 
   upload_pypi:
     name: Upload to PyPI
@@ -134,4 +134,4 @@ jobs:
       - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.10
         with:
-          skip_existing: true
+          skip-existing: true
