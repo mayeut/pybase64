@@ -59,8 +59,9 @@ jobs:
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "cibw-wheels ${{ matrix.build || matrix.os }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -91,8 +92,9 @@ jobs:
           python -m pip install -r requirements-test.txt
           pytest
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: cibw-sdist
           path: dist/*.tar.gz
 
   upload_test_pypi:
@@ -106,10 +108,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
           path: dist
+          merge-multiple: true
       - name: Upload to Test PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
@@ -127,10 +131,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
           path: dist
+          merge-multiple: true
       - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
