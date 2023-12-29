@@ -46,7 +46,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"])
 def test(session: nox.Session) -> None:
     """Run tests."""
     session.install("-r", "requirements-test.txt")
@@ -54,11 +54,11 @@ def test(session: nox.Session) -> None:
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
     session.install(".", env=env)
-    session.run("pytest", env=env)
+    session.run("pytest", *session.posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session)
-    session.run("pytest", env=env)
+    session.run("pytest", *session.posargs, env=env)
 
 
 @nox.session(python=["3.8", "3.11"])

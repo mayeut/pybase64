@@ -125,6 +125,9 @@ def b64encode(s: Any, altchars: Any = None) -> bytes:
     if altchars is not None:
         altchars = _get_bytes(altchars)
         assert len(altchars) == 2, repr(altchars)
+    mv = memoryview(s)
+    if not mv.c_contiguous:
+        s = mv.tobytes()
     return builtin_encode(s, altchars)
 
 

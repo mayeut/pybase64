@@ -23,7 +23,6 @@ except ImportError:
         raise  # pragma: no cover
     _has_extension = False
 
-
 STD = 0
 URL = 1
 ALT1 = 2
@@ -156,8 +155,12 @@ param_simd = pytest.mark.parametrize(
 param_encode_functions = pytest.mark.parametrize(
     "efn, ecast",
     [
-        (pybase64.b64encode, lambda x: x),
-        (pybase64.b64encode_as_string, lambda x: x.encode("ascii")),
+        pytest.param(pybase64.b64encode, lambda x: x, id="b64encode"),
+        pytest.param(
+            pybase64.b64encode_as_string,
+            lambda x: x.encode("ascii"),
+            id="b64encode_as_string",
+        ),
     ],
 )
 
@@ -165,8 +168,12 @@ param_encode_functions = pytest.mark.parametrize(
 param_decode_functions = pytest.mark.parametrize(
     "dfn, dcast",
     [
-        (pybase64.b64decode, lambda x: x),
-        (pybase64.b64decode_as_bytearray, lambda x: bytes(x)),
+        pytest.param(pybase64.b64decode, lambda x: x, id="b64decode"),
+        pytest.param(
+            pybase64.b64decode_as_bytearray,
+            lambda x: bytes(x),
+            id="b64decode_as_bytearray",
+        ),
     ],
 )
 
@@ -460,3 +467,48 @@ def test_flags(request):
         "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
         "spr": 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
     }[cpu] == runtime_flags
+
+
+@param_encode_functions
+def test_enc_multi_dimensional(efn, ecast):
+    source = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
+    vector = memoryview(source).cast("B", (4, len(source) // 4))
+    assert vector.c_contiguous
+    test = ecast(efn(vector, None))
+    base = base64.b64encode(source)
+    assert test == base
+
+
+@param_decode_functions
+def test_dec_multi_dimensional(dfn, dcast):
+    source = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
+    vector = memoryview(source).cast("B", (4, len(source) // 4))
+    assert vector.c_contiguous
+    test = dcast(dfn(vector, None))
+    base = base64.b64decode(source)
+    assert test == base
+
+
+@param_validate
+@param_decode_functions
+def test_dec_stride(dfn, dcast, validate):
+    source = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
+    source_altchars = b"- _"
+    vector = memoryview(source)[::2]
+    vector_altchars = memoryview(source_altchars)[::2]
+    assert not (vector.contiguous or vector_altchars.contiguous)
+    test = dcast(dfn(vector, vector_altchars, validate))
+    base = base64.b64decode(vector.tobytes(), vector_altchars.tobytes(), validate)
+    assert test == base
+
+
+@param_encode_functions
+def test_enc_stride(efn, ecast):
+    source = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
+    source_altchars = b"- _"
+    vector = memoryview(source)[::2]
+    vector_altchars = memoryview(source_altchars)[::2]
+    assert not (vector.contiguous or vector_altchars.contiguous)
+    test = ecast(efn(vector, vector_altchars))
+    base = base64.b64encode(vector.tobytes(), vector_altchars.tobytes())
+    assert test == base

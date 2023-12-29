@@ -25,7 +25,7 @@ static uint32_t active_simd_flag = 0U;
 static uint32_t simd_flags;
 
 /* returns 0 on success */
-static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlphabet)
+static int parse_alphabet(PyObject* alphabetObject, int allow_non_contiguous, char* alphabet, int* useAlphabet)
 {
     Py_buffer buffer;
 
@@ -49,7 +49,7 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
         Py_INCREF(alphabetObject);
     }
 
-    if (PyObject_GetBuffer(alphabetObject, &buffer, PyBUF_SIMPLE) < 0) {
+    if (PyObject_GetBuffer(alphabetObject, &buffer, allow_non_contiguous ? PyBUF_FULL_RO : PyBUF_SIMPLE) < 0) {
         Py_DECREF(alphabetObject);
         return -1;
     }
@@ -61,9 +61,13 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
         return -1;
     }
 
+    if (PyBuffer_ToContiguous(alphabet, &buffer, 2, 'C') != 0) {
+        PyBuffer_Release(&buffer);
+        Py_DECREF(alphabetObject);
+        return -1;
+    }
+
     *useAlphabet = 1;
-    alphabet[0] = ((const char*)buffer.buf)[0];
-    alphabet[1] = ((const char*)buffer.buf)[1];
 
     if ((alphabet[0] == '+') && (alphabet[1] == '/')) {
         *useAlphabet = 0;
@@ -292,6 +296,31 @@ END:
     return 0;
 }
 
+static PyObject* get_contiguous_buffer(PyObject* input, Py_buffer* buffer) {
+    if (PyObject_GetBuffer(input, buffer, PyBUF_FULL_RO) < 0) {
+        Py_DECREF(input);
+        return NULL;
+    }
+    if (!PyBuffer_IsContiguous(buffer, 'C')) {
+        int error;
+        PyObject* contiguous_object = PyBytes_FromStringAndSize(NULL, buffer->len);
+        if (contiguous_object == NULL) {
+            PyBuffer_Release(buffer);
+            Py_DECREF(input);
+            return NULL;
+        }
+        error = PyBuffer_ToContiguous(PyBytes_AS_STRING(contiguous_object), buffer, buffer->len, 'C');
+        PyBuffer_Release(buffer);
+        Py_DECREF(input);
+        input = contiguous_object;
+        if ((error != 0) || (PyObject_GetBuffer(input, buffer, PyBUF_SIMPLE) != 0)) {
+            Py_DECREF(input);
+            return NULL;
+        }
+    }
+    return input;
+}
+
 static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_string)
 {
     static const char *kwlist[] = { "", "altchars", NULL };
@@ -310,16 +339,19 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
+    if (parse_alphabet(in_alphabet, 1, alphabet, &use_alphabet) != 0) {
         return NULL;
     }
 
-    if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+    Py_INCREF(in_object);
+    in_object = get_contiguous_buffer(in_object, &buffer);
+    if (in_object == NULL) {
         return NULL;
     }
 
     if (buffer.len > (3 * (PY_SSIZE_T_MAX / 4))) {
         PyBuffer_Release(&buffer);
+        Py_DECREF(in_object);
         return PyErr_NoMemory();
     }
 
@@ -332,6 +364,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     }
     if (out_object == NULL) {
         PyBuffer_Release(&buffer);
+        Py_DECREF(in_object);
         return NULL;
     }
     if (return_string) {
@@ -375,6 +408,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     Py_END_ALLOW_THREADS
 
     PyBuffer_Release(&buffer);
+    Py_DECREF(in_object);
 
     return out_object;
 }
@@ -411,7 +445,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
+    if (parse_alphabet(in_alphabet, 1, alphabet, &use_alphabet) != 0) {
         return NULL;
     }
 
@@ -434,8 +468,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_INCREF(in_object);
     }
     if (source == NULL) {
-        if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
-            Py_DECREF(in_object);
+        in_object = get_contiguous_buffer(in_object, &buffer);
+        if (in_object == NULL) {
             return NULL;
         }
         source = buffer.buf;
