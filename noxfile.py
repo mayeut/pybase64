@@ -9,6 +9,10 @@ HERE = Path(__file__).resolve().parent
 
 nox.options.sessions = ["lint", "test"]
 
+ALL_CPYTHON = [f"3.{minor}" for minor in range(6, 12 + 1)]
+ALL_PYPY = [f"pypy3.{minor}" for minor in range(8, 10 + 1)]
+ALL_PYTHON = ALL_CPYTHON + ALL_PYPY
+
 
 @nox.session
 def lint(session: nox.Session) -> None:
@@ -46,7 +50,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=ALL_PYTHON)
 def test(session: nox.Session) -> None:
     """Run tests."""
     session.install("-r", "requirements-test.txt")
@@ -54,11 +58,11 @@ def test(session: nox.Session) -> None:
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
     session.install(".", env=env)
-    session.run("pytest", env=env)
+    session.run("pytest", *session.posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session)
-    session.run("pytest", env=env)
+    session.run("pytest", *session.posargs, env=env)
 
 
 @nox.session(python=["3.8", "3.11"])

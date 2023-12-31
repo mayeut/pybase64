@@ -35,7 +35,10 @@ def _get_bytes(s: Any) -> Union[bytes, bytearray]:
     if isinstance(s, _bytes_types):
         return s
     try:
-        return memoryview(s).tobytes()
+        mv = memoryview(s)
+        if not mv.c_contiguous:
+            raise BufferError("memoryview: underlying buffer is not C-contiguous")
+        return mv.tobytes()
     except TypeError:
         raise TypeError(
             "argument should be a bytes-like object or ASCII "
@@ -63,24 +66,25 @@ def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
+    s = _get_bytes(s)
+    if altchars is not None:
+        altchars = _get_bytes(altchars)
     if validate:
         if len(s) % 4 != 0:
             raise BinAsciiError("Incorrect padding")
-        s = _get_bytes(s)
-        if altchars is not None:
-            altchars = _get_bytes(altchars)
-            assert len(altchars) == 2, repr(altchars)
-            map = bytes.maketrans(altchars, b"+/")
-            s = s.translate(map)
         result = builtin_decode(s, altchars, validate=False)
 
         # check length of result vs length of input
-        padding = 0
-        if len(s) > 1 and s[-2] in (b"=", 61):
-            padding = padding + 1
-        if len(s) > 0 and s[-1] in (b"=", 61):
-            padding = padding + 1
-        if 3 * (len(s) / 4) - padding != len(result):
+        expected_len = 0
+        if len(s) > 0:
+            padding = 0
+            # len(s) % 4 != 0 implies len(s) >= 4 here
+            if s[-2] == 61:  # 61 == ord("=")
+                padding += 1
+            if s[-1] == 61:
+                padding += 1
+            expected_len = 3 * (len(s) // 4) - padding
+        if expected_len != len(result):
             raise BinAsciiError("Non-base64 digit found")
         return result
     return builtin_decode(s, altchars, validate=False)
@@ -122,9 +126,11 @@ def b64encode(s: Any, altchars: Any = None) -> bytes:
 
     The result is returned as a :class:`bytes` object.
     """
+    mv = memoryview(s)
+    if not mv.c_contiguous:
+        raise BufferError("memoryview: underlying buffer is not C-contiguous")
     if altchars is not None:
         altchars = _get_bytes(altchars)
-        assert len(altchars) == 2, repr(altchars)
     return builtin_encode(s, altchars)
 
 
@@ -151,4 +157,7 @@ def encodebytes(s: Any) -> bytes:
 
     The result is returned as a :class:`bytes` object.
     """
+    mv = memoryview(s)
+    if not mv.c_contiguous:
+        raise BufferError("memoryview: underlying buffer is not C-contiguous")
     return builtin_encodebytes(s)

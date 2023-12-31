@@ -24,6 +24,25 @@ static int libbase64_simd_flag = 0;
 static uint32_t active_simd_flag = 0U;
 static uint32_t simd_flags;
 
+
+/* returns 0 on success */
+static int get_buffer(PyObject* object, Py_buffer* buffer)
+{
+    if (PyObject_GetBuffer(object, buffer, PyBUF_RECORDS_RO | PyBUF_C_CONTIGUOUS) != 0) {
+        return -1;
+    }
+#if defined(PYPY_VERSION)
+    /* PyPy does not respect PyBUF_C_CONTIGUOUS */
+    if (!PyBuffer_IsContiguous(buffer, 'C')) {
+        PyBuffer_Release(buffer);
+        PyErr_Format(PyExc_BufferError, "%R: underlying buffer is not C-contiguous", Py_TYPE(object));
+        return -1;
+    }
+#endif
+    return 0;
+}
+
+
 /* returns 0 on success */
 static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlphabet)
 {
@@ -49,7 +68,7 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
         Py_INCREF(alphabetObject);
     }
 
-    if (PyObject_GetBuffer(alphabetObject, &buffer, PyBUF_SIMPLE) < 0) {
+    if (get_buffer(alphabetObject, &buffer) != 0) {
         Py_DECREF(alphabetObject);
         return -1;
     }
@@ -314,7 +333,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+    if (get_buffer(in_object, &buffer) != 0) {
         return NULL;
     }
 
@@ -434,7 +453,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_INCREF(in_object);
     }
     if (source == NULL) {
-        if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+        if (get_buffer(in_object, &buffer) != 0) {
             Py_DECREF(in_object);
             return NULL;
         }
@@ -467,7 +486,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             Py_DECREF(in_object);
         }
         in_object = translate_object;
-        if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+        if (get_buffer(in_object, &buffer) != 0) {
             Py_DECREF(in_object);
             return NULL;
         }
@@ -605,10 +624,17 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
     size_t out_len;
     PyObject* out_object;
 
-    if (PyObject_GetBuffer(in_object, &buffer, PyBUF_SIMPLE) < 0) {
+    if (get_buffer(in_object, &buffer) != 0) {
         return NULL;
     }
-
+    if (((buffer.format[0] != 'c') && (buffer.format[0] != 'b') && (buffer.format[0] != 'B')) || buffer.format[1] != '\0' ) {
+        PyBuffer_Release(&buffer);
+        return PyErr_Format(PyExc_TypeError, "expected single byte elements, not '%s' from %R", buffer.format, Py_TYPE(in_object));
+    }
+    if (buffer.ndim != 1) {
+        PyBuffer_Release(&buffer);
+        return PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer.ndim, Py_TYPE(in_object));
+    }
     if (buffer.len > (3 * (PY_SSIZE_T_MAX / 4))) {
         PyBuffer_Release(&buffer);
         return PyErr_NoMemory();
