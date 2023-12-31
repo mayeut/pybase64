@@ -5,12 +5,22 @@ import base64
 import sys
 from base64 import b64decode as b64decodeValidate
 from base64 import encodebytes as b64encodebytes
+from collections.abc import Callable, Sequence
 from timeit import default_timer as timer
+from typing import Any, BinaryIO
 
 import pybase64
 
 
-def bench_one(duration, data, enc, dec, encbytes, altchars=None, validate=False):
+def bench_one(
+    duration: float,
+    data: bytes,
+    enc: Callable[..., bytes],
+    dec: Callable[..., bytes],
+    encbytes: Callable[[Any], bytes],
+    altchars: Any | None = None,
+    validate: bool = False,
+) -> None:
     duration = duration / 2.0
 
     if not validate and altchars is None:
@@ -72,34 +82,32 @@ def bench_one(duration, data, enc, dec, encbytes, altchars=None, validate=False)
         iter -= 1
     time = timer() - time
     print(
-        "{0:<32s} {1:9.3f} MB/s ({3:,d} bytes -> {2:,d} bytes)".format(
+        "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
             dec.__module__ + "." + dec.__name__ + ":",
             ((number * len(data)) / (1024.0 * 1024.0)) / time,
-            len(data),
             len(encodedcontent),
+            len(data),
         )
     )
     assert decodedcontent == data
 
 
-def readall(file):
+def readall(file: BinaryIO) -> bytes:
     if file == sys.stdin:
         # Python 3 < 3.9 does not honor the binary flag,
         # read from the underlying buffer
         if hasattr(file, "buffer"):
             return file.buffer.read()
-        else:
-            return file.read()  # pragma: no cover
+        return file.read()  # pragma: no cover
         # do not close the file
-    else:
-        try:
-            data = file.read()
-        finally:
-            file.close()
-        return data
+    try:
+        data = file.read()
+    finally:
+        file.close()
+    return data
 
 
-def writeall(file, data):
+def writeall(file: BinaryIO, data: bytes) -> None:
     if file == sys.stdout:
         # Python 3 does not honor the binary flag,
         # write to the underlying buffer
@@ -115,18 +123,14 @@ def writeall(file, data):
             file.close()
 
 
-def benchmark(args):
+def benchmark(duration: float, input: BinaryIO) -> None:
     print(__package__ + " " + pybase64.get_version())
-    data = readall(args.input)
+    data = readall(input)
     for altchars in [None, b"-_"]:
         for validate in [False, True]:
-            print(
-                "bench: altchars={:s}, validate={:s}".format(
-                    repr(altchars), repr(validate)
-                )
-            )
+            print(f"bench: altchars={altchars!r:s}, validate={validate!r:s}")
             bench_one(
-                args.duration,
+                duration,
                 data,
                 pybase64.b64encode,
                 pybase64.b64decode,
@@ -135,7 +139,7 @@ def benchmark(args):
                 validate,
             )
             bench_one(
-                args.duration,
+                duration,
                 data,
                 base64.b64encode,
                 b64decodeValidate,
@@ -145,42 +149,47 @@ def benchmark(args):
             )
 
 
-def encode(args):
-    data = readall(args.input)
-    data = pybase64.b64encode(data, args.altchars)
-    writeall(args.output, data)
+def encode(input: BinaryIO, altchars: bytes | None, output: BinaryIO) -> None:
+    data = readall(input)
+    data = pybase64.b64encode(data, altchars)
+    writeall(output, data)
 
 
-def decode(args):
-    data = readall(args.input)
-    data = pybase64.b64decode(data, args.altchars, args.validate)
-    writeall(args.output, data)
+def decode(input: BinaryIO, altchars: bytes | None, validate: bool, output: BinaryIO) -> None:
+    data = readall(input)
+    data = pybase64.b64decode(data, altchars, validate)
+    writeall(output, data)
 
 
 class LicenseAction(argparse.Action):
     def __init__(
         self,
-        option_strings,
-        license=None,
-        dest=argparse.SUPPRESS,
-        default=argparse.SUPPRESS,
-        help="show license information and exit",
+        option_strings: Sequence[str],
+        dest: str,
+        license: str | None = None,
+        help: str | None = "show license information and exit",
     ):
         super().__init__(
             option_strings=option_strings,
             dest=dest,
-            default=default,
+            default=argparse.SUPPRESS,
             nargs=0,
             help=help,
         )
         self.license = license
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,  # noqa: ARG002
+        values: str | Sequence[Any] | None,  # noqa: ARG002
+        option_string: str | None = None,  # noqa: ARG002
+    ) -> None:
         print(self.license)
         parser.exit()
 
 
-def main(args=None):
+def main(argv: Sequence[str] | None = None) -> None:
     # main parser
     parser = argparse.ArgumentParser(
         prog=__package__, description=__package__ + " command-line tool."
@@ -191,9 +200,7 @@ def main(args=None):
         action="version",
         version=__package__ + " " + pybase64.get_version(),
     )
-    parser.add_argument(
-        "--license", action=LicenseAction, license=pybase64.get_license_text()
-    )
+    parser.add_argument("--license", action=LicenseAction, license=pybase64.get_license_text())
     # create sub-parsers
     subparsers = parser.add_subparsers(help="tool help")
     # benchmark parser
@@ -276,12 +283,13 @@ def main(args=None):
     )
     decode_parser.set_defaults(func=decode)
     # ready, parse
-    if args is None:
-        args = sys.argv[1:]
-    if len(args) == 0:
-        args = ["-h"]
-    args = parser.parse_args(args=args)
-    args.func(args)
+    if argv is None:
+        argv = sys.argv[1:]
+    if len(argv) == 0:
+        argv = ["-h"]
+    args = vars(parser.parse_args(args=argv))
+    func = args.pop("func")
+    func(**args)
 
 
 if __name__ == "__main__":

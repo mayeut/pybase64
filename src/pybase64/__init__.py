@@ -6,7 +6,7 @@ from ._license import _license
 from ._version import __version__
 
 try:
-    from ._pybase64 import (  # noqa: F401
+    from ._pybase64 import (
         _get_simd_name,
         _get_simd_path,
         b64decode,

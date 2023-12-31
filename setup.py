@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import sys
-
-if sys.version_info[:2] < (3, 7):
-    raise RuntimeError("Python version >= 3.7 required.")
-
 import logging
 import os
 import platform as platform_module
 import shutil
 import subprocess
+import sys
 import sysconfig
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Generator
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -26,7 +23,7 @@ IS_MACOS = sys.platform.startswith("darwin")
 log = logging.getLogger("pybase64-setup")
 
 # Get version
-version_dict = {}
+version_dict: dict[str, object] = {}
 exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)
 version = version_dict["__version__"]
 
@@ -61,26 +58,26 @@ pybase64_ext = Extension(
 )
 
 
-def get_cmake_extra_config(plat_name, build_type):
+def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
     log.info("getting cmake extra config")
     extra_config = []
     machine = platform_module.machine().lower()
     platform = sysconfig.get_platform()
     archflags = os.environ.get("ARCHFLAGS", None)
 
-    log.info(f"  machine: {machine}")
-    log.info(f"  platform: {platform}")
-    log.info(f"  plat_name: {plat_name}")
-    log.info(f"  ARCHFLAGS: {archflags}")
-    log.info(f"  CC: {os.environ.get('CC', None)}")
-    log.info(f"  CFLAGS: {os.environ.get('CFLAGS', None)}")
-    log.info(f"  LDFLAGS: {os.environ.get('LDFLAGS', None)}")
-    log.info(f"  sysconfig CC: {sysconfig.get_config_var('CC')}")
-    log.info(f"  sysconfig CCSHARED: {sysconfig.get_config_var('CCSHARED')}")
-    log.info(f"  sysconfig CFLAGS: {sysconfig.get_config_var('CFLAGS')}")
-    log.info(f"  sysconfig BASECFLAGS: {sysconfig.get_config_var('BASECFLAGS')}")
-    log.info(f"  sysconfig OPT: {sysconfig.get_config_var('OPT')}")
-    log.info(f"  sysconfig LDFLAGS: {sysconfig.get_config_var('LDFLAGS')}")
+    log.info("  machine: %s", machine)
+    log.info("  platform: %s", platform)
+    log.info("  plat_name: %s", plat_name)
+    log.info("  ARCHFLAGS: %s", archflags)
+    log.info("  CC: %s", os.environ.get("CC", None))
+    log.info("  CFLAGS: %s", os.environ.get("CFLAGS", None))
+    log.info("  LDFLAGS: %s", os.environ.get("LDFLAGS", None))
+    log.info("  sysconfig CC: %s", sysconfig.get_config_var("CC"))
+    log.info("  sysconfig CCSHARED: %s", sysconfig.get_config_var("CCSHARED"))
+    log.info("  sysconfig CFLAGS: %s", sysconfig.get_config_var("CFLAGS"))
+    log.info("  sysconfig BASECFLAGS: %s", sysconfig.get_config_var("BASECFLAGS"))
+    log.info("  sysconfig OPT: %s", sysconfig.get_config_var("OPT"))
+    log.info("  sysconfig LDFLAGS: %s", sysconfig.get_config_var("LDFLAGS"))
 
     platform = plat_name or platform
 
@@ -89,7 +86,8 @@ def get_cmake_extra_config(plat_name, build_type):
 
     if IS_WINDOWS:
         if not platform.startswith("win"):
-            raise ValueError(f"Building {platform} is not supported on Windows")
+            msg = f"Building {platform} is not supported on Windows"
+            raise ValueError(msg)
         # setup cross-compile
         # assumes VS2019 or VS2022 will be used as the default generator
         if platform == "win-amd64" and machine != "amd64":
@@ -110,10 +108,12 @@ def get_cmake_extra_config(plat_name, build_type):
             "ppc64",
         }
         if not platform.startswith("macosx-"):
-            raise ValueError(f"Building {platform} is not supported on macOS")
+            msg = f"Building {platform} is not supported on macOS"
+            raise ValueError(msg)
         _, _, platform_arch = platform.split("-")
         if platform_arch.startswith(("universal", "fat")):
-            raise ValueError(f"multiple arch `{platform_arch}` is not supported")
+            msg = f"multiple arch `{platform_arch}` is not supported"
+            raise ValueError(msg)
         configured_archs = {platform_arch}
         if archflags:
             flags = [arch.strip() for arch in archflags.strip().split() if arch.strip()]
@@ -121,24 +121,25 @@ def get_cmake_extra_config(plat_name, build_type):
                 if flags[i] == "-arch":
                     configured_archs.add(flags[i + 1])
         if len(configured_archs) > 1:
-            raise ValueError(f"multiple arch `{configured_archs}` is not supported")
+            msg = f"multiple arch `{configured_archs}` is not supported"
+            raise ValueError(msg)
         arch = configured_archs.pop()
         if arch in known_archs:
             extra_config.append(f"-DCMAKE_OSX_ARCHITECTURES={arch}")
         else:
-            log.warning(f"`{arch}` is not a known value for CMAKE_OSX_ARCHITECTURES")
+            log.warning("`%s` is not a known value for CMAKE_OSX_ARCHITECTURES", arch)
 
     return extra_config
 
 
-def cmake(*args):
+def cmake(*args: str) -> None:
     args_string = " ".join(f"'{arg}'" for arg in args)
-    log.info(f"running cmake {args_string}")
+    log.info("running cmake %s", args_string)
     subprocess.run(["cmake", *args], check=True)
 
 
 @contextmanager
-def base64_build(plat_name):
+def base64_build(plat_name: str | None) -> Generator[None, None, None]:
     source_dir = HERE / "base64"
     build_dir = HERE / ".base64_build"
     build_type = "Release"
@@ -160,9 +161,7 @@ def base64_build(plat_name):
             cmake(*config_options)
             cmake("--build", str(build_dir), "--config", build_type, "--verbose")
             if IS_WINDOWS:
-                shutil.copyfile(
-                    build_dir / build_type / "base64.lib", build_dir / "base64.lib"
-                )
+                shutil.copyfile(build_dir / build_type / "base64.lib", build_dir / "base64.lib")
         except Exception:
             if not OPTIONAL_EXTENSION:
                 raise
@@ -174,7 +173,7 @@ def base64_build(plat_name):
 
 
 class BuildExt(build_ext):
-    def finalize_options(self):
+    def finalize_options(self) -> None:
         if "-coverage" in os.environ.get("CFLAGS", "").split():
             plat_name = getattr(self, "plat_name", None) or sysconfig.get_platform()
             temp_name = f"coverage-{plat_name}-{sys.implementation.cache_tag}"
@@ -184,7 +183,7 @@ class BuildExt(build_ext):
             self.build_temp = str(coverage_build)
         super().finalize_options()
 
-    def run(self):
+    def run(self) -> None:
         plat_name = getattr(self, "plat_name", None)
         with base64_build(plat_name):
             super().run()

@@ -51,6 +51,16 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
+@nox.session(python="3.12")
+def develop(session: nox.Session) -> None:
+    """create venv for dev."""
+    session.install("-r", "requirements-test.txt")
+    # make extension mandatory by exporting CIBUILDWHEEL=1
+    env = {"CIBUILDWHEEL": "1"}
+    update_env_macos(session, env)
+    session.install("-e", ".", env=env)
+
+
 @nox.session(python=ALL_PYTHON)
 def test(session: nox.Session) -> None:
     """Run tests."""

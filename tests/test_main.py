@@ -4,13 +4,12 @@ import os
 import re
 import sys
 
-import pytest
-
 import pybase64
+import pytest
 from pybase64.__main__ import main
 
 
-@pytest.fixture
+@pytest.fixture()
 def emptyfile(tmpdir):
     _file = os.path.join(tmpdir.strpath, "empty")
     with open(_file, "wb"):
@@ -19,7 +18,7 @@ def emptyfile(tmpdir):
     os.remove(_file)
 
 
-@pytest.fixture
+@pytest.fixture()
 def hellofile(tmpdir):
     _file = os.path.join(tmpdir.strpath, "helloworld")
     with open(_file, "wb") as f:
@@ -46,10 +45,10 @@ def idfn_test_help(args):
     ids=idfn_test_help,
 )
 def test_help(capsys, args):
+    command = "pybase64"
     if len(args) == 2:
-        usage = f"usage: pybase64 {args[0]} [-h]"
-    else:
-        usage = "usage: pybase64 [-h]"
+        command += f" {args[0]}"
+    usage = f"usage: {command} [-h]"
     with pytest.raises(SystemExit) as exit_info:
         main(args)
     captured = capsys.readouterr()
@@ -68,9 +67,7 @@ def test_version(capsys):
 
 
 def test_license(capsys):
-    restr = "\n".join(
-        x + "\n[=]+\n.*Copyright.*\n[=]+\n" for x in ["pybase64", "libbase64"]
-    )
+    restr = "\n".join(x + "\n[=]+\n.*Copyright.*\n[=]+\n" for x in ["pybase64", "libbase64"])
     regex = re.compile("^" + restr + "$", re.DOTALL)
     with pytest.raises(SystemExit) as exit_info:
         main(["--license"])
@@ -88,7 +85,7 @@ def test_benchmark(capsys, emptyfile):
 
 
 @pytest.mark.parametrize(
-    "args,expect",
+    ("args", "expect"),
     [
         ([], b"aGVsbG8gd29ybGQgIS8/Cg=="),
         (["-u"], b"aGVsbG8gd29ybGQgIS8_Cg=="),
@@ -97,7 +94,7 @@ def test_benchmark(capsys, emptyfile):
     ids=["0", "1", "2"],
 )
 def test_encode(capsysbinary, hellofile, args, expect):
-    main(["encode"] + args + [hellofile])
+    main(["encode", *args, hellofile])
     captured = capsysbinary.readouterr()
     assert captured.err == b""
     assert captured.out == expect
@@ -114,12 +111,12 @@ def test_encode_ouputfile(capsys, emptyfile, hellofile):
 
 
 @pytest.mark.parametrize(
-    "args,b64string",
+    ("args", "b64string"),
     [
-        [[], b"aGVsbG8gd29ybGQgIS8/Cg=="],
-        [["-u"], b"aGVsbG8gd29ybGQgIS8_Cg=="],
-        [["-a", ":,"], b"aGVsbG8gd29ybGQgIS8,Cg=="],
-        [["--no-validation"], b"aGVsbG8gd29yb GQgIS8/Cg==\n"],
+        ([], b"aGVsbG8gd29ybGQgIS8/Cg=="),
+        (["-u"], b"aGVsbG8gd29ybGQgIS8_Cg=="),
+        (["-a", ":,"], b"aGVsbG8gd29ybGQgIS8,Cg=="),
+        (["--no-validation"], b"aGVsbG8gd29yb GQgIS8/Cg==\n"),
     ],
     ids=["0", "1", "2", "3"],
 )
@@ -127,7 +124,7 @@ def test_decode(capsysbinary, tmpdir, args, b64string):
     iname = os.path.join(tmpdir.strpath, "in")
     with open(iname, "wb") as f:
         f.write(b64string)
-    main(["decode"] + args + [iname])
+    main(["decode", *args, iname])
     captured = capsysbinary.readouterr()
     assert captured.err == b""
     assert captured.out == b"hello world !/?\n"
