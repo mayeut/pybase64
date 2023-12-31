@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 import nox
 
@@ -9,7 +10,7 @@ HERE = Path(__file__).resolve().parent
 
 nox.options.sessions = ["lint", "test"]
 
-ALL_CPYTHON = [f"3.{minor}" for minor in range(6, 12 + 1)]
+ALL_CPYTHON = [f"3.{minor}" for minor in range(7, 12 + 1)]
 ALL_PYPY = [f"pypy3.{minor}" for minor in range(8, 10 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_PYPY
 
@@ -21,7 +22,7 @@ def lint(session: nox.Session) -> None:
     session.run("pre-commit", "run", "-a")
 
 
-def update_env_macos(session: nox.Session, env: Dict[str, str]) -> None:
+def update_env_macos(session: nox.Session, env: dict[str, str]) -> None:
     if sys.platform.startswith("darwin"):
         # we don't support universal builds
         machine = session.run(
