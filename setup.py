@@ -9,7 +9,7 @@ import sys
 import sysconfig
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
+from typing import Generator, cast
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -25,7 +25,7 @@ log = logging.getLogger("pybase64-setup")
 # Get version
 version_dict: dict[str, object] = {}
 exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)
-version = version_dict["__version__"]
+version = cast(str, version_dict["_version"])
 
 # Get the long description from the README file
 long_description = HERE.joinpath("README.rst").read_text()
@@ -244,7 +244,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    package_data={"pybase64": ["py.typed"]},
+    package_data={"pybase64": ["py.typed", "_pybase64.pyi"]},
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.

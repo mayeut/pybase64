@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ._license import _license
-from ._version import __version__
+from ._version import _version
+
+if TYPE_CHECKING:
+    from ._typing import Buffer
 
 try:
     from ._pybase64 import (
@@ -16,7 +19,7 @@ try:
         encodebytes,
     )
 except ImportError:
-    from ._fallback import (  # noqa: F401
+    from ._fallback import (
         _get_simd_name,
         _get_simd_path,
         b64decode,
@@ -25,6 +28,21 @@ except ImportError:
         b64encode_as_string,
         encodebytes,
     )
+
+
+__all__ = (
+    "b64decode",
+    "b64decode_as_bytearray",
+    "b64encode",
+    "b64encode_as_string",
+    "encodebytes",
+    "standard_b64encode",
+    "standard_b64decode",
+    "urlsafe_b64encode",
+    "urlsafe_b64decode",
+)
+
+__version__ = _version
 
 
 def get_license_text() -> str:
@@ -47,7 +65,7 @@ def get_version() -> str:
     return f"{__version__} (C extension inactive)"
 
 
-def standard_b64encode(s: Any) -> bytes:
+def standard_b64encode(s: Buffer) -> bytes:
     """Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -57,7 +75,7 @@ def standard_b64encode(s: Any) -> bytes:
     return b64encode(s)
 
 
-def standard_b64decode(s: Any) -> bytes:
+def standard_b64decode(s: str | Buffer) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -73,7 +91,7 @@ def standard_b64decode(s: Any) -> bytes:
     return b64decode(s)
 
 
-def urlsafe_b64encode(s: Any) -> bytes:
+def urlsafe_b64encode(s: Buffer) -> bytes:
     """Encode bytes using the URL- and filesystem-safe Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -85,7 +103,7 @@ def urlsafe_b64encode(s: Any) -> bytes:
     return b64encode(s, b"-_")
 
 
-def urlsafe_b64decode(s: Any) -> bytes:
+def urlsafe_b64decode(s: str | Buffer) -> bytes:
     """Decode bytes using the URL- and filesystem-safe Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to

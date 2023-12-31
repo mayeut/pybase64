@@ -7,6 +7,10 @@ test-requires = "-r requirements-test.txt"
 test-command = "pytest {project}/tests"
 build-verbosity = 1
 
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "-p", "no:legacypath"]
+
 [tool.ruff]
 target-version = "py37"
 line-length = 100
@@ -37,15 +41,48 @@ extend-select = [
 ignore = [
   "PLR",    # Design related pylint codes
 ]
+typing-modules = ["pybase64._typing"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.Callable".msg = "Use collections.abc.Callable instead."
+"typing.Iterator".msg = "Use collections.abc.Iterator instead."
 "typing.Sequence".msg = "Use collections.abc.Sequence instead."
 
 [tool.mypy]
 python_version = "3.7"
-follow_imports = "silent"
-ignore_missing_imports = true
-disallow_untyped_defs = true
-disallow_any_generics = true
+files = [
+  "src/**/*.py",
+  "test/**/*.py",
+  "noxfile.py",
+  "setup.py",
+]
+warn_unused_configs = true
+show_error_codes = true
+
+warn_redundant_casts = true
+no_implicit_reexport = true
+strict_equality = true
 warn_unused_ignores = true
+check_untyped_defs = true
+ignore_missing_imports = false
+
+disallow_subclassing_any = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_any_explicit = true
+warn_return_any = true
+
+no_implicit_optional = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["pybase64.__main__"]
+disallow_any_explicit = false
+
+[[tool.mypy.overrides]]
+module = ["tests.test_pybase64"]
+disallow_any_explicit = false

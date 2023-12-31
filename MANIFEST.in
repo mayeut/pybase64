@@ -4,6 +4,9 @@ include LICENSE
 # Include headers
 include src/pybase64/_pybase64_get_simd_flags.h
 
+# Include type stub for extension
+include src/pybase64/_pybase64.pyi
+
 # Include full base64 folder
 graft base64
 # but the git folder
