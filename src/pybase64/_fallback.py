@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
-from typing import Any, Union
+from typing import Any
 
 __all__ = [
     "_get_simd_name",
@@ -26,7 +28,7 @@ def _get_simd_path() -> int:
     return 0
 
 
-def _get_bytes(s: Any) -> Union[bytes, bytearray]:
+def _get_bytes(s: Any) -> bytes | bytearray:
     if isinstance(s, str):
         try:
             return s.encode("ascii")
