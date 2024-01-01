@@ -174,16 +174,16 @@ def base64_build(plat_name):
 class BuildExt(build_ext):
     def finalize_options(self):
         if "-coverage" in os.environ.get("CFLAGS", "").split():
-            coverage_build = HERE / "build" / "coverage"
+            plat_name = getattr(self, "plat_name", None) or sysconfig.get_platform()
+            temp_name = f"coverage-{plat_name}-{sys.implementation.cache_tag}"
+            coverage_build = HERE / "build" / temp_name
             if coverage_build.exists():
                 shutil.rmtree(coverage_build)
             self.build_temp = str(coverage_build)
         super().finalize_options()
 
     def run(self):
-        plat_name = None
-        if hasattr(self, "plat_name"):
-            plat_name = getattr(self, "plat_name")
+        plat_name = getattr(self, "plat_name", None)
         with base64_build(plat_name):
             super().run()
 
