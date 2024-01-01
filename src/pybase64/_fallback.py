@@ -33,19 +33,22 @@ def _get_bytes(s: Any) -> bytes | bytearray:
         try:
             return s.encode("ascii")
         except UnicodeEncodeError:
-            raise ValueError("string argument should contain only ASCII " "characters")
+            msg = "string argument should contain only ASCII characters"
+            raise ValueError(msg) from None
     if isinstance(s, _bytes_types):
         return s
     try:
         mv = memoryview(s)
         if not mv.c_contiguous:
-            raise BufferError("memoryview: underlying buffer is not C-contiguous")
+            msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"
+            raise BufferError(msg)
         return mv.tobytes()
     except TypeError:
-        raise TypeError(
+        msg = (
             "argument should be a bytes-like object or ASCII "
-            "string, not %r" % s.__class__.__name__
+            f"string, not {s.__class__.__name__!r:s}"
         )
+        raise TypeError(msg) from None
 
 
 def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
@@ -73,7 +76,8 @@ def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
         altchars = _get_bytes(altchars)
     if validate:
         if len(s) % 4 != 0:
-            raise BinAsciiError("Incorrect padding")
+            msg = "Incorrect padding"
+            raise BinAsciiError(msg)
         result = builtin_decode(s, altchars, validate=False)
 
         # check length of result vs length of input
@@ -87,14 +91,13 @@ def b64decode(s: Any, altchars: Any = None, validate: bool = False) -> bytes:
                 padding += 1
             expected_len = 3 * (len(s) // 4) - padding
         if expected_len != len(result):
-            raise BinAsciiError("Non-base64 digit found")
+            msg = "Non-base64 digit found"
+            raise BinAsciiError(msg)
         return result
     return builtin_decode(s, altchars, validate=False)
 
 
-def b64decode_as_bytearray(
-    s: Any, altchars: Any = None, validate: bool = False
-) -> bytearray:
+def b64decode_as_bytearray(s: Any, altchars: Any = None, validate: bool = False) -> bytearray:
     """Decode bytes encoded with the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -130,7 +133,8 @@ def b64encode(s: Any, altchars: Any = None) -> bytes:
     """
     mv = memoryview(s)
     if not mv.c_contiguous:
-        raise BufferError("memoryview: underlying buffer is not C-contiguous")
+        msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"
+        raise BufferError(msg)
     if altchars is not None:
         altchars = _get_bytes(altchars)
     return builtin_encode(s, altchars)
@@ -161,5 +165,6 @@ def encodebytes(s: Any) -> bytes:
     """
     mv = memoryview(s)
     if not mv.c_contiguous:
-        raise BufferError("memoryview: underlying buffer is not C-contiguous")
+        msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"
+        raise BufferError(msg)
     return builtin_encodebytes(s)

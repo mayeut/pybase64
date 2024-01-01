@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # pybase64 documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 29 22:06:28 2017.
 #
@@ -63,9 +61,7 @@ copyright = f"2017-{datetime.date.today().year}, Matthieu Darbois"
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 # Get version
-_version = runpy.run_path(os.path.join(here, "..", "src", "pybase64", "_version.py"))[
-    "__version__"
-]
+_version = runpy.run_path(os.path.join(here, "..", "src", "pybase64", "_version.py"))["__version__"]
 # The short X.Y version.
 version = _version
 # The full version, including alpha/beta/rc tags.

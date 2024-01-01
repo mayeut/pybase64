@@ -5,9 +5,8 @@ import os
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 
-import pytest
-
 import pybase64
+import pytest
 
 try:
     from pybase64._pybase64 import (
@@ -26,6 +25,10 @@ except ImportError:
     _has_extension = False
 
 
+def unused_args(*args):  # noqa: ARG001
+    return None
+
+
 def b64encode_as_string(s, altchars=None):
     """helper returning bytes instead of string for tests"""
     return pybase64.b64encode_as_string(s, altchars).encode("ascii")
@@ -36,9 +39,7 @@ def b64decode_as_bytearray(s, altchars=None, validate=False):
     return bytes(pybase64.b64decode_as_bytearray(s, altchars, validate))
 
 
-param_encode_functions = pytest.mark.parametrize(
-    "efn", [pybase64.b64encode, b64encode_as_string]
-)
+param_encode_functions = pytest.mark.parametrize("efn", [pybase64.b64encode, b64encode_as_string])
 param_decode_functions = pytest.mark.parametrize(
     "dfn", [pybase64.b64decode, b64decode_as_bytearray]
 )
@@ -107,9 +108,7 @@ test_vectors_b64_list = [
 test_vectors_b64 = []
 for altchars in altchars_lut:
     trans = bytes.maketrans(b"+/", altchars)
-    test_vectors_b64.append(
-        [vector.translate(trans) for vector in test_vectors_b64_list]
-    )
+    test_vectors_b64.append([vector.translate(trans) for vector in test_vectors_b64_list])
 
 test_vectors_bin = []
 for altchars in altchars_lut:
@@ -130,32 +129,16 @@ if _has_extension:
 def get_simd_name(simd_id):
     if _has_extension:
         simd_flag = compile_flags[simd_id]
-        if simd_flag == 0:
-            simd_name = "c"
-        else:
-            simd_name = _get_simd_name(simd_flag).lower()
+        simd_name = "c" if simd_flag == 0 else _get_simd_name(simd_flag).lower()
     else:
         simd_name = "py"
     return simd_name
 
 
-def simd_setup(simd_id):
-    if _has_extension:
-        flag = compile_flags[simd_id]
-        if flag != 0 and not flag & runtime_flags:  # pragma: no branch
-            pytest.skip("SIMD extension not available")  # pragma: no cover
-        _set_simd_path(flag)
-        assert _get_simd_path() == flag
-    else:
-        assert 0 == simd_id
-
-
 param_vector = pytest.mark.parametrize("vector_id", range(len(test_vectors_bin[0])))
 
 
-param_validate = pytest.mark.parametrize(
-    "validate", [False, True], ids=["novalidate", "validate"]
-)
+param_validate = pytest.mark.parametrize("validate", [False, True], ids=["novalidate", "validate"])
 
 
 param_altchars = pytest.mark.parametrize(
@@ -175,12 +158,27 @@ param_simd = pytest.mark.parametrize(
 
 @pytest.fixture()
 def simd(request):
-    simd_setup(request.param)
-    return request.param
+    simd_id = request.param
+    if not _has_extension:
+        assert simd_id == 0
+        yield simd_id
+        return
+
+    flag = compile_flags[simd_id]
+    if flag != 0 and not flag & runtime_flags:  # pragma: no branch
+        pytest.skip("SIMD extension not available")  # pragma: no cover
+    old_flag = _get_simd_path()
+    _set_simd_path(flag)
+    assert _get_simd_path() == flag
+    try:
+        yield simd_id
+    finally:
+        _set_simd_path(old_flag)
 
 
 @param_simd
 def test_version(simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     assert pybase64.get_version().startswith(pybase64.__version__)
 
 
@@ -188,6 +186,7 @@ def test_version(simd):
 @param_vector
 @param_altchars_helper
 def test_enc_helper(altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_bin[altchars_id][vector_id]
     test = enc_helper_lut[altchars_id](vector)
     base = ref_enc_helper_lut[altchars_id](vector)
@@ -198,6 +197,7 @@ def test_enc_helper(altchars_id, vector_id, simd):
 @param_vector
 @param_altchars_helper
 def test_dec_helper(altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     test = dec_helper_lut[altchars_id](vector)
     base = ref_dec_helper_lut[altchars_id](vector)
@@ -208,6 +208,7 @@ def test_dec_helper(altchars_id, vector_id, simd):
 @param_vector
 @param_altchars_helper
 def test_dec_helper_unicode(altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     test = dec_helper_lut[altchars_id](str(vector, "utf-8"))
     base = ref_dec_helper_lut[altchars_id](str(vector, "utf-8"))
@@ -218,6 +219,7 @@ def test_dec_helper_unicode(altchars_id, vector_id, simd):
 @param_vector
 @param_altchars_helper
 def test_rnd_helper(altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     test = dec_helper_lut[altchars_id](vector)
     test = enc_helper_lut[altchars_id](test)
@@ -228,6 +230,7 @@ def test_rnd_helper(altchars_id, vector_id, simd):
 @param_vector
 @param_altchars_helper
 def test_rnd_helper_unicode(altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     test = dec_helper_lut[altchars_id](str(vector, "utf-8"))
     test = enc_helper_lut[altchars_id](test)
@@ -237,6 +240,7 @@ def test_rnd_helper_unicode(altchars_id, vector_id, simd):
 @param_simd
 @param_vector
 def test_encbytes(vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_bin[STD][vector_id]
     test = pybase64.encodebytes(vector)
     base = b64encodebytes(vector)
@@ -248,6 +252,7 @@ def test_encbytes(vector_id, simd):
 @param_altchars
 @param_encode_functions
 def test_enc(efn, altchars_id, vector_id, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_bin[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     test = efn(vector, altchars)
@@ -261,6 +266,7 @@ def test_enc(efn, altchars_id, vector_id, simd):
 @param_validate
 @param_decode_functions
 def test_dec(dfn, altchars_id, vector_id, validate, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     if validate:
@@ -277,13 +283,10 @@ def test_dec(dfn, altchars_id, vector_id, validate, simd):
 @param_validate
 @param_decode_functions
 def test_dec_unicode(dfn, altchars_id, vector_id, validate, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     vector = str(vector, "utf-8")
-    altchars = altchars_lut[altchars_id]
-    if altchars_id == STD:
-        altchars = None
-    else:
-        altchars = str(altchars, "utf-8")
+    altchars = None if altchars_id == STD else str(altchars_lut[altchars_id], "utf-8")
     if validate:
         base = base64.b64decode(vector, altchars, validate)
     else:
@@ -299,6 +302,7 @@ def test_dec_unicode(dfn, altchars_id, vector_id, validate, simd):
 @param_encode_functions
 @param_decode_functions
 def test_rnd(dfn, efn, altchars_id, vector_id, validate, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     test = dfn(vector, altchars, validate)
@@ -313,6 +317,7 @@ def test_rnd(dfn, efn, altchars_id, vector_id, validate, simd):
 @param_encode_functions
 @param_decode_functions
 def test_rnd_unicode(dfn, efn, altchars_id, vector_id, validate, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
     test = dfn(str(vector, "utf-8"), altchars, validate)
@@ -326,6 +331,7 @@ def test_rnd_unicode(dfn, efn, altchars_id, vector_id, validate, simd):
 @param_validate
 @param_decode_functions
 def test_invalid_padding_dec(dfn, altchars_id, vector_id, validate, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     vector = test_vectors_b64[altchars_id][vector_id][1:]
     if len(vector) > 0:
         altchars = altchars_lut[altchars_id]
@@ -352,6 +358,7 @@ params_invalid_altchars = pytest.mark.parametrize(
 @params_invalid_altchars
 @param_encode_functions
 def test_invalid_altchars_enc(efn, altchars, exception, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         efn(b"ABCD", altchars)
 
@@ -360,6 +367,7 @@ def test_invalid_altchars_enc(efn, altchars, exception, simd):
 @params_invalid_altchars
 @param_decode_functions
 def test_invalid_altchars_dec(dfn, altchars, exception, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(b"ABCD", altchars)
 
@@ -368,6 +376,7 @@ def test_invalid_altchars_dec(dfn, altchars, exception, simd):
 @params_invalid_altchars
 @param_decode_functions
 def test_invalid_altchars_dec_validate(dfn, altchars, exception, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(b"ABCD", altchars, True)
 
@@ -393,9 +402,7 @@ params_invalid_data_all = pytest.mark.parametrize(
     params_invalid_data_novalidate + params_invalid_data_validate,
     ids=[
         str(i)
-        for i in range(
-            len(params_invalid_data_novalidate) + len(params_invalid_data_validate)
-        )
+        for i in range(len(params_invalid_data_novalidate) + len(params_invalid_data_validate))
     ],
 )
 params_invalid_data_novalidate = pytest.mark.parametrize(
@@ -414,6 +421,7 @@ params_invalid_data_validate = pytest.mark.parametrize(
 @params_invalid_data_novalidate
 @param_decode_functions
 def test_invalid_data_dec(dfn, vector, altchars, exception, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(vector, altchars)
 
@@ -422,6 +430,7 @@ def test_invalid_data_dec(dfn, vector, altchars, exception, simd):
 @params_invalid_data_validate
 @param_decode_functions
 def test_invalid_data_dec_skip(dfn, vector, altchars, exception, simd):
+    unused_args(exception, simd)  # simd is a parameter in order to control the order of tests
     test = dfn(vector, altchars)
     base = base64.b64decode(vector, altchars)
     assert test == base
@@ -431,6 +440,7 @@ def test_invalid_data_dec_skip(dfn, vector, altchars, exception, simd):
 @params_invalid_data_all
 @param_decode_functions
 def test_invalid_data_dec_validate(dfn, vector, altchars, exception, simd):
+    unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(vector, altchars, True)
 
@@ -439,7 +449,8 @@ params_invalid_data_enc = [
     ["this is a test", TypeError],
     [memoryview(b"abcd")[::2], BufferError],
 ]
-params_invalid_data_encodebytes = params_invalid_data_enc + [
+params_invalid_data_encodebytes = [
+    *params_invalid_data_enc,
     [memoryview(b"abcd").cast("B", (2, 2)), TypeError],
     [memoryview(b"abcd").cast("I"), TypeError],
 ]
