@@ -121,6 +121,11 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+1.3.2
+-----
+- Update base64 library
+- PyPy: fix wrong outcome with non C-contiguous buffer
+
 1.3.1
 -----
 - Add missing py.typed marker
