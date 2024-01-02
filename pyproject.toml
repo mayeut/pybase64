@@ -7,6 +7,12 @@ test-requires = "-r requirements-test.txt"
 test-command = "pytest {project}/tests"
 build-verbosity = 1
 
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "class .*\\(Protocol\\):", "if TYPE_CHECKING:"]
+
 [tool.mypy]
 python_version = "3.7"
 files = [
