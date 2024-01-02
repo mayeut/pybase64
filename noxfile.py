@@ -25,7 +25,7 @@ def lint(session: nox.Session) -> None:
 def update_env_macos(session: nox.Session, env: dict[str, str]) -> None:
     if sys.platform.startswith("darwin"):
         # we don't support universal builds
-        machine = session.run(
+        machine = session.run(  # type: ignore[union-attr]
             "python", "-sSEc", "import platform; print(platform.machine())", silent=True
         ).strip()
         env["ARCHFLAGS"] = f"-arch {machine}"
@@ -37,7 +37,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         where = HERE / "src" / "pybase64"
     else:
         command = "import sysconfig; print(sysconfig.get_path('platlib'))"
-        platlib = session.run("python", "-c", command, silent=True).strip()
+        platlib = session.run("python", "-c", command, silent=True).strip()  # type: ignore[union-attr]
         where = Path(platlib) / "pybase64"
         assert where.exists()
 
@@ -54,7 +54,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
 @nox.session(python="3.12")
 def develop(session: nox.Session) -> None:
     """create venv for dev."""
-    session.install("-r", "requirements-test.txt")
+    session.install("nox", "setuptools", "-r", "requirements-test.txt")
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
@@ -76,7 +76,7 @@ def test(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=["3.8", "3.11", "pypy3.10"])
+@nox.session(python=["3.8", "3.12", "pypy3.10"])
 def _coverage(session: nox.Session) -> None:
     """internal coverage run. Do not run manually"""
     with_sde = "--with-sde" in session.posargs
@@ -86,7 +86,6 @@ def _coverage(session: nox.Session) -> None:
         "--cov=pybase64",
         "--cov=tests",
         "--cov-append",
-        "--cov-branch",
         "--cov-report=",
     )
     pytest_command = ("pytest", *coverage_args)
@@ -144,7 +143,7 @@ def coverage(session: nox.Session) -> None:
     posargs.add("--report")
     session.notify("_coverage-3.8", ["--clean"])
     session.notify("_coverage-pypy3.10", [])
-    session.notify("_coverage-3.11", posargs)
+    session.notify("_coverage-3.12", posargs)
 
 
 @nox.session(python="3.11")

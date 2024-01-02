@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import os
 import re
 import sys
+from collections.abc import Iterator, Sequence
+from pathlib import Path
 
 import pybase64
 import pytest
@@ -10,24 +11,22 @@ from pybase64.__main__ import main
 
 
 @pytest.fixture()
-def emptyfile(tmpdir):
-    _file = os.path.join(tmpdir.strpath, "empty")
-    with open(_file, "wb"):
-        pass
-    yield _file
-    os.remove(_file)
+def emptyfile(tmp_path: Path) -> Iterator[str]:
+    _file = tmp_path / "empty"
+    _file.write_bytes(b"")
+    yield str(_file)
+    _file.unlink()
 
 
 @pytest.fixture()
-def hellofile(tmpdir):
-    _file = os.path.join(tmpdir.strpath, "helloworld")
-    with open(_file, "wb") as f:
-        f.write(b"hello world !/?\n")
-    yield _file
-    os.remove(_file)
+def hellofile(tmp_path: Path) -> Iterator[str]:
+    _file = tmp_path / "helloworld"
+    _file.write_bytes(b"hello world !/?\n")
+    yield str(_file)
+    _file.unlink()
 
 
-def idfn_test_help(args):
+def idfn_test_help(args: Sequence[str]) -> str:
     if len(args) == 0:
         return "(empty)"
     return " ".join(args)
@@ -44,7 +43,7 @@ def idfn_test_help(args):
     ],
     ids=idfn_test_help,
 )
-def test_help(capsys, args):
+def test_help(capsys: pytest.CaptureFixture[str], args: Sequence[str]) -> None:
     command = "pybase64"
     if len(args) == 2:
         command += f" {args[0]}"
@@ -57,7 +56,7 @@ def test_help(capsys, args):
     assert exit_info.value.code == 0
 
 
-def test_version(capsys):
+def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exit_info:
         main(["-V"])
     captured = capsys.readouterr()
@@ -66,7 +65,7 @@ def test_version(capsys):
     assert exit_info.value.code == 0
 
 
-def test_license(capsys):
+def test_license(capsys: pytest.CaptureFixture[str]) -> None:
     restr = "\n".join(x + "\n[=]+\n.*Copyright.*\n[=]+\n" for x in ["pybase64", "libbase64"])
     regex = re.compile("^" + restr + "$", re.DOTALL)
     with pytest.raises(SystemExit) as exit_info:
@@ -77,7 +76,7 @@ def test_license(capsys):
     assert exit_info.value.code == 0
 
 
-def test_benchmark(capsys, emptyfile):
+def test_benchmark(capsys: pytest.CaptureFixture[str], emptyfile: str) -> None:
     main(["benchmark", "-d", "0.005", emptyfile])
     captured = capsys.readouterr()
     assert captured.err == ""
@@ -93,14 +92,18 @@ def test_benchmark(capsys, emptyfile):
     ],
     ids=["0", "1", "2"],
 )
-def test_encode(capsysbinary, hellofile, args, expect):
+def test_encode(
+    capsysbinary: pytest.CaptureFixture[bytes], hellofile: str, args: Sequence[str], expect: bytes
+) -> None:
     main(["encode", *args, hellofile])
     captured = capsysbinary.readouterr()
     assert captured.err == b""
     assert captured.out == expect
 
 
-def test_encode_ouputfile(capsys, emptyfile, hellofile):
+def test_encode_ouputfile(
+    capsys: pytest.CaptureFixture[str], emptyfile: str, hellofile: str
+) -> None:
     main(["encode", "-o", hellofile, emptyfile])
     captured = capsys.readouterr()
     assert captured.err == ""
@@ -120,17 +123,21 @@ def test_encode_ouputfile(capsys, emptyfile, hellofile):
     ],
     ids=["0", "1", "2", "3"],
 )
-def test_decode(capsysbinary, tmpdir, args, b64string):
-    iname = os.path.join(tmpdir.strpath, "in")
-    with open(iname, "wb") as f:
-        f.write(b64string)
-    main(["decode", *args, iname])
+def test_decode(
+    capsysbinary: pytest.CaptureFixture[bytes],
+    tmp_path: Path,
+    args: Sequence[str],
+    b64string: bytes,
+) -> None:
+    input_file = tmp_path / "in"
+    input_file.write_bytes(b64string)
+    main(["decode", *args, str(input_file)])
     captured = capsysbinary.readouterr()
     assert captured.err == b""
     assert captured.out == b"hello world !/?\n"
 
 
-def test_subprocess():
+def test_subprocess() -> None:
     import subprocess
 
     process = subprocess.Popen(

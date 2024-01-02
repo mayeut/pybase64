@@ -5,20 +5,23 @@ import base64
 import sys
 from base64 import b64decode as b64decodeValidate
 from base64 import encodebytes as b64encodebytes
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from timeit import default_timer as timer
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO, cast
 
 import pybase64
+
+if TYPE_CHECKING:
+    from pybase64._typing import Decode, Encode, EncodeBytes
 
 
 def bench_one(
     duration: float,
     data: bytes,
-    enc: Callable[..., bytes],
-    dec: Callable[..., bytes],
-    encbytes: Callable[[Any], bytes],
-    altchars: Any | None = None,
+    enc: Encode,
+    dec: Decode,
+    encbytes: EncodeBytes,
+    altchars: bytes | None = None,
     validate: bool = False,
 ) -> None:
     duration = duration / 2.0
@@ -93,11 +96,11 @@ def bench_one(
 
 
 def readall(file: BinaryIO) -> bytes:
-    if file == sys.stdin:
+    if file == cast(BinaryIO, sys.stdin):
         # Python 3 < 3.9 does not honor the binary flag,
         # read from the underlying buffer
         if hasattr(file, "buffer"):
-            return file.buffer.read()
+            return cast(BinaryIO, file.buffer).read()
         return file.read()  # pragma: no cover
         # do not close the file
     try:
@@ -108,7 +111,7 @@ def readall(file: BinaryIO) -> bytes:
 
 
 def writeall(file: BinaryIO, data: bytes) -> None:
-    if file == sys.stdout:
+    if file == cast(BinaryIO, sys.stdout):
         # Python 3 does not honor the binary flag,
         # write to the underlying buffer
         if hasattr(file, "buffer"):
@@ -142,7 +145,7 @@ def benchmark(duration: float, input: BinaryIO) -> None:
                 duration,
                 data,
                 base64.b64encode,
-                b64decodeValidate,
+                b64decodeValidate,  # type: ignore[arg-type] # c.f. https://github.com/python/typeshed/pull/11210
                 b64encodebytes,
                 altchars,
                 validate,

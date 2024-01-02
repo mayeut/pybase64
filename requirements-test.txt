@@ -1,1 +1,2 @@
 pytest==7.4.4
+typing_extensions>=4.6.0
