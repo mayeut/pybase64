@@ -139,7 +139,8 @@ def cmake(*args: str) -> None:
 
 
 @contextmanager
-def base64_build(plat_name: str | None) -> Generator[None, None, None]:
+def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
+    base64_built = False
     source_dir = HERE / "base64"
     build_dir = HERE / ".base64_build"
     build_type = "Release"
@@ -162,14 +163,15 @@ def base64_build(plat_name: str | None) -> Generator[None, None, None]:
             cmake("--build", str(build_dir), "--config", build_type, "--verbose")
             if IS_WINDOWS:
                 shutil.copyfile(build_dir / build_type / "base64.lib", build_dir / "base64.lib")
-        except Exception:
+            base64_built = True
+        except Exception as e:
+            log.error("error: %s", e)
             if not OPTIONAL_EXTENSION:
                 raise
-        yield
+        yield base64_built
     finally:
-        # if build_dir.exists():
-        #     shutil.rmtree(build_dir)
-        pass
+        if build_dir.exists():
+            shutil.rmtree(build_dir, ignore_errors=True)
 
 
 class BuildExt(build_ext):
@@ -185,8 +187,12 @@ class BuildExt(build_ext):
 
     def run(self) -> None:
         plat_name = getattr(self, "plat_name", None)
-        with base64_build(plat_name):
-            super().run()
+        with base64_build(plat_name) as build_successful:
+            if build_successful:
+                super().run()
+            else:
+                assert OPTIONAL_EXTENSION
+                log.warning("warning: skipping optional C-extension, base64 library build failed")
 
 
 setup(
