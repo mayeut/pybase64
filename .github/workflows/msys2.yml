@@ -1,0 +1,46 @@
+name: MSYS2 Tests
+
+on:
+  push:
+    branches-ignore:
+      - "dependabot/**"
+  pull_request:
+
+jobs:
+  test:
+    name: Test with MSYS2 ${{ matrix.sys }}
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        include:
+          - { sys: msys, toolchain: "gcc" }
+          - { sys: mingw64, env: mingw-w64-x86_64- }
+          - { sys: ucrt64, env: mingw-w64-ucrt-x86_64- }
+          - { sys: clang64, env: mingw-w64-clang-x86_64- }
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{matrix.sys}}
+        update: true
+        install: >-
+          make
+          ${{matrix.env}}cmake
+          ${{matrix.env}}ninja
+          ${{matrix.env}}${{matrix.toolchain || 'toolchain' }}
+          ${{matrix.env}}python
+          ${{matrix.env}}python-pip
+          ${{matrix.env}}python-pytest
+          ${{matrix.env}}python-setuptools
+          ${{matrix.env}}python-typing_extensions
+          ${{matrix.env}}python-wheel
+    - name: "Run tests"
+      shell: msys2 {0}
+      env:
+        CIBUILDWHEEL: 1
+      run: |
+        python -m pip install -v --no-build-isolation .
+        python -m pytest

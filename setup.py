@@ -58,7 +58,7 @@ pybase64_ext = Extension(
 )
 
 
-def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
+def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool, list[str]]:
     log.info("getting cmake extra config")
     extra_config = []
     machine = platform_module.machine().lower()
@@ -80,13 +80,14 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
     log.info("  sysconfig LDFLAGS: %s", sysconfig.get_config_var("LDFLAGS"))
 
     platform = plat_name or platform
+    is_msvc = platform.startswith("win")
 
-    if not IS_WINDOWS:
+    if not is_msvc:
         extra_config.append(f"-DCMAKE_BUILD_TYPE={build_type}")
 
-    if IS_WINDOWS:
-        if not platform.startswith("win"):
-            msg = f"Building {platform} is not supported on Windows"
+    if is_msvc:
+        if not IS_WINDOWS:
+            msg = f"Building {platform} is only supported on Windows"
             raise ValueError(msg)
         # setup cross-compile
         # assumes VS2019 or VS2022 will be used as the default generator
@@ -129,7 +130,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
         else:
             log.warning("`%s` is not a known value for CMAKE_OSX_ARCHITECTURES", arch)
 
-    return extra_config
+    return is_msvc, extra_config
 
 
 def cmake(*args: str) -> None:
@@ -139,7 +140,8 @@ def cmake(*args: str) -> None:
 
 
 @contextmanager
-def base64_build(plat_name: str | None) -> Generator[None, None, None]:
+def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
+    base64_built = False
     source_dir = HERE / "base64"
     build_dir = HERE / ".base64_build"
     build_type = "Release"
@@ -157,19 +159,21 @@ def base64_build(plat_name: str | None) -> Generator[None, None, None]:
     try:
         try:
             cmake("--version")
-            config_options.extend(get_cmake_extra_config(plat_name, build_type))
+            is_msvc, extra_config = get_cmake_extra_config(plat_name, build_type)
+            config_options.extend(extra_config)
             cmake(*config_options)
             cmake("--build", str(build_dir), "--config", build_type, "--verbose")
-            if IS_WINDOWS:
+            if is_msvc:
                 shutil.copyfile(build_dir / build_type / "base64.lib", build_dir / "base64.lib")
-        except Exception:
+            base64_built = True
+        except Exception as e:
+            log.error("error: %s", e)
             if not OPTIONAL_EXTENSION:
                 raise
-        yield
+        yield base64_built
     finally:
-        # if build_dir.exists():
-        #     shutil.rmtree(build_dir)
-        pass
+        if build_dir.exists():
+            shutil.rmtree(build_dir, ignore_errors=True)
 
 
 class BuildExt(build_ext):
@@ -185,8 +189,12 @@ class BuildExt(build_ext):
 
     def run(self) -> None:
         plat_name = getattr(self, "plat_name", None)
-        with base64_build(plat_name):
-            super().run()
+        with base64_build(plat_name) as build_successful:
+            if build_successful:
+                super().run()
+            else:
+                assert OPTIONAL_EXTENSION
+                log.warning("warning: skipping optional C-extension, base64 library build failed")
 
 
 setup(
