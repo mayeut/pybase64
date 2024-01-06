@@ -58,7 +58,7 @@ pybase64_ext = Extension(
 )
 
 
-def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
+def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool, list[str]]:
     log.info("getting cmake extra config")
     extra_config = []
     machine = platform_module.machine().lower()
@@ -80,13 +80,14 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
     log.info("  sysconfig LDFLAGS: %s", sysconfig.get_config_var("LDFLAGS"))
 
     platform = plat_name or platform
+    is_msvc = platform.startswith("win")
 
-    if not IS_WINDOWS:
+    if not is_msvc:
         extra_config.append(f"-DCMAKE_BUILD_TYPE={build_type}")
 
-    if IS_WINDOWS:
-        if not platform.startswith("win"):
-            msg = f"Building {platform} is not supported on Windows"
+    if is_msvc:
+        if not IS_WINDOWS:
+            msg = f"Building {platform} is only supported on Windows"
             raise ValueError(msg)
         # setup cross-compile
         # assumes VS2019 or VS2022 will be used as the default generator
@@ -129,7 +130,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> list[str]:
         else:
             log.warning("`%s` is not a known value for CMAKE_OSX_ARCHITECTURES", arch)
 
-    return extra_config
+    return is_msvc, extra_config
 
 
 def cmake(*args: str) -> None:
@@ -158,10 +159,11 @@ def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
     try:
         try:
             cmake("--version")
-            config_options.extend(get_cmake_extra_config(plat_name, build_type))
+            is_msvc, extra_config = get_cmake_extra_config(plat_name, build_type)
+            config_options.extend(extra_config)
             cmake(*config_options)
             cmake("--build", str(build_dir), "--config", build_type, "--verbose")
-            if IS_WINDOWS:
+            if is_msvc:
                 shutil.copyfile(build_dir / build_type / "base64.lib", build_dir / "base64.lib")
             base64_built = True
         except Exception as e:
