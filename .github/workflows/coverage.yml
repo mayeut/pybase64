@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Intel SDE
         run: |
-          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/777395/sde-external-9.21.1-2023-04-24-lin.tar.xz
+          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/813591/sde-external-9.33.0-2024-01-07-lin.tar.xz
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
