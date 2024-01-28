@@ -25,8 +25,17 @@ repos:
   rev: v1.8.0
   hooks:
   - id: mypy
+    name: mypy 3.7
     exclude: docs|conftest.py
     args: ["--python-version=3.7"]
+    additional_dependencies:
+      - nox
+      - pytest<8
+      - types-setuptools<68.1.0
+  - id: mypy
+    name: mypy 3.12
+    exclude: docs|conftest.py
+    args: ["--python-version=3.12"]
     additional_dependencies:
       - nox
       - pytest
