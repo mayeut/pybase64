@@ -36,7 +36,9 @@ jobs:
           - os: windows-2019
             archs: "ARM64"
           - os: macos-11
-            archs: "x86_64, arm64"
+            archs: "x86_64"
+          - os: macos-14
+            archs: "arm64"
 
     steps:
       - name: Set git to use LF
