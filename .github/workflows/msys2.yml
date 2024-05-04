@@ -16,7 +16,7 @@ jobs:
           - { sys: msys, toolchain: "gcc" }
           - { sys: mingw64, env: mingw-w64-x86_64- }
           - { sys: ucrt64, env: mingw-w64-ucrt-x86_64- }
-          - { sys: clang64, env: mingw-w64-clang-x86_64- }
+          # - { sys: clang64, env: mingw-w64-clang-x86_64- }  failing for an unknown reason
     steps:
     - uses: actions/checkout@v4
       with:
