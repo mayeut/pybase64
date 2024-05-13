@@ -15,24 +15,21 @@ class Decode(Protocol):
 
     def __call__(
         self, s: str | Buffer, altchars: str | Buffer | None = None, validate: bool = False
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
 
 class Encode(Protocol):
     __name__: str
     __module__: str
 
-    def __call__(self, s: Buffer, altchars: Buffer | None = None) -> bytes:
-        ...
+    def __call__(self, s: Buffer, altchars: Buffer | None = None) -> bytes: ...
 
 
 class EncodeBytes(Protocol):
     __name__: str
     __module__: str
 
-    def __call__(self, s: Buffer) -> bytes:
-        ...
+    def __call__(self, s: Buffer) -> bytes: ...
 
 
 __all__ = ("Buffer", "Decode", "Encode", "EncodeBytes")

@@ -145,7 +145,7 @@ def benchmark(duration: float, input: BinaryIO) -> None:
                 duration,
                 data,
                 base64.b64encode,
-                b64decodeValidate,  # type: ignore[arg-type] # c.f. https://github.com/python/typeshed/pull/11210
+                b64decodeValidate,
                 b64encodebytes,
                 altchars,
                 validate,

@@ -281,9 +281,9 @@ def test_dec_unicode(
     vector = str(test_vectors_b64[altchars_id][vector_id], "utf-8")
     altchars = None if altchars_id == AltCharsId.STD else str(altchars_lut[altchars_id], "utf-8")
     if validate:
-        base = base64.b64decode(vector, altchars, validate)  # type: ignore[arg-type] # c.f. https://github.com/python/typeshed/pull/11210
+        base = base64.b64decode(vector, altchars, validate)
     else:
-        base = base64.b64decode(vector, altchars)  # type: ignore[arg-type] # c.f. https://github.com/python/typeshed/pull/11210
+        base = base64.b64decode(vector, altchars)
     test = dfn(vector, altchars, validate)
     assert test == base
 
