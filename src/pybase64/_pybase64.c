@@ -1,5 +1,6 @@
 #include "_pybase64_get_simd_flags.h"
 #define PY_SSIZE_T_CLEAN
+#define PY_CXX_CONST const
 #include <Python.h>
 #include <config.h>
 #include <libbase64.h>
@@ -24,6 +25,11 @@ static int libbase64_simd_flag = 0;
 static uint32_t active_simd_flag = 0U;
 static uint32_t simd_flags;
 
+#if defined(PY_VERSION_HEX) && PY_VERSION_HEX >= 0x030d0000
+#define KW_CONST_CAST
+#else
+#define KW_CONST_CAST (char**)
+#endif
 
 /* returns 0 on success */
 static int get_buffer(PyObject* object, Py_buffer* buffer)
@@ -325,7 +331,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     char* dst;
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &in_object, &in_alphabet)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", KW_CONST_CAST kwlist, &in_object, &in_alphabet)) {
         return NULL;
     }
 
@@ -426,7 +432,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     void* dest;
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", kwlist, &in_object, &in_alphabet, &validation)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation)) {
         return NULL;
     }
 
