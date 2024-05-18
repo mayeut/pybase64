@@ -10,8 +10,8 @@ HERE = Path(__file__).resolve().parent
 
 nox.options.sessions = ["lint", "test"]
 
-ALL_CPYTHON = [f"3.{minor}" for minor in range(7, 12 + 1)]
-ALL_PYPY = [f"pypy3.{minor}" for minor in range(8, 10 + 1)]
+ALL_CPYTHON = [f"3.{minor}" for minor in range(8, 12 + 1)]
+ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 10 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_PYPY
 
 
