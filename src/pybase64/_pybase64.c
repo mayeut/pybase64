@@ -19,11 +19,12 @@
 #define HAVE_FAST_UNALIGNED_ACCESS 0
 #endif
 
-
-static PyObject* g_BinAsciiError = NULL;
-static int libbase64_simd_flag = 0;
-static uint32_t active_simd_flag = 0U;
-static uint32_t simd_flags;
+typedef struct pybase64_state {
+    PyObject *binAsciiError;
+    uint32_t active_simd_flag;
+    uint32_t simd_flags;
+    int libbase64_simd_flag;
+} pybase64_state;
 
 #if defined(PY_VERSION_HEX) && PY_VERSION_HEX >= 0x030d0000
 #define KW_CONST_CAST
@@ -329,6 +330,10 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     PyObject* in_object;
     PyObject* in_alphabet = NULL;
     char* dst;
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
 
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", KW_CONST_CAST kwlist, &in_object, &in_alphabet)) {
@@ -368,6 +373,8 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
 
     /* not interacting with Python objects from here, release the GIL */
     Py_BEGIN_ALLOW_THREADS
+
+    int const libbase64_simd_flag = state->libbase64_simd_flag;
 
     if (use_alphabet) {
         /* TODO, make this more efficient */
@@ -430,7 +437,10 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     Py_ssize_t source_len;
     int source_use_buffer = 0;
     void* dest;
-
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation)) {
         return NULL;
@@ -533,7 +543,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_END_ALLOW_THREADS
 
         if (result != 0) {
-            PyErr_SetString(g_BinAsciiError, "Incorrect padding");
+            PyErr_SetString(state->binAsciiError, "Incorrect padding");
             goto EXCEPT;
         }
     }
@@ -550,6 +560,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
+        int const libbase64_simd_flag = state->libbase64_simd_flag;
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
@@ -573,7 +584,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_END_ALLOW_THREADS
 
         if (result <= 0) {
-            PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
+            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
         out_len += (dst - (char*)dest);
@@ -584,13 +595,13 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        result = base64_decode(source, source_len, dest, &out_len, libbase64_simd_flag);
+        result = base64_decode(source, source_len, dest, &out_len, state->libbase64_simd_flag);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
 
         if (result <= 0) {
-            PyErr_SetString(g_BinAsciiError, "Non-base64 digit found");
+            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
     }
@@ -629,7 +640,10 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
     Py_buffer buffer;
     size_t out_len;
     PyObject* out_object;
-
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
     if (get_buffer(in_object, &buffer) != 0) {
         return NULL;
     }
@@ -673,6 +687,7 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
+        int const libbase64_simd_flag = state->libbase64_simd_flag;
         while (out_len > dst_slice) {
             size_t dst_len = dst_slice - 1U;
 
@@ -699,12 +714,20 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 
 static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
 {
-    return PyLong_FromUnsignedLong(active_simd_flag);
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
+    return PyLong_FromUnsignedLong(state->active_simd_flag);
 }
 
 static PyObject* pybase64_get_simd_flags_runtime(PyObject* self, PyObject* arg)
 {
-    return PyLong_FromUnsignedLong(simd_flags);
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
+    return PyLong_FromUnsignedLong(state->simd_flags);
 }
 
 static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
@@ -736,70 +759,74 @@ static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
     return PyLong_FromUnsignedLong(result);
 }
 
-static void set_simd_path(uint32_t flag)
+static void set_simd_path(pybase64_state* state, uint32_t flag)
 {
-    flag &= simd_flags; /* clean-up with allowed flags */
+    flag &= state->simd_flags; /* clean-up with allowed flags */
 
     if (0) {
     }
 #if BASE64_WITH_NEON64
     else if (flag & PYBASE64_NEON) {
-        active_simd_flag = PYBASE64_NEON;
-        libbase64_simd_flag = BASE64_FORCE_NEON64;
+        state->active_simd_flag = PYBASE64_NEON;
+        state->libbase64_simd_flag = BASE64_FORCE_NEON64;
     }
 #endif
 #if BASE64_WITH_NEON32
     else if (flag & PYBASE64_NEON) {
-        active_simd_flag = PYBASE64_NEON;
-        libbase64_simd_flag = BASE64_FORCE_NEON32;
+        state->active_simd_flag = PYBASE64_NEON;
+        state->libbase64_simd_flag = BASE64_FORCE_NEON32;
     }
 #endif
 
 #if BASE64_WITH_AVX512
     else if (flag & PYBASE64_AVX512VBMI) {
-        active_simd_flag = PYBASE64_AVX512VBMI;
-        libbase64_simd_flag = BASE64_FORCE_AVX512;
+        state->active_simd_flag = PYBASE64_AVX512VBMI;
+        state->libbase64_simd_flag = BASE64_FORCE_AVX512;
     }
 #endif
 #if BASE64_WITH_AVX2
     else if (flag & PYBASE64_AVX2) {
-        active_simd_flag = PYBASE64_AVX2;
-        libbase64_simd_flag = BASE64_FORCE_AVX2;
+        state->active_simd_flag = PYBASE64_AVX2;
+        state->libbase64_simd_flag = BASE64_FORCE_AVX2;
     }
 #endif
 #if BASE64_WITH_AVX
     else if (flag & PYBASE64_AVX) {
-        active_simd_flag = PYBASE64_AVX;
-        libbase64_simd_flag = BASE64_FORCE_AVX;
+        state->active_simd_flag = PYBASE64_AVX;
+        state->libbase64_simd_flag = BASE64_FORCE_AVX;
     }
 #endif
 #if BASE64_WITH_SSE42
     else if (flag & PYBASE64_SSE42) {
-        active_simd_flag = PYBASE64_SSE42;
-        libbase64_simd_flag = BASE64_FORCE_SSE42;
+        state->active_simd_flag = PYBASE64_SSE42;
+        state->libbase64_simd_flag = BASE64_FORCE_SSE42;
     }
 #endif
 #if BASE64_WITH_SSE41
     else if (flag & PYBASE64_SSE41) {
-        active_simd_flag = PYBASE64_SSE41;
-        libbase64_simd_flag = BASE64_FORCE_SSE41;
+        state->active_simd_flag = PYBASE64_SSE41;
+        state->libbase64_simd_flag = BASE64_FORCE_SSE41;
     }
 #endif
 #if BASE64_WITH_SSSE3
     else if (flag & PYBASE64_SSSE3) {
-        active_simd_flag = PYBASE64_SSSE3;
-        libbase64_simd_flag = BASE64_FORCE_SSSE3;
+        state->active_simd_flag = PYBASE64_SSSE3;
+        state->libbase64_simd_flag = BASE64_FORCE_SSSE3;
     }
 #endif
     else {
-        active_simd_flag = PYBASE64_NONE;
-        libbase64_simd_flag = BASE64_FORCE_PLAIN;
+        state->active_simd_flag = PYBASE64_NONE;
+        state->libbase64_simd_flag = BASE64_FORCE_PLAIN;
     }
 }
 
 static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
 {
-    set_simd_path((uint32_t)PyLong_AsUnsignedLong(arg));
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
+    set_simd_path(state, (uint32_t)PyLong_AsUnsignedLong(arg));
     Py_RETURN_NONE;
 }
 
@@ -881,7 +908,7 @@ static PyObject* pybase64_import(const char* from, const char* object)
     return importedObject;
 }
 
-static PyObject* pybase64_import_BinAsciiError(PyObject* module)
+static PyObject* pybase64_import_BinAsciiError()
 {
     PyObject* binAsciiError;
 
@@ -893,11 +920,55 @@ static PyObject* pybase64_import_BinAsciiError(PyObject* module)
         Py_DECREF(binAsciiError);
         return NULL;
     }
-    if (PyModule_AddObject(module, "_BinAsciiError", binAsciiError) != 0) {
-        Py_DECREF(binAsciiError);
-        return NULL;
-    }
+
     return binAsciiError;
+}
+
+static int _pybase64_exec(PyObject *m)
+{
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
+    if (state == NULL) {
+        return -1;
+    }
+
+    state->binAsciiError = pybase64_import_BinAsciiError();
+    if (state->binAsciiError == NULL) {
+        return -1;
+    }
+
+    Py_INCREF(state->binAsciiError); /* PyModule_AddObject steals a reference */
+    if (PyModule_AddObject(m, "_BinAsciiError", state->binAsciiError) != 0) {
+        Py_DECREF(state->binAsciiError);
+        return -1;
+    }
+
+    state->simd_flags = pybase64_get_simd_flags();
+    set_simd_path(state, state->simd_flags);
+
+    return 0;
+}
+
+static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
+{
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
+    if (state) {
+        Py_VISIT(state->binAsciiError);
+    }
+    return 0;
+}
+
+static int _pybase64_clear(PyObject *m)
+{
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
+    if (state) {
+        Py_CLEAR(state->binAsciiError);
+    }
+    return 0;
+}
+
+static void _pybase64_free(void *m)
+{
+    _pybase64_clear((PyObject *)m);
 }
 
 static PyMethodDef _pybase64_methods[] = {
@@ -914,35 +985,32 @@ static PyMethodDef _pybase64_methods[] = {
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
+static PyModuleDef_Slot _pybase64_slots[] = {
+    {Py_mod_exec, _pybase64_exec},
+#ifdef Py_mod_multiple_interpreters
+    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
+#ifdef Py_mod_gil
+    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
+    {0, NULL}
+};
+
 /* Initialize this module. */
 static struct PyModuleDef _pybase64_module = {
         PyModuleDef_HEAD_INIT,
         "pybase64._pybase64",
         NULL,
-        -1,
+        sizeof(pybase64_state),
         _pybase64_methods,
-        NULL,
-        NULL,
-        NULL,
-        NULL
+        _pybase64_slots,
+        _pybase64_traverse,
+        _pybase64_clear,
+        _pybase64_free
 };
 
 PyMODINIT_FUNC
 PyInit__pybase64(void)
 {
-    PyObject *m = NULL;
-
-    if ((m = PyModule_Create(&_pybase64_module)) == NULL) {
-        return NULL;
-    }
-
-    simd_flags = pybase64_get_simd_flags();
-    set_simd_path(simd_flags);
-
-    if ((m != NULL) && ((g_BinAsciiError = pybase64_import_BinAsciiError(m)) == NULL)) {
-        Py_DECREF(m);
-        m = NULL;
-    }
-
-    return m;
+    return PyModuleDef_Init(&_pybase64_module);
 }

@@ -123,6 +123,7 @@ Changelog
 =========
 Future
 ------
+- Add support for free-threaded builds
 - Add MSYS2 support for C-extension
 - Better logging on base64 build failure when C-extension build is optional
 - Drop python 3.6 & 3.7 support

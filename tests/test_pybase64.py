@@ -12,21 +12,8 @@ import pybase64
 import pytest
 from pybase64._typing import Buffer, Decode, Encode
 
-try:
-    from pybase64._pybase64 import (
-        _get_simd_flags_compile,
-        _get_simd_flags_runtime,
-        _get_simd_name,
-        _get_simd_path,
-        _set_simd_path,
-    )
-
-    _has_extension = True
-except ImportError:
-    if os.environ.get("CIBUILDWHEEL", "0") == "1":
-        # the native extension must be importable within cibuildwheel
-        raise  # pragma: no cover
-    _has_extension = False
+_has_extension = hasattr(pybase64, "_set_simd_path")
+assert _has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
 
 
 def unused_args(*args: Any) -> None:  # noqa: ARG001
@@ -115,8 +102,8 @@ for altchars in altchars_lut:
 compile_flags = [0]
 runtime_flags = 0
 if _has_extension:
-    runtime_flags = _get_simd_flags_runtime()
-    flags = _get_simd_flags_compile()
+    runtime_flags = pybase64._get_simd_flags_runtime()  # type: ignore[attr-defined]
+    flags = pybase64._get_simd_flags_compile()  # type: ignore[attr-defined]
     for i in range(31):
         if flags & (1 << i):
             compile_flags += [(1 << i)]
@@ -125,7 +112,7 @@ if _has_extension:
 def get_simd_name(simd_id: int) -> str:
     if _has_extension:
         simd_flag = compile_flags[simd_id]
-        simd_name = "C" if simd_flag == 0 else _get_simd_name(simd_flag)
+        simd_name = "C" if simd_flag == 0 else pybase64._get_simd_name(simd_flag)  # type: ignore[attr-defined]
     else:
         simd_name = "PY"
     return simd_name
@@ -161,11 +148,11 @@ def simd(request: pytest.FixtureRequest) -> Iterator[int]:
     flag = compile_flags[simd_id]
     if flag != 0 and not flag & runtime_flags:  # pragma: no branch
         pytest.skip("SIMD extension not available")  # pragma: no cover
-    old_flag = _get_simd_path()
-    _set_simd_path(flag)
-    assert _get_simd_path() == flag
+    old_flag = pybase64._get_simd_path()  # type: ignore[attr-defined]
+    pybase64._set_simd_path(flag)  # type: ignore[attr-defined]
+    assert pybase64._get_simd_path() == flag  # type: ignore[attr-defined]
     yield simd_id
-    _set_simd_path(old_flag)
+    pybase64._set_simd_path(old_flag)  # type: ignore[attr-defined]
 
 
 @param_simd
