@@ -3,6 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
+free-threaded-support = true
 test-requires = "-r requirements-test.txt"
 test-command = "pytest {project}/tests"
 test-skip = "*-win_arm64"  # silence warnings for windows ARM64

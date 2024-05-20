@@ -10,8 +10,11 @@ if TYPE_CHECKING:
 
 try:
     from ._pybase64 import (
+        _get_simd_flags_compile,  # noqa: F401
+        _get_simd_flags_runtime,  # noqa: F401
         _get_simd_name,
         _get_simd_path,
+        _set_simd_path,  # noqa: F401
         b64decode,
         b64decode_as_bytearray,
         b64encode,
