@@ -137,6 +137,7 @@ def test_decode(
     assert captured.out == b"hello world !/?\n"
 
 
+@pytest.mark.skipif(sys.platform == "emscripten", reason="subprocess not supported on emscripten")
 def test_subprocess() -> None:
     import subprocess
 

@@ -81,11 +81,14 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
 
     platform = plat_name or platform
     is_msvc = platform.startswith("win")
+    is_emscripten = platform.startswith("emscripten_")
 
     if not is_msvc:
         extra_config.append(f"-DCMAKE_BUILD_TYPE={build_type}")
 
-    if is_msvc:
+    if is_emscripten:
+        pass
+    elif is_msvc:
         if not IS_WINDOWS:
             msg = f"Building {platform} is only supported on Windows"
             raise ValueError(msg)
