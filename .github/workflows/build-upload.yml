@@ -77,7 +77,7 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
-          CIBW_PLATFORM: "${{ matrix.platform || 'auto' }}*"
+          CIBW_PLATFORM: "${{ matrix.platform || 'auto' }}"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
       - uses: actions/upload-artifact@v4
