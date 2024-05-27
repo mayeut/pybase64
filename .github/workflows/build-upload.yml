@@ -39,7 +39,7 @@ jobs:
             archs: "x86_64"
           - os: macos-14
             archs: "arm64"
-          - os: ubuntu22_04
+          - os: ubuntu-22.04
             platform: pyodide
             archs: "wasm32"
 
