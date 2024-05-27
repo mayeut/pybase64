@@ -19,6 +19,48 @@ jobs:
           python-version: "3.10"
       - uses: pre-commit/action@v3.0.1
 
+  build-wasm-emscripten:
+    name: Pyodide wheel
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pyodide-build
+        run: pip install pyodide-build==0.26.0a6
+
+      - name: Compute emsdk version
+        id: compute-emsdk-version
+        run: |
+          # Prepare xbuild environment (side-effect)
+          pyodide config list
+          # Save EMSDK version
+          EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version)
+          echo "emsdk-version=$EMSCRIPTEN_VERSION" >> $GITHUB_OUTPUT
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ steps.compute-emsdk-version.outputs.emsdk-version }}
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        run: pyodide build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Pyodide virtual environment
+        run: |
+          pyodide venv .venv-pyodide
+          .venv-pyodide/bin/pip install -r requirements-test.txt $(echo -n dist/*.whl)
+
+      - name: Test
+        run: .venv-pyodide/bin/pytest ./tests
+
   build_wheels:
     name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
     needs: [lint]
