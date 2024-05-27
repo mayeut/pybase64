@@ -39,6 +39,9 @@ jobs:
             archs: "x86_64"
           - os: macos-14
             archs: "arm64"
+          - os: ubuntu22_04
+            platform: pyodide
+            archs: "wasm32"
 
     steps:
       - name: Set git to use LF
@@ -61,18 +64,25 @@ jobs:
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: 1
         with:
-          python-version: 3.8
+          python-version: "3.8"
+
+      - name: "Install python 3.12 for pyodide"
+        if: matrix.platform == 'pyodide'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
+        uses: hoodmane/cibuildwheel@emscripten
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
+          CIBW_PLATFORM: "${{ matrix.platform || 'auto' }}*"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "cibw-wheels ${{ matrix.build || matrix.os }} ${{ matrix.archs }}"
+          name: "${{ matrix.platform == 'pyodide' && 'nopypi-wheels' || 'cibw-wheels'}} ${{ matrix.build || matrix.os }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
