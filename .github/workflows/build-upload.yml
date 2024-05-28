@@ -66,7 +66,9 @@ jobs:
           .venv-pyodide/bin/pip install -r requirements-test.txt $(echo -n dist/*.whl)
 
       - name: Test
-        run: .venv-pyodide/bin/pytest ./tests
+        run: |
+          cat .venv-pyodide/bin/pytest
+          .venv-pyodide/bin/pytest ./tests
 
   build_wheels:
     name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
