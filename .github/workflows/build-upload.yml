@@ -63,6 +63,7 @@ jobs:
       - name: Set up Pyodide virtual environment
         run: |
           pyodide venv .venv-pyodide
+          cat .venv-pyodide/bin/pip
           .venv-pyodide/bin/pip install -r requirements-test.txt $(echo -n dist/*.whl)
 
       - name: Test
