@@ -57,7 +57,7 @@ jobs:
       - name: Set up Pyodide virtual environment
         run: |
           pyodide venv .venv-pyodide
-          .venv-pyodide/bin/python -m pip --force-reinstall -U pip
+          .venv-pyodide/bin/python -m pip install --force-reinstall -U pip
           cat .venv-pyodide/bin/pip
           .venv-pyodide/bin/pip install -r requirements-test.txt $(echo -n dist/*.whl)
 
