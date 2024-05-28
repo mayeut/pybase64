@@ -63,6 +63,7 @@ jobs:
       - name: Test
         run: |
           set -eux
+          /usr/bin/env bash --help
           ls -al .venv-pyodide/bin/
           cat .venv-pyodide/bin/pybase64
           cat .venv-pyodide/bin/pytest
