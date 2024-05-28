@@ -37,7 +37,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install pyodide-build
-        run: pip install pyodide-build==0.26.0a6
+        run: pip install pyodide-build==0.26.0
 
       - name: Compute emsdk version
         id: compute-emsdk-version
@@ -122,7 +122,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build wheels
-        uses: hoodmane/cibuildwheel@emscripten
+        uses: pypa/cibuildwheel@9f2a3cb67c8bd776cf38843139db532fb8448522
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
