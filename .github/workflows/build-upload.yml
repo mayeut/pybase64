@@ -61,6 +61,8 @@ jobs:
 
       - name: Test
         run: |
-          cat .venv-pyodide/bin/pytest
           ls -al .venv-pyodide/bin/
+          cat .venv-pyodide/bin/pybase64
+          cat .venv-pyodide/bin/pytest
+          .venv-pyodide/bin/pybase64 --help
           .venv-pyodide/bin/pytest ./tests
