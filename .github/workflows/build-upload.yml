@@ -62,8 +62,10 @@ jobs:
 
       - name: Test
         run: |
+          set -eux
           ls -al .venv-pyodide/bin/
           cat .venv-pyodide/bin/pybase64
           cat .venv-pyodide/bin/pytest
+          ls -al $(dirname $(realpath .venv-pyodide/bin/python))
           .venv-pyodide/bin/pybase64 --help
           .venv-pyodide/bin/pytest ./tests
