@@ -11,6 +11,10 @@ build-verbosity = 1
 
 [tool.coverage.run]
 branch = true
+omit = [
+  "tests/conftest.py",
+  "tests/test_benchmark.py",
+]
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "class .*\\(Protocol\\):", "if TYPE_CHECKING:"]
@@ -47,17 +51,13 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["pybase64.__main__"]
+module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils"]
 disallow_any_explicit = false
-
-[[tool.mypy.overrides]]
-module = ["tests.test_pybase64"]
-disallow_any_explicit = false
-
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "-p", "no:legacypath"]
+markers = ["benchmark"]
 
 [tool.ruff]
 target-version = "py38"

@@ -146,6 +146,21 @@ def coverage(session: nox.Session) -> None:
     session.notify("_coverage-3.12", posargs)
 
 
+@nox.session(python="3.12")
+def benchmark(session: nox.Session) -> None:
+    """Benchmark tests."""
+    project_install: tuple[str, ...] = ("-e", ".")
+    posargs = session.posargs.copy()
+    if "--wheel" in posargs:
+        index = posargs.index("--wheel")
+        posargs.pop(index)
+        project_install = (posargs.pop(index),)
+    env = {"CIBUILDWHEEL": "1"}
+    update_env_macos(session, env)
+    session.install("-r", "requirements-benchmark.txt", *project_install, env=env)
+    session.run("pytest", "--codspeed", *posargs)
+
+
 @nox.session(python="3.11")
 def docs(session: nox.Session) -> None:
     """

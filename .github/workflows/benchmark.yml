@@ -1,0 +1,47 @@
+name: Benchmark
+
+on:
+  push:
+    branches-ignore:
+      - "dependabot/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Benchmark ${{ matrix.archs }} ${{ matrix.build }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+        archs: ["x86_64"]
+        build: ["manylinux"]
+
+    steps:
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build wheel
+        uses: pypa/cibuildwheel@v2.18.1
+        env:
+          CIBW_ARCHS: "${{ matrix.archs }}"
+          CIBW_BUILD: "cp312-${{ matrix.build }}*"
+
+      - uses: wntrblm/nox@2024.04.15
+        name: Install Nox
+        with:
+          python-versions: "3.12"
+
+      - name: Install dependencies
+        run: nox -s benchmark --install-only -- --wheel wheelhouse/*.whl
+
+      - name: Run benchmark
+        uses: CodSpeedHQ/action@v2
+        with:
+          run: nox -s benchmark --reuse-existing-virtualenvs --no-install -- -v
