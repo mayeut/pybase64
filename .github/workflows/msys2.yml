@@ -6,6 +6,10 @@ on:
       - "dependabot/**"
   pull_request:
 
+concurrency:
+  group: msys2-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test with MSYS2 ${{ matrix.sys }}

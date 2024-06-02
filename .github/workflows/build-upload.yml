@@ -8,6 +8,10 @@ on:
       - "dependabot/**"
   pull_request:
 
+concurrency:
+  group: build-upload-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint

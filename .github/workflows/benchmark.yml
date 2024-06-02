@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   benchmark:
     name: Benchmark ${{ matrix.archs }} ${{ matrix.build }} on ${{ matrix.os }}
