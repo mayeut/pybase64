@@ -44,7 +44,8 @@ def simd(request: pytest.FixtureRequest) -> Iterator[int]:
 
     flag = compile_flags[simd_id]
     if flag != 0 and not flag & runtime_flags:  # pragma: no branch
-        pytest.skip("SIMD extension not available")  # pragma: no cover
+        simd_name = _get_simd_name(simd_id)  # pragma: no cover
+        pytest.skip(f"{simd_name!r} SIMD extension not available")  # pragma: no cover
     old_flag = pybase64._get_simd_path()  # type: ignore[attr-defined]
     pybase64._set_simd_path(flag)  # type: ignore[attr-defined]
     assert pybase64._get_simd_path() == flag  # type: ignore[attr-defined]
