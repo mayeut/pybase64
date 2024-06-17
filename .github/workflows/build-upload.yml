@@ -130,7 +130,7 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Upload to Test PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.14
+        uses: pypa/gh-action-pypi-publish@v1.9.0
         with:
           skip-existing: true
           repository-url: https://test.pypi.org/legacy/
@@ -153,6 +153,6 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.14
+        uses: pypa/gh-action-pypi-publish@v1.9.0
         with:
           skip-existing: true
