@@ -5,12 +5,13 @@ import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
-import pybase64
 import pytest
+
+import pybase64
 from pybase64.__main__ import main
 
 
-@pytest.fixture()
+@pytest.fixture
 def emptyfile(tmp_path: Path) -> Iterator[str]:
     _file = tmp_path / "empty"
     _file.write_bytes(b"")
@@ -18,7 +19,7 @@ def emptyfile(tmp_path: Path) -> Iterator[str]:
     _file.unlink()
 
 
-@pytest.fixture()
+@pytest.fixture
 def hellofile(tmp_path: Path) -> Iterator[str]:
     _file = tmp_path / "helloworld"
     _file.write_bytes(b"hello world !/?\n")
