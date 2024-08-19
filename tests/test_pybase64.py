@@ -7,8 +7,9 @@ from collections.abc import Callable
 from enum import IntEnum
 from typing import Any
 
-import pybase64
 import pytest
+
+import pybase64
 from pybase64._typing import Buffer, Decode, Encode
 
 from . import utils

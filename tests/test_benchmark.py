@@ -1,5 +1,6 @@
-import pybase64
 import pytest
+
+import pybase64
 
 from . import utils
 

@@ -4,8 +4,9 @@ import os
 from collections.abc import Iterator
 from typing import Any
 
-import pybase64
 import pytest
+
+import pybase64
 
 _has_extension = hasattr(pybase64, "_set_simd_path")
 assert _has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
@@ -34,7 +35,7 @@ param_simd = pytest.mark.parametrize(
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def simd(request: pytest.FixtureRequest) -> Iterator[int]:
     simd_id = request.param
     if not _has_extension:
