@@ -8,6 +8,18 @@ test-requires = "-r requirements-test.txt"
 test-command = "pytest {project}/tests"
 test-skip = "*-win_arm64"  # silence warnings for windows ARM64
 build-verbosity = 1
+manylinux-i686-image = "manylinux2014"
+manylinux-pypy_i686-image = "manylinux2014"
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-pypy_x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+manylinux-pypy_aarch64-image = "manylinux_2_28"
+manylinux-ppc64le-image = "manylinux_2_28"
+manylinux-s390x-image = "manylinux_2_28"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-manylinux*"
+environment = { AUDITWHEEL_PLAT="manylinux2014_${AUDITWHEEL_ARCH}" }
 
 [tool.coverage.run]
 branch = true
