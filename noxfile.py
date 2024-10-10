@@ -141,7 +141,7 @@ def coverage(session: nox.Session) -> None:
     assert len(posargs & {"--clean", "--report"}) == 0
     assert len(posargs - {"--with-sde"}) == 0
     posargs.add("--report")
-    session.notify("_coverage-3.8", ["--clean"])
+    session.notify("_coverage-3.9", ["--clean"])
     session.notify("_coverage-pypy3.10", [])
     session.notify("_coverage-3.12", posargs)
 
