@@ -96,12 +96,12 @@ def bench_one(
 
 
 def readall(file: BinaryIO) -> bytes:
-    if file == cast(BinaryIO, sys.stdin):
+    if sys.version_info[:2] == (3, 8) and file == cast(BinaryIO, sys.stdin):  # pragma: no cover
         # Python 3 < 3.9 does not honor the binary flag,
         # read from the underlying buffer
         if hasattr(file, "buffer"):
             return cast(BinaryIO, file.buffer).read()
-        return file.read()  # pragma: no cover
+        return file.read()
         # do not close the file
     try:
         data = file.read()
