@@ -22,7 +22,7 @@ jobs:
 
       - uses: wntrblm/nox@2024.04.15
         with:
-          python-versions: "3.9, 3.12, pypy3.10"
+          python-versions: "3.13, pypy3.10"
 
       - name: Install Intel SDE
         run: |
