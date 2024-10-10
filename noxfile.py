@@ -76,7 +76,7 @@ def test(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=["3.8", "3.12", "pypy3.10"])
+@nox.session(python=["3.9", "3.12", "pypy3.10"])
 def _coverage(session: nox.Session) -> None:
     """internal coverage run. Do not run manually"""
     with_sde = "--with-sde" in session.posargs
