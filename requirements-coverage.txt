@@ -1,4 +1,4 @@
 -r requirements-test.txt
-gcovr==8.0
+gcovr==8.2
 pytest-cov==5.0.0
 coverage==7.6.3
