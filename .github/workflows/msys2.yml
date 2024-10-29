@@ -41,7 +41,6 @@ jobs:
           ${{matrix.env}}python-pytest
           ${{matrix.env}}python-setuptools
           ${{matrix.env}}python-typing_extensions
-          ${{matrix.env}}python-wheel
     - name: "Run tests"
       shell: msys2 {0}
       env:
