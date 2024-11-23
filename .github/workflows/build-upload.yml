@@ -73,7 +73,7 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
-          CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
+          CIBW_ENABLE: "${{ startsWith(github.ref, 'refs/tags/v') && '' || 'cpython-prerelease'}}"
 
       - uses: actions/upload-artifact@v4
         with:
