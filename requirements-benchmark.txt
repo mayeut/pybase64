@@ -1,2 +1,2 @@
 -r requirements-test.txt
-pytest-codspeed==3.0.0
+pytest-codspeed==3.1.0
