@@ -27,11 +27,11 @@ jobs:
   build_wheels:
     name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
     needs: [lint]
-    runs-on: ${{ matrix.os }}
+    runs-on: "${{ matrix.os }}${{ startsWith(matrix.archs, 'aarch64') && '-arm' || '' }}"
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-        archs: ["x86_64, i686", "aarch64", "ppc64le", "s390x", "armv7l"]
+        os: [ubuntu-24.04]
+        archs: ["x86_64, i686", "aarch64, armv7l", "ppc64le", "s390x"]
         build: ["manylinux", "musllinux"]
         include:
           - os: windows-2019
@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.3.0
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && runner.arch == 'X64'
 
       # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
       - name: "Install python 3.8 universal2 on macOS arm64"
