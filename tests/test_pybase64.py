@@ -288,7 +288,7 @@ params_invalid_altchars_values = [
     [memoryview(b"- _")[::2], BufferError],
 ]
 params_invalid_altchars = pytest.mark.parametrize(
-    "altchars,exception",
+    ("altchars", "exception"),
     params_invalid_altchars_values,
     ids=[str(i) for i in range(len(params_invalid_altchars_values))],
 )
@@ -344,7 +344,7 @@ params_invalid_data_validate_values = [
     # [std, b'-_', BinAsciiError],  TODO does no fail with base64 module
 ]
 params_invalid_data_all = pytest.mark.parametrize(
-    "vector,altchars,exception",
+    ("vector", "altchars", "exception"),
     params_invalid_data_novalidate_values + params_invalid_data_validate_values,
     ids=[
         str(i)
@@ -354,12 +354,12 @@ params_invalid_data_all = pytest.mark.parametrize(
     ],
 )
 params_invalid_data_novalidate = pytest.mark.parametrize(
-    "vector,altchars,exception",
+    ("vector", "altchars", "exception"),
     params_invalid_data_novalidate_values,
     ids=[str(i) for i in range(len(params_invalid_data_novalidate_values))],
 )
 params_invalid_data_validate = pytest.mark.parametrize(
-    "vector,altchars,exception",
+    ("vector", "altchars", "exception"),
     params_invalid_data_validate_values,
     ids=[str(i) for i in range(len(params_invalid_data_validate_values))],
 )
@@ -409,12 +409,12 @@ params_invalid_data_encodebytes_values = [
     [memoryview(b"abcd").cast("I"), TypeError],
 ]
 params_invalid_data_enc = pytest.mark.parametrize(
-    "vector,exception",
+    ("vector", "exception"),
     params_invalid_data_enc_values,
     ids=[str(i) for i in range(len(params_invalid_data_enc_values))],
 )
 params_invalid_data_encodebytes = pytest.mark.parametrize(
-    "vector,exception",
+    ("vector", "exception"),
     params_invalid_data_encodebytes_values,
     ids=[str(i) for i in range(len(params_invalid_data_encodebytes_values))],
 )
