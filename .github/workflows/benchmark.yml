@@ -38,7 +38,7 @@ jobs:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "cp312-${{ matrix.build }}*"
 
-      - uses: wntrblm/nox@2024.10.09
+      - uses: wntrblm/nox@2025.02.09
         name: Install Nox
         with:
           python-versions: "3.12"
