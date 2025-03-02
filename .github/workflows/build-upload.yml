@@ -56,7 +56,7 @@ jobs:
           submodules: recursive
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.5.0
+        uses: docker/setup-qemu-action@v3.6.0
         if: runner.os == 'Linux' && runner.arch == 'X64'
 
       # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
