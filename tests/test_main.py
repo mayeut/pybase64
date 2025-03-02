@@ -138,6 +138,7 @@ def test_decode(
     assert captured.out == b"hello world !/?\n"
 
 
+@pytest.mark.skipif(sys.platform.startswith("ios"), reason="subprocess not supported")
 def test_subprocess() -> None:
     import subprocess
 

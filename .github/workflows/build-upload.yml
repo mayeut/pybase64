@@ -50,6 +50,12 @@ jobs:
           - platform: "macos"
             archs: "arm64"
             runs-on: macos-14
+          - platform: "ios"
+            archs: "x86_64_iphonesimulator"
+            runs-on: macos-13
+          - platform: "ios"
+            archs: "arm64_iphonesimulator,arm64_iphoneos"
+            runs-on: macos-14
 
     steps:
       - name: Set git to use LF
@@ -65,6 +71,14 @@ jobs:
         uses: docker/setup-qemu-action@v3.6.0
         if: runner.os == 'Linux' && runner.arch == 'X64'
 
+      - name: Install cmake
+        if: runner.os == 'macOS'
+        run: |
+          # workaround https://gitlab.kitware.com/cmake/cmake/-/issues/26570
+          pipx install -f cmake
+          which cmake
+          cmake --version
+
       # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
       - name: "Install python 3.8 universal2 on macOS arm64"
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
@@ -75,7 +89,7 @@ jobs:
           python-version: 3.8
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@main
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -133,7 +147,7 @@ jobs:
           merge-multiple: true
       - run: |
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          test ${WHEEL_COUNT} -eq 142
+          test ${WHEEL_COUNT} -eq 145
           pipx run twine check --strict dist/*
 
   upload_test_pypi:

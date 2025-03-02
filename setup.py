@@ -19,6 +19,7 @@ OPTIONAL_EXTENSION = os.environ.get("CIBUILDWHEEL", "0") != "1"
 IS_64BIT = sys.maxsize > 2**32
 IS_WINDOWS = sys.platform.startswith("win32")
 IS_MACOS = sys.platform.startswith("darwin")
+IS_IOS = sys.platform.startswith("ios")
 
 log = logging.getLogger("pybase64-setup")
 
@@ -97,7 +98,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
             extra_config.append("-A Win32")
         if platform == "win-arm64" and machine != "arm64":
             extra_config.append("-A ARM64")
-    elif IS_MACOS:
+    elif IS_MACOS or IS_IOS:
         known_archs = {
             "arm64",
             "arm64e",
@@ -108,10 +109,18 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
             "ppc",
             "ppc64",
         }
-        if not platform.startswith("macosx-"):
+        if not platform.startswith(("macosx-", "ios-")):
             msg = f"Building {platform} is not supported on macOS"
             raise ValueError(msg)
-        _, _, platform_arch = platform.split("-")
+        if IS_IOS:
+            _, min_ver, platform_arch, sdk = platform.split("-")
+            min_ver = os.getenv("IPHONEOS_DEPLOYMENT_TARGET", min_ver)
+            extra_config.append("-DCMAKE_SYSTEM_NAME=iOS")
+            extra_config.append(f"-DCMAKE_OSX_SYSROOT={sdk}")
+        else:
+            _, min_ver, platform_arch = platform.split("-")
+            min_ver = os.getenv("MACOSX_DEPLOYMENT_TARGET", min_ver)
+        extra_config.append(f"-DCMAKE_OSX_DEPLOYMENT_TARGET={min_ver}")
         if platform_arch.startswith(("universal", "fat")):
             msg = f"multiple arch `{platform_arch}` is not supported"
             raise ValueError(msg)
@@ -153,6 +162,7 @@ def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
         "-DBASE64_BUILD_TESTS:BOOL=OFF",
         "-DBASE64_BUILD_CLI:BOOL=OFF",
         "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+        "-DBUILD_SHARED_LIBS:BOOL=OFF",
     ]
     if build_dir.exists():
         shutil.rmtree(build_dir)
