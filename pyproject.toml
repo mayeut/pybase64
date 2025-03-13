@@ -5,8 +5,12 @@ build-backend = "setuptools.build_meta"
 [tool.cibuildwheel]
 enable = ["cpython-freethreading", "pypy"]
 test-requires = "-r requirements-test.txt"
-test-command = "pytest {project}/tests"
+test-command = "pytest tests"
 test-skip = "*-win_arm64"  # silence warnings for windows ARM64
+test-sources = [
+  "tests",
+]
+safe-tools = ["cmake"]
 build-verbosity = 1
 manylinux-i686-image = "manylinux2014"
 manylinux-pypy_i686-image = "manylinux2014"
