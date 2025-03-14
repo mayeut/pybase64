@@ -130,10 +130,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
         else:
             log.warning("`%s` is not a known value for CMAKE_OSX_ARCHITECTURES", arch)
     elif sys.platform == "ios":
-        if platform_module.ios_ver().is_simulator:
-            sdk = "iphonesimulator"
-        else:
-            sdk = "iphoneos"
+        sdk = "iphonesimulator" if platform_module.ios_ver().is_simulator else "iphoneos"
         sysroot = (
             subprocess.check_output(["xcrun", "--show-sdk-path", "--sdk", sdk])
             .strip()
