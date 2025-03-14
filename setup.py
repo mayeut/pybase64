@@ -134,19 +134,23 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
             sdk = "iphonesimulator"
         else:
             sdk = "iphoneos"
-        sysroot = subprocess.check_output(
-            ["xcrun", "--show-sdk-path", "--sdk", sdk]
-        ).strip().decode("latin1")
+        sysroot = (
+            subprocess.check_output(["xcrun", "--show-sdk-path", "--sdk", sdk])
+            .strip()
+            .decode("latin1")
+        )
         arch = "x86_64" if platform_module.machine() == "x86_64" else "aarch64"
         ios_min_ver = os.getenv("IPHONEOS_DEPLOYMENT_TARGET", "13.0")
 
-        extra_config.extend([
-            "-DCMAKE_SYSTEM_NAME=iOS",
-            f"-DCMAKE_SYSTEM_PROCESSOR={arch}",
-            f"-DCMAKE_OSX_DEPLOYMENT_TARGET={ios_min_ver}",
-            f"-DCMAKE_OSX_SYSROOT={sysroot}",
-            "-DBUILD_SHARED_LIBS=NO",
-        ])
+        extra_config.extend(
+            [
+                "-DCMAKE_SYSTEM_NAME=iOS",
+                f"-DCMAKE_SYSTEM_PROCESSOR={arch}",
+                f"-DCMAKE_OSX_DEPLOYMENT_TARGET={ios_min_ver}",
+                f"-DCMAKE_OSX_SYSROOT={sysroot}",
+                "-DBUILD_SHARED_LIBS=NO",
+            ]
+        )
     return is_msvc, extra_config
 
 
