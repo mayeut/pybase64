@@ -120,9 +120,25 @@ jobs:
           name: cibw-sdist
           path: dist/*.tar.gz
 
+  check_dist:
+    name: Check dist
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+      - run: |
+          WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
+          test ${WHEEL_COUNT} -eq 142
+          pipx run twine check --strict dist/*
+
   upload_test_pypi:
     name: Upload to Test PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [check_dist]
     runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.repository == 'mayeut/pybase64'
     environment:
