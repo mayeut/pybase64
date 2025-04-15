@@ -3,11 +3,10 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
+build-verbosity = 1
 enable = ["cpython-freethreading", "pypy"]
 test-requires = "-r requirements-test.txt"
 test-command = "pytest {project}/tests"
-test-skip = "*-win_arm64"  # silence warnings for windows ARM64
-build-verbosity = 1
 manylinux-i686-image = "manylinux2014"
 manylinux-pypy_i686-image = "manylinux2014"
 manylinux-x86_64-image = "manylinux_2_28"
