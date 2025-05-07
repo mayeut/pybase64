@@ -20,7 +20,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: wntrblm/nox@2025.02.09
+      - uses: wntrblm/nox@2025.05.01
         with:
           python-versions: "3.13, pypy3.10"
 
