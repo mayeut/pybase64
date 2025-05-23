@@ -4,9 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build-verbosity = 1
-enable = ["cpython-freethreading", "pypy"]
+enable = ["cpython-freethreading", "pypy", "pypy-eol"]
 test-requires = "-r requirements-test.txt"
-test-command = "pytest {project}/tests"
+test-sources = ["conftest.py", "pyproject.toml", "tests"]
+test-command = "python -m pytest"
+xbuild-tools = ["cmake"]
 manylinux-i686-image = "manylinux2014"
 manylinux-pypy_i686-image = "manylinux2014"
 manylinux-x86_64-image = "manylinux_2_28"
