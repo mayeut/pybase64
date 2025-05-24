@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build-verbosity = 1
-enable = ["cpython-freethreading", "pypy", "pypy-eol"]
+enable = ["cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
 test-requires = "-r requirements-test.txt"
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest"
