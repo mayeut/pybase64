@@ -35,6 +35,10 @@ jobs:
         build: ["manylinux", "musllinux"]
         runs-on: [ubuntu-24.04]
         include:
+          - platform: "linux"
+            archs: "riscv64"
+            build: "manylinux"
+            runs-on: ubuntu-24.04
           - platform: "windows"
             archs: "AMD64"
             runs-on: windows-2019
@@ -98,7 +102,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "cibw-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "${{ matrix.archs != 'riscv64' && 'pypi-' || ''}}wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -131,7 +135,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-sdist
+          name: pypi-sdist
           path: dist/*.tar.gz
 
   check_dist:
@@ -141,8 +145,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - run: |
@@ -165,8 +169,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to Test PyPI
@@ -188,8 +192,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to PyPI

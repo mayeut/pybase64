@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build-verbosity = 1
-enable = ["cpython-freethreading", "pypy", "pypy-eol"]
+enable = ["cpython-experimental-riscv64", "cpython-freethreading", "pypy", "pypy-eol"]
 test-requires = "-r requirements-test.txt"
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest"
@@ -17,10 +17,15 @@ manylinux-aarch64-image = "manylinux_2_28"
 manylinux-pypy_aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
 manylinux-s390x-image = "manylinux_2_28"
+manylinux-riscv64-image = "ghcr.io/mayeut/manylinux_2_35:2025.05.19-1"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux*"
 environment = { AUDITWHEEL_PLAT="manylinux2014_${AUDITWHEEL_ARCH}" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-manylinux_riscv64"
+environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 
 [tool.coverage.run]
 branch = true
