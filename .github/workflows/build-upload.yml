@@ -35,6 +35,10 @@ jobs:
         build: ["manylinux", "musllinux"]
         runs-on: [ubuntu-24.04]
         include:
+          - platform: "linux"
+            archs: "riscv64"
+            build: "manylinux"
+            runs-on: ubuntu-24.04
           - platform: "windows"
             archs: "AMD64"
             runs-on: windows-2019
@@ -56,6 +60,9 @@ jobs:
           - platform: "ios"
             archs: "arm64_iphonesimulator,arm64_iphoneos"
             runs-on: macos-14
+          - platform: "pyodide"
+            archs: "wasm32"
+            runs-on: ubuntu-24.04
 
     steps:
       - name: Set git to use LF
@@ -89,7 +96,7 @@ jobs:
           python-version: 3.8
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0b1
+        uses: pypa/cibuildwheel@v3.0.0b2
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -98,7 +105,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "cibw-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "${{ (matrix.archs != 'riscv64' && matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -131,7 +138,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-sdist
+          name: pypi-sdist
           path: dist/*.tar.gz
 
   check_dist:
@@ -141,8 +148,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - run: |
@@ -151,6 +158,18 @@ jobs:
           EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '145' || '179' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
+      - uses: actions/download-artifact@v4
+        with:
+          # unpacks all non PyPI artifacts into nodist/
+          pattern: cibw-*
+          path: nodist
+          merge-multiple: true
+      - run: |
+          set -x
+          WHEEL_COUNT=$(find nodist -name '*.whl' | wc -l)
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '8' || '10' }}
+          test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
+          pipx run twine check --strict nodist/*
 
   upload_test_pypi:
     name: Upload to Test PyPI
@@ -165,8 +184,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to Test PyPI
@@ -188,8 +207,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          # unpacks all CIBW artifacts into dist/
-          pattern: cibw-*
+          # unpacks all PyPI artifacts into dist/
+          pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to PyPI
