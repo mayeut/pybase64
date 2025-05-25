@@ -105,7 +105,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "${{ (matrix.archs != 'riscv64' && matrix.platform != 'pyodide') && 'pypi-' || ''}}wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "${{ (matrix.archs != 'riscv64' && matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -158,6 +158,18 @@ jobs:
           EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '145' || '179' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
+      - uses: actions/download-artifact@v4
+        with:
+          # unpacks all non PyPI artifacts into nodist/
+          pattern: cibw-*
+          path: nodist
+          merge-multiple: true
+      - run: |
+          set -x
+          WHEEL_COUNT=$(find nodist -name '*.whl' | wc -l)
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '8' || '10' }}
+          test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
+          pipx run twine check --strict nodist/*
 
   upload_test_pypi:
     name: Upload to Test PyPI
