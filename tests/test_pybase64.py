@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import sys
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from collections.abc import Callable
@@ -384,6 +385,8 @@ def test_invalid_data_dec_skip(
 ) -> None:
     utils.unused_args(exception, simd)  # simd is a parameter in order to control the order of tests
     test = dfn(vector, altchars)
+    if sys.implementation.name == "graalpy" and vector.startswith((b"A@@@=F", b"A@@=@")):
+        pytest.xfail(reason="graalpy fails decoding those entries")  # pragma: no cover
     base = base64.b64decode(vector, altchars)
     assert test == base
 
