@@ -6,8 +6,9 @@ import sys
 from base64 import b64decode as b64decodeValidate
 from base64 import encodebytes as b64encodebytes
 from collections.abc import Sequence
+from pathlib import Path
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Any, BinaryIO, cast
+from typing import TYPE_CHECKING, Any
 
 import pybase64
 
@@ -95,38 +96,20 @@ def bench_one(
     assert decodedcontent == data
 
 
-def readall(file: BinaryIO) -> bytes:
-    if file == cast(BinaryIO, sys.stdin):  # pragma: no cover
-        # Python 3 does not honor the binary flag,
-        # read from the underlying buffer
-        if hasattr(file, "buffer"):
-            return cast(BinaryIO, file.buffer).read()
-        return file.read()
-        # do not close the file
-    try:
-        data = file.read()
-    finally:
-        file.close()
-    return data
+def readall(file: str) -> bytes:
+    if file == "-":
+        return sys.stdin.buffer.read()
+    return Path(file).read_bytes()
 
 
-def writeall(file: BinaryIO, data: bytes) -> None:
-    if file == cast(BinaryIO, sys.stdout):
-        # Python 3 does not honor the binary flag,
-        # write to the underlying buffer
-        if hasattr(file, "buffer"):
-            file.buffer.write(data)
-        else:
-            file.write(data)  # pragma: no cover
-        # do not close the file
+def writeall(file: str, data: bytes) -> None:
+    if file == "-":
+        sys.stdout.buffer.write(data)
     else:
-        try:
-            file.write(data)
-        finally:
-            file.close()
+        Path(file).write_bytes(data)
 
 
-def benchmark(duration: float, input: BinaryIO) -> None:
+def benchmark(duration: float, input: str) -> None:
     print(__package__ + " " + pybase64.get_version())
     data = readall(input)
     for altchars in [None, b"-_"]:
@@ -152,13 +135,13 @@ def benchmark(duration: float, input: BinaryIO) -> None:
             )
 
 
-def encode(input: BinaryIO, altchars: bytes | None, output: BinaryIO) -> None:
+def encode(input: str, altchars: bytes | None, output: str) -> None:
     data = readall(input)
     data = pybase64.b64encode(data, altchars)
     writeall(output, data)
 
 
-def decode(input: BinaryIO, altchars: bytes | None, validate: bool, output: BinaryIO) -> None:
+def decode(input: str, altchars: bytes | None, validate: bool, output: str) -> None:
     data = readall(input)
     data = pybase64.b64decode(data, altchars, validate)
     writeall(output, data)
@@ -192,6 +175,15 @@ class LicenseAction(argparse.Action):
         parser.exit()
 
 
+def check_file(value: str, is_input: bool) -> str:
+    if value == "-":
+        return value
+    path = Path(value)
+    if is_input:
+        return str(path.resolve(strict=True))
+    return str(path.parent.resolve(strict=True) / path.name)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     # main parser
     parser = argparse.ArgumentParser(
@@ -217,15 +209,16 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=1.0,
         help="expected duration for a single encode or decode test",
     )
+    benchmark_parser.register("type", "input file", lambda s: check_file(s, True))
     benchmark_parser.add_argument(
-        "input", type=argparse.FileType("rb"), help="input file used for the benchmark"
+        "input", type="input file", help="input file used for the benchmark"
     )
     benchmark_parser.set_defaults(func=benchmark)
     # encode parser
     encode_parser = subparsers.add_parser("encode", help="-h for usage")
-    encode_parser.add_argument(
-        "input", type=argparse.FileType("rb"), help="input file to be encoded"
-    )
+    encode_parser.register("type", "input file", lambda s: check_file(s, True))
+    encode_parser.register("type", "output file", lambda s: check_file(s, False))
+    encode_parser.add_argument("input", type="input file", help="input file to be encoded")
     group = encode_parser.add_mutually_exclusive_group()
     group.add_argument(
         "-u",
@@ -245,16 +238,16 @@ def main(argv: Sequence[str] | None = None) -> None:
         "-o",
         "--output",
         dest="output",
-        type=argparse.FileType("wb"),
-        default=sys.stdout,
+        type="output file",
+        default="-",
         help="encoded output file (default to stdout)",
     )
     encode_parser.set_defaults(func=encode)
     # decode parser
     decode_parser = subparsers.add_parser("decode", help="-h for usage")
-    decode_parser.add_argument(
-        "input", type=argparse.FileType("rb"), help="input file to be decoded"
-    )
+    decode_parser.register("type", "input file", lambda s: check_file(s, True))
+    decode_parser.register("type", "output file", lambda s: check_file(s, False))
+    decode_parser.add_argument("input", type="input file", help="input file to be decoded")
     group = decode_parser.add_mutually_exclusive_group()
     group.add_argument(
         "-u",
@@ -274,8 +267,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         "-o",
         "--output",
         dest="output",
-        type=argparse.FileType("wb"),
-        default=sys.stdout,
+        type="output file",
+        default="-",
         help="decoded output file (default to stdout)",
     )
     decode_parser.add_argument(
