@@ -41,10 +41,10 @@ jobs:
             runs-on: ubuntu-24.04
           - platform: "windows"
             archs: "AMD64"
-            runs-on: windows-2019
+            runs-on: windows-2022
           - platform: "windows"
             archs: "x86"
-            runs-on: windows-2019
+            runs-on: windows-2022
           - platform: "windows"
             archs: "ARM64"
             runs-on: windows-11-arm
@@ -96,7 +96,7 @@ jobs:
           python-version: 3.8
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0b4
+        uses: pypa/cibuildwheel@v3.0.0b5
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
