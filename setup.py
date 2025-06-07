@@ -82,6 +82,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
 
     platform = plat_name or platform
     is_msvc = platform.startswith("win")
+    is_android = platform.startswith("android")
 
     if not is_msvc:
         extra_config.append(f"-DCMAKE_BUILD_TYPE={build_type}")
@@ -98,6 +99,22 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
             extra_config.append("-A Win32")
         if platform == "win-arm64" and machine != "arm64":
             extra_config.append("-A ARM64")
+    elif is_android:
+        _, level, arch = platform.split("-")
+        if arch.startswith("arm"):
+            arch = arch.replace("_", "-")
+        cc = Path(os.getenv("CC", sysconfig.get_config_var("CC"))).resolve(strict=True)
+        android_home_env = os.getenv("ANDROID_HOME")
+        if android_home_env is None:
+            msg = "The ANDROID_HOME environment variable is required."
+            raise ValueError(msg)
+        android_home = Path(android_home_env)
+        android_ndk_root = android_home / "/".join(cc.relative_to(android_home).parts[:2])
+        extra_config.append("-DCMAKE_SYSTEM_NAME=Android")
+        extra_config.append(f"-DCMAKE_SYSTEM_VERSION={level}")
+        extra_config.append(f"-DCMAKE_ANDROID_ARCH_ABI={arch}")
+        extra_config.append(f"-DCMAKE_ANDROID_NDK={android_ndk_root}")
+        extra_config.append("-DCMAKE_ANDROID_STL_TYPE=none")
     elif IS_MACOS or IS_IOS:
         known_archs = {
             "arm64",
