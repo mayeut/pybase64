@@ -30,7 +30,7 @@ repos:
     args: ["--python-version=3.8"]
     additional_dependencies:
       - nox
-      - pytest
+      - pytest<8.4
       - types-setuptools
   - id: mypy
     name: mypy 3.12
