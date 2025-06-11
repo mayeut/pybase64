@@ -72,6 +72,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
     log.info("  CC: %s", os.environ.get("CC", None))
     log.info("  CFLAGS: %s", os.environ.get("CFLAGS", None))
     log.info("  LDFLAGS: %s", os.environ.get("LDFLAGS", None))
+    log.info("  CMAKE_TOOLCHAIN_FILE: %s", os.environ.get("CMAKE_TOOLCHAIN_FILE", None))
     log.info("  sysconfig CC: %s", sysconfig.get_config_var("CC"))
     log.info("  sysconfig CCSHARED: %s", sysconfig.get_config_var("CCSHARED"))
     log.info("  sysconfig CFLAGS: %s", sysconfig.get_config_var("CFLAGS"))
