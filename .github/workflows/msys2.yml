@@ -39,6 +39,7 @@ jobs:
           ${{matrix.env}}python
           ${{matrix.env}}python-pip
           ${{matrix.env}}python-pytest
+          ${{matrix.env}}python-pygments
           ${{matrix.env}}python-setuptools
           ${{matrix.env}}python-typing_extensions
     - name: "Run tests"
