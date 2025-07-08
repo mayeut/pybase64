@@ -96,7 +96,7 @@ jobs:
           python-version: 3.8
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.0.1
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -155,7 +155,7 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '150' || '184' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '150' || '187' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
       - uses: actions/download-artifact@v4
