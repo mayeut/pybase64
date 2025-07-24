@@ -139,7 +139,7 @@ def test_decode(
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith(("emscripten", "ios")), reason="subprocess not supported"
+    sys.platform.startswith(("android", "emscripten", "ios")), reason="subprocess not supported"
 )
 def test_subprocess() -> None:
     import subprocess  # noqa: PLC0415
