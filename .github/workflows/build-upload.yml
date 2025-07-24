@@ -31,14 +31,10 @@ jobs:
     strategy:
       matrix:
         platform: ["linux"]
-        archs: ["x86_64, i686", "aarch64, armv7l", "ppc64le", "s390x"]
+        archs: ["x86_64, i686", "aarch64, armv7l", "ppc64le", "s390x", "riscv64"]
         build: ["manylinux", "musllinux"]
         runs-on: [ubuntu-24.04]
         include:
-          - platform: "linux"
-            archs: "riscv64"
-            build: "manylinux"
-            runs-on: ubuntu-24.04
           - platform: "windows"
             archs: "AMD64"
             runs-on: windows-2022
@@ -105,7 +101,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: "${{ (matrix.archs != 'riscv64' && matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -155,7 +151,7 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '150' || '187' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '205' || '205' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
       - uses: actions/download-artifact@v4
@@ -167,7 +163,7 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find nodist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '8' || '10' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '2' || '2' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict nodist/*
 
