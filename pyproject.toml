@@ -10,15 +10,6 @@ test-requires = "-r requirements-test.txt"
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest"
 xbuild-tools = ["cmake"]
-manylinux-i686-image = "manylinux2014"
-manylinux-pypy_i686-image = "manylinux2014"
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-pypy_x86_64-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
-manylinux-pypy_aarch64-image = "manylinux_2_28"
-manylinux-ppc64le-image = "manylinux_2_28"
-manylinux-s390x-image = "manylinux_2_28"
-manylinux-riscv64-image = "manylinux_2_39"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux*"
