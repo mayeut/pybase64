@@ -15,22 +15,39 @@ repos:
   - id: trailing-whitespace
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.12.4
+  rev: v0.12.5
   hooks:
   - id: ruff
     args: ["--fix", "--show-fixes"]
   - id: ruff-format
 
+- repo: local
+  hooks:
+  - id: mypy
+    name: mypy 3.8
+    entry: mypy
+    language: python
+    'types_or': [ python, pyi ]
+    require_serial: true
+    minimum_pre_commit_version: '2.9.2'
+    exclude: docs|conftest.py
+    args: ["--python-version=3.8"]
+    additional_dependencies:
+      - mypy==1.16.1
+      - nox
+      - pytest<8.4
+      - types-setuptools
+
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: v1.17.0
   hooks:
   - id: mypy
-    name: mypy 3.8
+    name: mypy 3.9
     exclude: docs|conftest.py
-    args: ["--python-version=3.8"]
+    args: ["--python-version=3.9"]
     additional_dependencies:
       - nox
-      - pytest<8.4
+      - pytest
       - types-setuptools
   - id: mypy
     name: mypy 3.12
