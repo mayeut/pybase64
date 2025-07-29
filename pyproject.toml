@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build-verbosity = 1
-enable = ["cpython-experimental-riscv64", "cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
+enable = ["cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
 test-skip = ["gp311_242-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
 test-requires = "-r requirements-test.txt"
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
