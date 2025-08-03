@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build_sdist:
     name: Valgrind
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,8 +24,8 @@ jobs:
         run: |
           set -exuo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends valgrind python3.10-dbg python3.10-dev python3-distutils
-          python3.10-dbg -mvenv ./venv-dbg
+          sudo apt-get install -y --no-install-recommends valgrind python3.12-dbg python3.12-dev
+          python3.12-dbg -mvenv ./venv-dbg
           ln -sf $(pwd)/venv-dbg/bin/python /usr/local/bin/python-pb64
           python-pb64 -m pip install --upgrade pip setuptools wheel
           python-pb64 -m pip install -r requirements-test.txt
