@@ -23,7 +23,7 @@ jobs:
           - { sys: ucrt64, env: mingw-w64-ucrt-x86_64- }
           - { sys: clang64, env: mingw-w64-clang-x86_64- }
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: 'Setup MSYS2'

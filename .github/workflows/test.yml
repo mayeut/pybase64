@@ -16,7 +16,7 @@ jobs:
     name: Test
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - uses: wntrblm/nox@2025.05.01
