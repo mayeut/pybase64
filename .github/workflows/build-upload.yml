@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
       - uses: pre-commit/action@v3.0.1
@@ -96,7 +96,7 @@ jobs:
       # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
       - name: "Install python 3.8 universal2 on macOS arm64"
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: 1
         with:
@@ -129,7 +129,7 @@ jobs:
       - name: Build sdist
         run: pipx run build --sdist
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         name: Install Python
         with:
           python-version: "3.11"
