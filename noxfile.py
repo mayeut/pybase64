@@ -97,7 +97,6 @@ def _coverage(session: nox.Session) -> None:
         "CIBUILDWHEEL": "1",
         "CFLAGS": "-O0 -coverage",
         "LDFLAGS": "-coverage",
-        "COVERAGE_PROCESS_START": "1",
     }
     update_env_macos(session, env)
     session.install("-e", ".", env=env)
@@ -123,15 +122,16 @@ def _coverage(session: nox.Session) -> None:
         threshold = 100.0 if "CI" in os.environ else 99.8
         session.run("coverage", "report", "--show-missing", f"--fail-under={threshold}")
         session.run("coverage", "xml", "-ocoverage-python.xml")
-        gcovr_config = ("-r=.", "-e=base64", "-e=.base64_build")
-        session.run(
-            "gcovr",
-            *gcovr_config,
-            "--fail-under-line=90",
-            "--txt",
-            "-s",
-            "--xml=coverage-native.xml",
-        )
+        if sys.platform.startswith("linux"):
+            gcovr_config = ("-r=.", "-e=base64", "-e=.base64_build")
+            session.run(
+                "gcovr",
+                *gcovr_config,
+                "--fail-under-line=90",
+                "--txt",
+                "-s",
+                "--xml=coverage-native.xml",
+            )
 
 
 @nox.session(venv_backend="none")

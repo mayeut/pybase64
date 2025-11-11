@@ -21,6 +21,7 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 
 [tool.coverage.run]
 branch = true
+patch = ["subprocess"]
 omit = [
   "tests/conftest.py",
   "tests/test_benchmark.py",
