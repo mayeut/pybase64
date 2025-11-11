@@ -49,4 +49,5 @@ jobs:
       - name: Run benchmark
         uses: CodSpeedHQ/action@v4
         with:
+          mode: instrumentation
           run: nox -s benchmark --reuse-existing-virtualenvs --no-install -- -v
