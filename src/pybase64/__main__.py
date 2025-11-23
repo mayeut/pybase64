@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 import base64
 import sys
-from base64 import b64decode as b64decodeValidate
+from base64 import b64decode as b64decode_validate
 from base64 import encodebytes as b64encodebytes
-from collections.abc import Sequence
 from pathlib import Path
 from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any
@@ -13,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 import pybase64
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from pybase64._typing import Decode, Encode, EncodeBytes
 
 
@@ -35,11 +36,11 @@ def bench_one(
             number += 1
             if timer() - time > duration:
                 break
-        iter = number
+        iter_ = number
         time = timer()
-        while iter > 0:
+        while iter_ > 0:
             encodedcontent = encbytes(data)
-            iter -= 1
+            iter_ -= 1
         time = timer() - time
         print(
             "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
@@ -47,7 +48,7 @@ def bench_one(
                 ((number * len(data)) / (1024.0 * 1024.0)) / time,
                 len(data),
                 len(encodedcontent),
-            )
+            ),
         )
 
     number = 0
@@ -57,11 +58,11 @@ def bench_one(
         number += 1
         if timer() - time > duration:
             break
-    iter = number
+    iter_ = number
     time = timer()
-    while iter > 0:
+    while iter_ > 0:
         encodedcontent = enc(data, altchars=altchars)
-        iter -= 1
+        iter_ -= 1
     time = timer() - time
     print(
         "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
@@ -69,7 +70,7 @@ def bench_one(
             ((number * len(data)) / (1024.0 * 1024.0)) / time,
             len(data),
             len(encodedcontent),
-        )
+        ),
     )
 
     number = 0
@@ -79,11 +80,11 @@ def bench_one(
         number += 1
         if timer() - time > duration:
             break
-    iter = number
+    iter_ = number
     time = timer()
-    while iter > 0:
+    while iter_ > 0:
         decodedcontent = dec(encodedcontent, altchars=altchars, validate=validate)
-        iter -= 1
+        iter_ -= 1
     time = timer() - time
     print(
         "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
@@ -91,9 +92,9 @@ def bench_one(
             ((number * len(data)) / (1024.0 * 1024.0)) / time,
             len(encodedcontent),
             len(data),
-        )
+        ),
     )
-    assert decodedcontent == data
+    assert decodedcontent == data  # noqa: S101
 
 
 def readall(file: str) -> bytes:
@@ -109,7 +110,7 @@ def writeall(file: str, data: bytes) -> None:
         Path(file).write_bytes(data)
 
 
-def benchmark(duration: float, input: str) -> None:
+def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     print(__package__ + " " + pybase64.get_version())
     data = readall(input)
     for altchars in [None, b"-_"]:
@@ -128,20 +129,20 @@ def benchmark(duration: float, input: str) -> None:
                 duration,
                 data,
                 base64.b64encode,
-                b64decodeValidate,
+                b64decode_validate,
                 b64encodebytes,
                 altchars,
                 validate,
             )
 
 
-def encode(input: str, altchars: bytes | None, output: str) -> None:
+def encode(*, input: str, altchars: bytes | None, output: str) -> None:  # noqa: A002
     data = readall(input)
     data = pybase64.b64encode(data, altchars)
     writeall(output, data)
 
 
-def decode(input: str, altchars: bytes | None, validate: bool, output: str) -> None:
+def decode(*, input: str, altchars: bytes | None, validate: bool, output: str) -> None:  # noqa: A002
     data = readall(input)
     data = pybase64.b64decode(data, altchars, validate)
     writeall(output, data)
@@ -152,9 +153,9 @@ class LicenseAction(argparse.Action):
         self,
         option_strings: Sequence[str],
         dest: str,
-        license: str | None = None,
-        help: str | None = "show license information and exit",
-    ):
+        license: str | None = None,  # noqa: A002
+        help: str | None = "show license information and exit",  # noqa: A002
+    ) -> None:
         super().__init__(
             option_strings=option_strings,
             dest=dest,
@@ -175,7 +176,7 @@ class LicenseAction(argparse.Action):
         parser.exit()
 
 
-def check_file(value: str, is_input: bool) -> str:
+def check_file(value: str, *, is_input: bool) -> str:
     if value == "-":
         return value
     path = Path(value)
@@ -187,7 +188,8 @@ def check_file(value: str, is_input: bool) -> str:
 def main(argv: Sequence[str] | None = None) -> None:
     # main parser
     parser = argparse.ArgumentParser(
-        prog=__package__, description=__package__ + " command-line tool."
+        prog=__package__,
+        description=__package__ + " command-line tool.",
     )
     parser.add_argument(
         "-V",
@@ -209,15 +211,17 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=1.0,
         help="expected duration for a single encode or decode test",
     )
-    benchmark_parser.register("type", "input file", lambda s: check_file(s, True))
+    benchmark_parser.register("type", "input file", lambda s: check_file(s, is_input=True))
     benchmark_parser.add_argument(
-        "input", type="input file", help="input file used for the benchmark"
+        "input",
+        type="input file",
+        help="input file used for the benchmark",
     )
     benchmark_parser.set_defaults(func=benchmark)
     # encode parser
     encode_parser = subparsers.add_parser("encode", help="-h for usage")
-    encode_parser.register("type", "input file", lambda s: check_file(s, True))
-    encode_parser.register("type", "output file", lambda s: check_file(s, False))
+    encode_parser.register("type", "input file", lambda s: check_file(s, is_input=True))
+    encode_parser.register("type", "output file", lambda s: check_file(s, is_input=False))
     encode_parser.add_argument("input", type="input file", help="input file to be encoded")
     group = encode_parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -245,8 +249,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     encode_parser.set_defaults(func=encode)
     # decode parser
     decode_parser = subparsers.add_parser("decode", help="-h for usage")
-    decode_parser.register("type", "input file", lambda s: check_file(s, True))
-    decode_parser.register("type", "output file", lambda s: check_file(s, False))
+    decode_parser.register("type", "input file", lambda s: check_file(s, is_input=True))
+    decode_parser.register("type", "output file", lambda s: check_file(s, is_input=False))
     decode_parser.add_argument("input", type="input file", help="input file to be decoded")
     group = decode_parser.add_mutually_exclusive_group()
     group.add_argument(

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 import pytest
 
@@ -31,7 +33,10 @@ def _get_simd_name(simd_id: int) -> str:
 
 
 param_simd = pytest.mark.parametrize(
-    "simd", range(len(compile_flags)), ids=lambda x: _get_simd_name(x), indirect=True
+    "simd",
+    range(len(compile_flags)),
+    ids=lambda x: _get_simd_name(x),
+    indirect=True,
 )
 
 

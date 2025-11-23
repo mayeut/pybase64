@@ -14,7 +14,10 @@ class Decode(Protocol):
     __module__: str
 
     def __call__(
-        self, s: str | Buffer, altchars: str | Buffer | None = None, validate: bool = False
+        self,
+        s: str | Buffer,
+        altchars: str | Buffer | None = None,
+        validate: bool = False,
     ) -> bytes: ...
 
 

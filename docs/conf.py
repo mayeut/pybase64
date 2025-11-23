@@ -55,7 +55,7 @@ master_doc = "index"
 # General information about the project.
 project = "pybase64"
 author = "Matthieu Darbois"
-copyright = f"2017-{datetime.date.today().year}, Matthieu Darbois"
+copyright = f"2017-{datetime.date.today().year}, Matthieu Darbois"  # noqa: A001
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

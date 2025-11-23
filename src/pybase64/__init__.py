@@ -49,7 +49,7 @@ __version__ = _version
 
 
 def get_license_text() -> str:
-    """Returns pybase64 license information as a :class:`str` object.
+    """Return pybase64 license information as a :class:`str` object.
 
     The result includes libbase64 license information as well.
     """
@@ -57,7 +57,7 @@ def get_license_text() -> str:
 
 
 def get_version() -> str:
-    """Returns pybase64 version as a :class:`str` object.
+    """Return pybase64 version as a :class:`str` object.
 
     The result reports if the C extension is used or not.
     e.g. `1.0.0 (C extension active - AVX2)`
