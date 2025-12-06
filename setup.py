@@ -24,8 +24,8 @@ log = logging.getLogger("pybase64-setup")
 
 # Get version
 version_dict: dict[str, object] = {}
-exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)
-version = cast(str, version_dict["_version"])
+exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)  # noqa: S102
+version = cast("str", version_dict["_version"])
 
 # Get the long description from the README file
 long_description = HERE.joinpath("README.rst").read_text()
@@ -58,7 +58,7 @@ pybase64_ext = Extension(
 )
 
 
-def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool, list[str]]:
+def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool, list[str]]:  # noqa: C901
     log.info("getting cmake extra config")
     extra_config = []
     machine = platform_module.machine().lower()
@@ -147,7 +147,7 @@ def get_cmake_extra_config(plat_name: str | None, build_type: str) -> tuple[bool
 def cmake(*args: str) -> None:
     args_string = " ".join(f"'{arg}'" for arg in args)
     log.info("running cmake %s", args_string)
-    subprocess.run(["cmake", *args], check=True)
+    subprocess.run(["cmake", *args], check=True)  # noqa: S603,S607
 
 
 @contextmanager
@@ -205,7 +205,9 @@ class BuildExt(build_ext):
             if build_successful:
                 super().run()
             else:
-                assert OPTIONAL_EXTENSION
+                if not OPTIONAL_EXTENSION:
+                    msg = "C-extension is mandatory but base64 library build failed"
+                    raise ValueError(msg)
                 log.warning("warning: skipping optional C-extension, base64 library build failed")
 
 
@@ -229,7 +231,7 @@ setup(
     },
     # Author details
     author="Matthieu Darbois",
-    # author_email = 'mayeut@users.noreply.github.com',
+    # author_email = 'mayeut@users.noreply.github.com',  # noqa: ERA001
     # Choose your license
     license="BSD-2-Clause",
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers

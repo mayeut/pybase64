@@ -4,6 +4,11 @@ import re
 import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
 
 import pytest
 
@@ -94,7 +99,10 @@ def test_benchmark(capsys: pytest.CaptureFixture[str], emptyfile: str) -> None:
     ids=["0", "1", "2"],
 )
 def test_encode(
-    capsysbinary: pytest.CaptureFixture[bytes], hellofile: str, args: Sequence[str], expect: bytes
+    capsysbinary: pytest.CaptureFixture[bytes],
+    hellofile: str,
+    args: Sequence[str],
+    expect: bytes,
 ) -> None:
     main(["encode", *args, hellofile])
     captured = capsysbinary.readouterr()
@@ -103,14 +111,15 @@ def test_encode(
 
 
 def test_encode_ouputfile(
-    capsys: pytest.CaptureFixture[str], emptyfile: str, hellofile: str
+    capsys: pytest.CaptureFixture[str],
+    emptyfile: str,
+    hellofile: str,
 ) -> None:
     main(["encode", "-o", hellofile, emptyfile])
     captured = capsys.readouterr()
     assert captured.err == ""
     assert captured.out == ""
-    with open(hellofile, "rb") as f:
-        data = f.read()
+    data = Path(hellofile).read_bytes()
     assert data == b""
 
 
@@ -139,12 +148,13 @@ def test_decode(
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith(("android", "emscripten", "ios")), reason="subprocess not supported"
+    sys.platform.startswith(("android", "emscripten", "ios")),
+    reason="subprocess not supported",
 )
 def test_subprocess() -> None:
     import subprocess  # noqa: PLC0415
 
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # noqa: S603
         [sys.executable, "-m", "pybase64", "encode", "-"],
         bufsize=4096,
         stdin=subprocess.PIPE,

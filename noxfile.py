@@ -26,7 +26,10 @@ def update_env_macos(session: nox.Session, env: dict[str, str]) -> None:
     if sys.platform.startswith("darwin"):
         # we don't support universal builds
         machine = session.run(  # type: ignore[union-attr]
-            "python", "-sSEc", "import platform; print(platform.machine())", silent=True
+            "python",
+            "-sSEc",
+            "import platform; print(platform.machine())",
+            silent=True,
         ).strip()
         env["ARCHFLAGS"] = f"-arch {machine}"
         env["_PYTHON_HOST_PLATFORM"] = f"macosx-11.0-{machine}"
@@ -53,7 +56,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
 
 @nox.session(python="3.12")
 def develop(session: nox.Session) -> None:
-    """create venv for dev."""
+    """Create venv for dev."""
     session.install("nox", "setuptools", "-r", "requirements-test.txt")
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
@@ -78,7 +81,7 @@ def test(session: nox.Session) -> None:
 
 @nox.session(python=["3.13", "pypy3.10"])
 def _coverage(session: nox.Session) -> None:
-    """internal coverage run. Do not run manually"""
+    """Internal coverage run. Do not run manually"""
     with_sde = "--with-sde" in session.posargs
     clean = "--clean" in session.posargs
     report = "--report" in session.posargs
@@ -162,9 +165,7 @@ def benchmark(session: nox.Session) -> None:
 
 @nox.session(python="3.11")
 def docs(session: nox.Session) -> None:
-    """
-    Build the docs.
-    """
+    """Build the docs."""
     session.install("-r", "requirements-doc.txt", ".")
     session.run("pip", "list")
     session.chdir("docs")

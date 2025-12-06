@@ -13,7 +13,7 @@ _bytes_types = (bytes, bytearray)  # Types acceptable as binary data
 
 
 def _get_simd_name(flags: int) -> str:
-    assert flags == 0
+    assert flags == 0  # noqa: S101
     return "fallback"
 
 
@@ -45,7 +45,9 @@ def _get_bytes(s: str | Buffer) -> bytes | bytearray:
 
 
 def b64decode(
-    s: str | Buffer, altchars: str | Buffer | None = None, validate: bool = False
+    s: str | Buffer,
+    altchars: str | Buffer | None = None,
+    validate: bool = False,
 ) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -93,7 +95,9 @@ def b64decode(
 
 
 def b64decode_as_bytearray(
-    s: str | Buffer, altchars: str | Buffer | None = None, validate: bool = False
+    s: str | Buffer,
+    altchars: str | Buffer | None = None,
+    validate: bool = False,
 ) -> bytearray:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -152,14 +156,14 @@ def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None) -> str:
 
 
 def encodebytes(s: Buffer) -> bytes:
-    """Encode bytes into a bytes object with newlines (b'\\\\n') inserted after
+    r"""Encode bytes into a bytes object with newlines (b'\n') inserted after
     every 76 bytes of output, and ensuring that there is a trailing newline,
     as per :rfc:`2045` (MIME).
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
 
     The result is returned as a :class:`bytes` object.
-    """
+    """  # noqa: D205
     mv = memoryview(s)
     if not mv.c_contiguous:
         msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"

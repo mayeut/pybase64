@@ -23,6 +23,7 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 branch = true
 patch = ["subprocess"]
 omit = [
+  "src/pybase64/_typing.py",
   "tests/conftest.py",
   "tests/test_benchmark.py",
 ]
@@ -73,34 +74,22 @@ markers = ["benchmark"]
 [tool.ruff]
 target-version = "py38"
 line-length = 100
-
-[tool.ruff.lint]
-extend-select = [
-  "B",           # flake8-bugbear
-  "I",           # isort
-  "ARG",         # flake8-unused-arguments
-  "C4",          # flake8-comprehensions
-  "EM",          # flake8-errmsg
-  "ICN",         # flake8-import-conventions
-  "ISC",         # flake8-implicit-str-concat
-  "G",           # flake8-logging-format
-  "PGH",         # pygrep-hooks
-  "PIE",         # flake8-pie
-  "PL",          # pylint
-  "PT",          # flake8-pytest-style
-  "RET",         # flake8-return
-  "RUF",         # Ruff-specific
-  "SIM",         # flake8-simplify
-  "TID251",      # flake8-tidy-imports.banned-api
-  "UP",          # pyupgrade
-  "YTT",         # flake8-2020
-  "EXE",         # flake8-executable
-  "PYI",         # flake8-pyi
-]
-ignore = [
+lint.select = ["ALL"]
+lint.ignore = [
+  "D104",  # TODO add doc
+  "FBT001",
+  "FBT002",
   "PLR",    # Design related pylint codes
 ]
-typing-modules = ["pybase64._typing"]
+lint.typing-modules = ["pybase64._typing"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/pybase64/__main__.py" = ["C901", "D", "T201"]
+"!src/**.py" = ["D"]
+"setup.py" = ["TRY400"]  # TODO
+"docs/**.py" = ["ANN", "DTZ011", "ERA001", "INP001", "PTH"]
+"tests/**.py" = ["ANN401", "PERF", "S101", "SLF001"]
+"noxfile.py" = ["S101"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.Callable".msg = "Use collections.abc.Callable instead."
