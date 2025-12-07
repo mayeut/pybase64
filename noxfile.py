@@ -113,10 +113,10 @@ def _coverage(session: nox.Session) -> None:
     session.run(*pytest_command, env=env)
     if with_sde:
         cpu = "spr"
-        sde = ("sde", f"-{cpu}", "--")
+        sde = ("sde64", f"-{cpu}", "--")
         session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
-        for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw"]:
-            sde = ("sde", f"-{cpu}", "--")
+        for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
+            sde = ("sde64", f"-{cpu}", "--")
             pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
             session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
 

@@ -30,7 +30,7 @@ jobs:
 
       - name: Install Intel SDE, libxml2-dev & libxslt1-dev
         run: |
-          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/813591/sde-external-9.33.0-2024-01-07-lin.tar.xz
+          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-lin.tar.xz
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV

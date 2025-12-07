@@ -504,6 +504,7 @@ def test_flags(request: pytest.FixtureRequest) -> None:
         "nhm": 1 | 2 | 4 | 8 | 16,  # SSE42
         "snb": 1 | 2 | 4 | 8 | 16 | 32,  # AVX
         "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
+        "skx": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
         "spr": 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
     }[cpu] == utils.runtime_flags
 
