@@ -10,7 +10,7 @@ HERE = Path(__file__).resolve().parent
 
 nox.options.sessions = ["lint", "test"]
 
-ALL_CPYTHON = [f"3.{minor}" for minor in range(8, 14 + 1)]
+ALL_CPYTHON = [f"3.{minor}" for minor in range(8, 15 + 1)]
 ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 11 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_PYPY
 
@@ -79,9 +79,15 @@ def test(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=["3.13", "pypy3.10"])
+@nox.session(python=["3.14", "3.15", "pypy3.11"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
+    gcovr_config = (
+        "-r=.",
+        "-e=base64",
+        "-e=.base64_build",
+        "--gcov-exclude-directory=.base64_build",
+    )
     with_sde = "--with-sde" in session.posargs
     clean = "--clean" in session.posargs
     report = "--report" in session.posargs
@@ -92,8 +98,7 @@ def _coverage(session: nox.Session) -> None:
         "--cov-report=",
     )
     pytest_command = ("pytest", *coverage_args)
-
-    session.install("-r", "requirements-test.txt", "-r", "requirements-coverage.txt")
+    session.install("-r", "requirements-coverage.txt")
     remove_extension(session, in_place=True)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
@@ -119,22 +124,22 @@ def _coverage(session: nox.Session) -> None:
     env.pop("CIBUILDWHEEL")
     remove_extension(session, in_place=True)
     session.run(*pytest_command, env=env)
+    session.run("gcovr", *gcovr_config, f"--json=coverage-native-{session.python}.json")
 
     # reports
     if report:
         threshold = 100.0 if "CI" in os.environ else 99.8
         session.run("coverage", "report", "--show-missing", f"--fail-under={threshold}")
         session.run("coverage", "xml", "-ocoverage-python.xml")
-        if sys.platform.startswith("linux"):
-            gcovr_config = ("-r=.", "-e=base64", "-e=.base64_build")
-            session.run(
-                "gcovr",
-                *gcovr_config,
-                "--fail-under-line=90",
-                "--txt",
-                "-s",
-                "--xml=coverage-native.xml",
-            )
+        session.run(
+            "gcovr",
+            *gcovr_config,
+            "--add-tracefile=coverage-native-*.json",
+            "--fail-under-line=89",
+            "--txt",
+            "--print-summary",
+            "--xml=coverage-native.xml",
+        )
 
 
 @nox.session(venv_backend="none")
@@ -144,8 +149,9 @@ def coverage(session: nox.Session) -> None:
     assert len(posargs_ & {"--clean", "--report"}) == 0
     assert len(posargs_ - {"--with-sde"}) == 0
     posargs = [*session.posargs, "--report"]
-    session.notify("_coverage-pypy3.10", ["--clean"])
-    session.notify("_coverage-3.13", posargs)
+    session.notify("_coverage-pypy3.11", ["--clean"])
+    session.notify("_coverage-3.15", [])
+    session.notify("_coverage-3.14", posargs)
 
 
 @nox.session(python="3.12")

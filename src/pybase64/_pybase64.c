@@ -327,6 +327,9 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     Py_buffer buffer;
     size_t out_len;
     PyObject* out_object;
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter* writer;
+#endif
     PyObject* in_object;
     PyObject* in_alphabet = NULL;
     char* dst;
@@ -356,19 +359,28 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     out_len = (size_t)(((buffer.len + 2) / 3) * 4);
     if (return_string) {
         out_object = PyUnicode_New((Py_ssize_t)out_len, 127);
-    }
-    else {
-        out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-    }
-    if (out_object == NULL) {
-        PyBuffer_Release(&buffer);
-        return NULL;
-    }
-    if (return_string) {
+        if (out_object == NULL) {
+            PyBuffer_Release(&buffer);
+            return NULL;
+        }
         dst = (char*)PyUnicode_1BYTE_DATA(out_object);
     }
     else {
+#if PY_VERSION_HEX >= 0x030f0000
+        writer = PyBytesWriter_Create((Py_ssize_t)out_len);
+        if (writer == NULL) {
+            PyBuffer_Release(&buffer);
+            return NULL;
+        }
+        dst = PyBytesWriter_GetData(writer);
+#else
+        out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+        if (out_object == NULL) {
+            PyBuffer_Release(&buffer);
+            return NULL;
+        }
         dst = PyBytes_AS_STRING(out_object);
+#endif
     }
 
     /* not interacting with Python objects from here, release the GIL */
@@ -406,6 +418,12 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     /* restore the GIL */
     Py_END_ALLOW_THREADS
 
+#if PY_VERSION_HEX >= 0x030f0000
+    if (!return_string) {
+        out_object = PyBytesWriter_Finish(writer);
+    }
+#endif
+
     PyBuffer_Release(&buffer);
 
     return out_object;
@@ -433,6 +451,9 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     PyObject* in_alphabet = NULL;
     PyObject* in_object;
     PyObject* out_object = NULL;
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter* writer = NULL;
+#endif
     const void* source = NULL;
     Py_ssize_t source_len;
     int source_use_buffer = 0;
@@ -483,11 +504,19 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         PyObject* translate_object;
         char* translate_dst;
 
+#if PY_VERSION_HEX >= 0x030f0000
+        writer = PyBytesWriter_Create(source_len);
+        if (writer == NULL) {
+            goto EXCEPT;
+        }
+        translate_dst = PyBytesWriter_GetData(writer);
+#else
         translate_object = PyBytes_FromStringAndSize(NULL, source_len);
         if (translate_object == NULL) {
             goto EXCEPT;
         }
         translate_dst = PyBytes_AS_STRING(translate_object);
+#endif
 
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
@@ -496,6 +525,14 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
+
+#if PY_VERSION_HEX >= 0x030f0000
+        translate_object = PyBytesWriter_Finish(writer);
+        writer = NULL;
+        if (translate_object == NULL) {
+            goto EXCEPT;
+        }
+#endif
 
         if (source_use_buffer) {
             PyBuffer_Release(&buffer);
@@ -517,18 +554,25 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     out_len = (size_t)((source_len / 4) * 3) + 3U;
     if (return_bytearray) {
         out_object = PyByteArray_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-    }
-    else {
-        out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-    }
-    if (out_object == NULL) {
-        goto EXCEPT;
-    }
-    if (return_bytearray) {
+        if (out_object == NULL) {
+            goto EXCEPT;
+        }
         dest = PyByteArray_AS_STRING(out_object);
     }
     else {
+#if PY_VERSION_HEX >= 0x030f0000
+        writer = PyBytesWriter_Create((Py_ssize_t)out_len);
+        if (writer == NULL) {
+            goto EXCEPT;
+        }
+        dest = PyBytesWriter_GetData(writer);
+#else
+        out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+        if (out_object == NULL) {
+            goto EXCEPT;
+        }
         dest = PyBytes_AS_STRING(out_object);
+#endif
     }
 
     if (!validation) {
@@ -609,14 +653,20 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         PyByteArray_Resize(out_object, (Py_ssize_t)out_len);
     }
     else {
+#if PY_VERSION_HEX >= 0x030f0000
+        out_object = PyBytesWriter_FinishWithSize(writer, (Py_ssize_t)out_len);
+        /* writer = NULL; */
+#else
         _PyBytes_Resize(&out_object, (Py_ssize_t)out_len);
+#endif
     }
     goto FINALLY;
 EXCEPT:
-    if (out_object != NULL) {
-        Py_DECREF(out_object);
-        out_object = NULL;
-    }
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter_Discard(writer);
+#endif
+    Py_XDECREF(out_object);
+    out_object = NULL;
 FINALLY:
     if (source_use_buffer) {
         PyBuffer_Release(&buffer);
@@ -639,7 +689,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 {
     Py_buffer buffer;
     size_t out_len;
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter* out_object;
+#else
     PyObject* out_object;
+#endif
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) {
         return NULL;
@@ -669,7 +723,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         out_len += ((out_len - 1U) / 76U) + 1U;
     }
 
+#if PY_VERSION_HEX >= 0x030f0000
+    out_object = PyBytesWriter_Create((Py_ssize_t)out_len);
+#else
     out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
+#endif
     if (out_object == NULL) {
         PyBuffer_Release(&buffer);
         return NULL;
@@ -681,7 +739,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
         Py_ssize_t len = buffer.len;
         const char* src = (const char*)buffer.buf;
+#if PY_VERSION_HEX >= 0x030f0000
+        char* dst = PyBytesWriter_GetData(out_object);
+#else
         char* dst = PyBytes_AS_STRING(out_object);
+#endif
         size_t remainder;
 
         /* not interacting with Python objects from here, release the GIL */
@@ -709,7 +771,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 
     PyBuffer_Release(&buffer);
 
+#if PY_VERSION_HEX >= 0x030f0000
+    return PyBytesWriter_Finish(out_object);
+#else
     return out_object;
+#endif
 }
 
 static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
