@@ -17,7 +17,7 @@ permissions:
 jobs:
   build_sdist:
     name: Coverage
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
@@ -26,14 +26,17 @@ jobs:
 
       - uses: wntrblm/nox@2025.11.12
         with:
-          python-versions: "3.13, pypy3.10"
+          python-versions: "3.14, 3.15, pypy3.11"
 
-      - name: Install Intel SDE
+      - name: Install Intel SDE, libxml2-dev & libxslt1-dev
         run: |
           curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/813591/sde-external-9.33.0-2024-01-07-lin.tar.xz
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
+          # as long as lxml does not provide 3.15 wheels
+          sudo apt-get update
+          sudo apt-get install -y libxml2-dev libxslt1-dev
 
       - name: Run coverage tests
         run: nox -s coverage -- --with-sde
