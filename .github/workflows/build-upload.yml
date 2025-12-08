@@ -72,6 +72,22 @@ jobs:
             runs-on: ubuntu-24.04
 
     steps:
+      - name: Clean Up runner
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        run: |
+          df -h
+          docker system prune -a -f
+          sudo rm -rf \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk \
+            /opt/hostedtoolcache/PyPy \
+            /opt/hostedtoolcache/Ruby \
+            /opt/hostedtoolcache/go \
+            /usr/local/share/chromium
+          ls -al /opt/hostedtoolcache/
+          find /opt/hostedtoolcache/Python -name '*.tgz' -delete
+          df -h
+
       - name: Set git to use LF
         run: |
           git config --global core.autocrlf false
