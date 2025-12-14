@@ -1052,6 +1052,14 @@ static PyMethodDef _pybase64_methods[] = {
 };
 
 static PyModuleDef_Slot _pybase64_slots[] = {
+#if PY_VERSION_HEX >= 0x030f0000
+    {Py_mod_name, "pybase64._pybase64"},
+    {Py_mod_state_size, (void*)sizeof(pybase64_state)},
+    {Py_mod_methods, _pybase64_methods},
+    {Py_mod_state_traverse, _pybase64_traverse},
+    {Py_mod_state_clear, _pybase64_clear},
+    {Py_mod_state_free, _pybase64_free},
+#endif
     {Py_mod_exec, _pybase64_exec},
 #ifdef Py_mod_multiple_interpreters
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
@@ -1063,6 +1071,12 @@ static PyModuleDef_Slot _pybase64_slots[] = {
 };
 
 /* Initialize this module. */
+#if PY_VERSION_HEX >= 0x030f0000
+PyMODEXPORT_FUNC
+PyModExport__pybase64() {
+    return _pybase64_slots;
+}
+#else
 static struct PyModuleDef _pybase64_module = {
         PyModuleDef_HEAD_INIT,
         "pybase64._pybase64",
@@ -1080,3 +1094,4 @@ PyInit__pybase64(void)
 {
     return PyModuleDef_Init(&_pybase64_module);
 }
+#endif
