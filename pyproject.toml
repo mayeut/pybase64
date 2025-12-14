@@ -18,7 +18,7 @@ coverage = [
     {include-group = "test"},
     "gcovr==8.4",
     "pytest-cov==7.0.0",
-    "coverage==7.10.7",
+    "coverage==7.13.0",
 ]
 docs = [
     "sphinx==8.2.3",
@@ -33,6 +33,7 @@ dev = [
 ]
 
 [tool.cibuildwheel]
+build-frontend = "build[uv]"
 build-verbosity = 1
 enable = ["cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
 test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
@@ -48,6 +49,14 @@ environment = { AUDITWHEEL_PLAT="manylinux2014_${AUDITWHEEL_ARCH}" }
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_riscv64"
 environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux_{ppc64le,riscv64,s390x}"
+build-frontend = "build"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-ios*"
+build-frontend = "build"
 
 [tool.coverage.run]
 branch = true

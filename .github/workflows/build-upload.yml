@@ -98,6 +98,9 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.7.0
         if: runner.os == 'Linux' && runner.arch == 'X64'
@@ -154,8 +157,11 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Build sdist
-        run: pipx run build --sdist
+        run: uvx --from build pyproject-build --installer uv --sdist
 
       - uses: actions/setup-python@v6
         name: Install Python

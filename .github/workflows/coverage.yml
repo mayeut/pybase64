@@ -24,6 +24,9 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+
       - uses: wntrblm/nox@2025.11.12
         with:
           python-versions: "3.14, 3.15, pypy3.10, pypy3.11"

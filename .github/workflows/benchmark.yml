@@ -36,6 +36,9 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Build wheel
         uses: pypa/cibuildwheel@v3.3.0
         env:
