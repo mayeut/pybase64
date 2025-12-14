@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  build_sdist:
+  coverage:
     name: Coverage
     runs-on: ubuntu-24.04
     steps:
