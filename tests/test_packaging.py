@@ -19,7 +19,7 @@ def test_version() -> None:
 
 def test_license() -> None:
     metadata = importlib.metadata.metadata("pybase64")
-    assert metadata["License"] == "BSD-2-Clause"
+    assert metadata["License-Expression"] == "BSD-2-Clause"
 
 
 @pytest.mark.pypi_distribution
@@ -32,7 +32,7 @@ def test_sbom() -> None:  # pragma: no cover
     metadata = importlib.metadata.metadata("pybase64")
     distribution = metadata["Name"]
     version = metadata["Version"]
-    license_ = metadata["License"]
+    license_ = metadata["License-Expression"]
     files = importlib.metadata.files("pybase64")
     assert files is not None
     sbom_name = f"{distribution}.cdx.json"
@@ -48,7 +48,7 @@ def test_sbom() -> None:  # pragma: no cover
     sbom_version = sbom_data["metadata"]["component"]["version"]
     sbom_licenses = sbom_data["metadata"]["component"]["licenses"]
     assert len(sbom_licenses) == 1
-    sbom_license = sbom_licenses[0]["license"]["id"]
+    sbom_license = sbom_licenses[0]["expression"]
     assert sbom_purl.startswith(purl_prefix)
     assert sbom_bom_ref == sbom_purl
     assert sbom_version == version

@@ -9,9 +9,12 @@ import sys
 import sysconfig
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, cast
+from typing import TYPE_CHECKING
 
-from setuptools import Extension, find_packages, setup
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
 HERE = Path(__file__).resolve().parent
@@ -21,14 +24,6 @@ IS_WINDOWS = sys.platform.startswith("win32")
 IS_MACOS = sys.platform.startswith("darwin")
 
 log = logging.getLogger("pybase64-setup")
-
-# Get version
-version_dict: dict[str, object] = {}
-exec(HERE.joinpath("src", "pybase64", "_version.py").read_text(), {}, version_dict)  # noqa: S102
-version = cast("str", version_dict["_version"])
-
-# Get the long description from the README file
-long_description = HERE.joinpath("README.rst").read_text()
 
 # Generate license text
 with HERE.joinpath("src", "pybase64", "_license.py").open("w") as f:
@@ -212,68 +207,6 @@ class BuildExt(build_ext):
 
 
 setup(
-    name="pybase64",
     cmdclass={"build_ext": BuildExt},
     ext_modules=[pybase64_ext],
-    # Versions should comply with PEP440.  For a discussion on single-sourcing
-    # the version across setup.py and the project code, see
-    # https://packaging.python.org/en/latest/single_source_version.html
-    version=version,
-    description="Fast Base64 encoding/decoding",
-    long_description=long_description,
-    long_description_content_type="text/x-rst",
-    # The project's main homepage.
-    url="https://github.com/mayeut/pybase64",
-    project_urls={
-        "Source": "https://github.com/mayeut/pybase64",
-        "Tracker": "https://github.com/mayeut/pybase64/issues",
-        "Documentation": "https://pybase64.readthedocs.io/en/stable",
-    },
-    # Author details
-    author="Matthieu Darbois",
-    # author_email = 'mayeut@users.noreply.github.com',  # noqa: ERA001
-    # Choose your license
-    license="BSD-2-Clause",
-    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    classifiers=[
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
-        "Development Status :: 5 - Production/Stable",
-        # Indicate who your project is intended for
-        "Intended Audience :: Developers",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: Utilities",
-        # Pick your license as you wish (should match "license" above)
-        "License :: OSI Approved :: BSD License",
-        # Specify the Python versions you support here. In particular, ensure
-        # that you indicate whether you support Python 2, Python 3 or both.
-        "Programming Language :: C",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Programming Language :: Python :: 3.14",
-    ],
-    # Supported python versions
-    python_requires=">=3.8",
-    # What does your project relate to?
-    keywords="base64",
-    # You can just specify the packages manually here if your project is
-    # simple. Or you can use find_packages().
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
-    package_data={"pybase64": ["py.typed", "_pybase64.pyi"]},
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # pip to create the appropriate form of executable for the target platform.
-    entry_points={
-        "console_scripts": [
-            "pybase64=pybase64.__main__:main",
-        ],
-    },
 )

@@ -129,6 +129,7 @@ Future
 - Add initial support for Python 3.15
 - Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
 - Add ``wrapcol`` parameter to b64encode
+- Drop python 3.8 support
 
 1.4.3
 -----

@@ -1,10 +1,59 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybase64"
+authors = [
+    {name = "Matthieu Darbois"},  # , email = "mayeut@users.noreply.github.com"
+]
+description = "Fast Base64 encoding/decoding"
+readme = "README.rst"
+requires-python = ">=3.9"
+keywords = ["base64"]
+license = "BSD-2-Clause"
+license-files = ["LICENSE", "base64/LICENSE"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    # Indicate who your project is intended for
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    # Specify the Python versions you support here.
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dynamic = ["version"]
+
+[project.scripts]
+pybase64 = "pybase64.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/mayeut/pybase64"
+Documentation = "https://pybase64.readthedocs.io/en/stable"
+Source = "https://github.com/mayeut/pybase64"
+Issues = "https://github.com/mayeut/pybase64/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "pybase64._version._version"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.package-data]
+pybase64 = ["py.typed", "_pybase64.pyi"]
 
 [dependency-groups]
 test = [
-    "pytest==8.3.5 ; python_version == '3.8'",
     "pytest==8.4.2 ; python_version == '3.9'",
     "pytest==9.0.2 ; python_version >= '3.10'",
     "pytest-run-parallel==0.8.2 ; python_version >= '3.13'",
@@ -84,7 +133,7 @@ omit = [
 exclude_also = ["class .*\\(Protocol\\):"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 files = [
   "src/**/*.py",
   "test/**/*.py",
@@ -124,7 +173,7 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "-p", "
 markers = ["benchmark", "pypi_distribution"]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 line-length = 100
 lint.select = ["ALL"]
 lint.ignore = [
