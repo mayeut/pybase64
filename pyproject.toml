@@ -89,7 +89,7 @@ lint.typing-modules = ["pybase64._typing"]
 "setup.py" = ["TRY400"]  # TODO
 "docs/**.py" = ["ANN", "DTZ011", "ERA001", "INP001", "PTH"]
 "tests/**.py" = ["ANN401", "PERF", "S101", "SLF001"]
-"noxfile.py" = ["S101"]
+"noxfile.py" = ["FIX002", "S101", "TD"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.Callable".msg = "Use collections.abc.Callable instead."
