@@ -11,8 +11,9 @@ HERE = Path(__file__).resolve().parent
 nox.options.sessions = ["lint", "test"]
 
 ALL_CPYTHON = [f"3.{minor}" for minor in range(8, 15 + 1)]
+ALL_CPYTHONT = [f"3.{minor}t" for minor in range(13, 15 + 1)]
 ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 11 + 1)]
-ALL_PYTHON = ALL_CPYTHON + ALL_PYPY
+ALL_PYTHON = ALL_CPYTHON + ALL_CPYTHONT + ALL_PYPY
 
 
 @nox.session
@@ -73,6 +74,25 @@ def test(session: nox.Session) -> None:
     update_env_macos(session, env)
     session.install(".", env=env)
     session.run("pytest", *session.posargs, env=env)
+    # run without extension as well
+    env.pop("CIBUILDWHEEL")
+    remove_extension(session)
+    session.run("pytest", *session.posargs, env=env)
+
+
+@nox.session(python=ALL_CPYTHONT)
+def test_parallel(session: nox.Session) -> None:
+    """Run tests."""
+    posargs = session.posargs
+    if not posargs:
+        # TODO remove -k test_pybase64, https://github.com/Quansight-Labs/pytest-run-parallel/pull/157
+        posargs = ["-k", "test_pybase64", "--parallel-threads=auto", "--iterations=32"]
+    session.install("-r", "requirements-test.txt")
+    # make extension mandatory by exporting CIBUILDWHEEL=1
+    env = {"CIBUILDWHEEL": "1"}
+    update_env_macos(session, env)
+    session.install(".", env=env)
+    session.run("pytest", *posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session)
