@@ -127,6 +127,7 @@ Future
 - Use ``ValueError`` instead of ``AssertionError`` on altchars length validation
 - Add SBOM to PyPI wheels
 - Add initial support for Python 3.15
+- Drop python 3.8 support
 
 1.4.3
 -----

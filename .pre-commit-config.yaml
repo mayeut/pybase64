@@ -21,23 +21,6 @@ repos:
     args: ["--fix", "--show-fixes"]
   - id: ruff-format
 
-- repo: local
-  hooks:
-  - id: mypy
-    name: mypy 3.8
-    entry: mypy
-    language: python
-    'types_or': [ python, pyi ]
-    require_serial: true
-    minimum_pre_commit_version: '2.9.2'
-    exclude: docs|tools|conftest.py
-    args: ["--python-version=3.8"]
-    additional_dependencies:
-      - mypy==1.16.1
-      - nox
-      - pytest<8.4
-      - types-setuptools
-
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: v1.19.1
   hooks:

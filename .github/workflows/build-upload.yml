@@ -115,23 +115,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Install cmake
-        if: runner.os == 'macOS'
-        run: |
-          # workaround https://gitlab.kitware.com/cmake/cmake/-/issues/26570
-          pipx install -f cmake
-          which cmake
-          cmake --version
-
-      # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
-      - name: "Install python 3.8 universal2 on macOS arm64"
-        if: runner.os == 'macOS' && runner.arch == 'ARM64'
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        env:
-          PIP_DISABLE_PIP_VERSION_CHECK: 1
-        with:
-          python-version: 3.8
-
       - name: Build wheels
         uses: pypa/cibuildwheel@298ed2fb2c105540f5ed055e8a6ad78d82dd3a7e # v3.3.1
         env:
@@ -207,7 +190,7 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '214' || '214' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '190' || '190' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
