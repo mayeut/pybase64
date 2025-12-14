@@ -20,7 +20,7 @@ jobs:
     name: Lint
     permissions:
       contents: read
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
@@ -148,7 +148,7 @@ jobs:
     needs: [lint]
     permissions:
       contents: read
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       CIBUILDWHEEL: 1  # make C extension mandatory
     steps:
@@ -217,7 +217,7 @@ jobs:
   upload_test_pypi:
     name: Upload to Test PyPI
     needs: [check_dist]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' && github.repository == 'mayeut/pybase64'
     environment:
       name: test-pypi
@@ -240,7 +240,7 @@ jobs:
   upload_pypi:
     name: Upload to PyPI
     needs: [upload_test_pypi]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' && github.repository == 'mayeut/pybase64' && startsWith(github.ref, 'refs/tags/v')
     environment:
       name: pypi
