@@ -8,12 +8,19 @@ import nox
 
 HERE = Path(__file__).resolve().parent
 
+nox.needs_version = ">=2025.11.12"
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.sessions = ["lint", "test"]
 
 ALL_CPYTHON = [f"3.{minor}" for minor in range(8, 15 + 1)]
 ALL_CPYTHONT = [f"3.{minor}t" for minor in range(13, 15 + 1)]
 ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 11 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_CPYTHONT + ALL_PYPY
+
+
+def _get_group_dependencies(group: str) -> tuple[str, ...]:
+    pyproject = nox.project.load_toml()
+    return nox.project.dependency_groups(pyproject, group)
 
 
 @nox.session
@@ -58,7 +65,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
 @nox.session(python="3.12")
 def develop(session: nox.Session) -> None:
     """Create venv for dev."""
-    session.install("nox", "setuptools", "-r", "requirements-test.txt")
+    session.install(*_get_group_dependencies("dev"))
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
@@ -68,7 +75,7 @@ def develop(session: nox.Session) -> None:
 @nox.session(python=ALL_PYTHON)
 def test(session: nox.Session) -> None:
     """Run tests."""
-    session.install("-r", "requirements-test.txt")
+    session.install(*_get_group_dependencies("test"))
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
@@ -87,7 +94,7 @@ def test_parallel(session: nox.Session) -> None:
     if not posargs:
         # TODO remove -k test_pybase64, https://github.com/Quansight-Labs/pytest-run-parallel/pull/157
         posargs = ["-k", "test_pybase64", "--parallel-threads=auto", "--iterations=32"]
-    session.install("-r", "requirements-test.txt")
+    session.install(*_get_group_dependencies("test"))
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
@@ -118,7 +125,7 @@ def _coverage(session: nox.Session) -> None:
         "--cov-report=",
     )
     pytest_command = ("pytest", *coverage_args)
-    session.install("-r", "requirements-coverage.txt")
+    session.install(*_get_group_dependencies("coverage"))
     remove_extension(session, in_place=True)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
@@ -186,15 +193,14 @@ def benchmark(session: nox.Session) -> None:
         project_install = (posargs.pop(index),)
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install("-r", "requirements-benchmark.txt", *project_install, env=env)
+    session.install(*_get_group_dependencies("benchmark"), *project_install, env=env)
     session.run("pytest", "--codspeed", *posargs)
 
 
-@nox.session(python="3.11")
+@nox.session(python="3.12")
 def docs(session: nox.Session) -> None:
     """Build the docs."""
-    session.install("-r", "requirements-doc.txt", ".")
-    session.run("pip", "list")
+    session.install(*_get_group_dependencies("docs"), ".")
     session.chdir("docs")
     session.run(
         "python",

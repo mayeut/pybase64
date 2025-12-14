@@ -168,7 +168,7 @@ jobs:
 
       - name: Test
         run: |
-          python -m pip install -r requirements-test.txt
+          python -m pip install --group test
           pytest
 
       - uses: actions/upload-artifact@v5
