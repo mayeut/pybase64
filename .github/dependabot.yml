@@ -10,7 +10,11 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      pip:
+        patterns:
+          - "*"
 
   # Maintain dependencies for git submodule (base64)
   - package-ecosystem: "gitsubmodule"
@@ -22,4 +26,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
