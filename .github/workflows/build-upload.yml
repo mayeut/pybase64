@@ -138,7 +138,7 @@ jobs:
           CIBW_ENABLE: "${{ startsWith(github.ref, 'refs/tags/v') && '' || 'cpython-prerelease'}}"
           CIBW_PLATFORM: "${{ matrix.platform }}"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
@@ -177,7 +177,7 @@ jobs:
           python -m pip install --group test
           pytest
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
@@ -189,7 +189,7 @@ jobs:
       contents: read
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
@@ -201,7 +201,7 @@ jobs:
           EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '214' || '214' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           # unpacks all non PyPI artifacts into nodist/
           pattern: cibw-*
@@ -225,7 +225,7 @@ jobs:
     permissions:
       id-token: write # trusted publishing + attestations
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
@@ -248,7 +248,7 @@ jobs:
     permissions:
       id-token: write # trusted publishing + attestations
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
