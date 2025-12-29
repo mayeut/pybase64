@@ -92,8 +92,7 @@ def test_parallel(session: nox.Session) -> None:
     """Run tests."""
     posargs = session.posargs
     if not posargs:
-        # TODO remove -k test_pybase64, https://github.com/Quansight-Labs/pytest-run-parallel/pull/157
-        posargs = ["-k", "test_pybase64", "--parallel-threads=auto", "--iterations=32"]
+        posargs = ["--parallel-threads=auto", "--iterations=32"]
     session.install(*_get_group_dependencies("test"))
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
