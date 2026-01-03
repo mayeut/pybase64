@@ -19,13 +19,13 @@ jobs:
     name: Test
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
         submodules: recursive
         persist-credentials: false
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v7
-    - uses: wntrblm/nox@2025.11.12
+      uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+    - uses: wntrblm/nox@0eee2e45758dbd06d48ebb23476439f0f00e5cbd # 2025.11.12
       with:
         python-versions: "3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.13t, 3.14, 3.14t, 3.15, 3.15t, pypy3.9, pypy3.10, pypy3.11"
     - name: "Run tests"

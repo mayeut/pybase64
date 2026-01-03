@@ -31,21 +31,21 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           submodules: recursive
           persist-credentials: false
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
 
       - name: Build wheel
-        uses: pypa/cibuildwheel@v3.3.0
+        uses: pypa/cibuildwheel@63fd63b352a9a8bdcc24791c9dbee952ee9a8abc # v3.3.0
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "cp312-${{ matrix.build }}*"
 
-      - uses: wntrblm/nox@2025.11.12
+      - uses: wntrblm/nox@0eee2e45758dbd06d48ebb23476439f0f00e5cbd # 2025.11.12
         name: Install Nox
         with:
           python-versions: "3.12"
@@ -54,7 +54,7 @@ jobs:
         run: nox -s benchmark --install-only -- --wheel wheelhouse/*.whl
 
       - name: Run benchmark
-        uses: CodSpeedHQ/action@v4
+        uses: CodSpeedHQ/action@dbda7111f8ac363564b0c51b992d4ce76bb89f2f # v4.5.2
         with:
           mode: instrumentation
           run: nox -s benchmark --reuse-existing-virtualenvs --no-install -- -v

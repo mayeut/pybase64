@@ -22,13 +22,13 @@ jobs:
       contents: read
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: "3.10"
-      - uses: pre-commit/action@v3.0.1
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   build_wheels:
     name: ${{ matrix.build || matrix.platform }} ${{ matrix.archs }} wheels
@@ -93,16 +93,18 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           submodules: recursive
           persist-credentials: false
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+        with:
+          enable-cache: false
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.7.0
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
         if: runner.os == 'Linux' && runner.arch == 'X64'
 
       # https://github.blog/changelog/2024-04-02-github-actions-hardware-accelerated-android-virtualization-now-available/
@@ -124,21 +126,21 @@ jobs:
       # see https://cibuildwheel.pypa.io/en/stable/faq/#macos-building-cpython-38-wheels-on-arm64
       - name: "Install python 3.8 universal2 on macOS arm64"
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: 1
         with:
           python-version: 3.8
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.0
+        uses: pypa/cibuildwheel@63fd63b352a9a8bdcc24791c9dbee952ee9a8abc # v3.3.0
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_ENABLE: "${{ startsWith(github.ref, 'refs/tags/v') && '' || 'cpython-prerelease'}}"
           CIBW_PLATFORM: "${{ matrix.platform }}"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
@@ -152,18 +154,20 @@ jobs:
     env:
       CIBUILDWHEEL: 1  # make C extension mandatory
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           submodules: recursive
           persist-credentials: false
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+        with:
+          enable-cache: false
 
       - name: Build sdist
         run: uvx --from build pyproject-build --installer uv --sdist
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         name: Install Python
         with:
           python-version: "3.11"
@@ -177,19 +181,24 @@ jobs:
           python -m pip install --group test
           pytest
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
 
   check_dist:
+    if: always()
     name: Check dist
     needs: [build_wheels, build_sdist]
     permissions:
       contents: read
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v7
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
@@ -201,7 +210,7 @@ jobs:
           EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '214' || '214' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           pipx run twine check --strict dist/*
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           # unpacks all non PyPI artifacts into nodist/
           pattern: cibw-*
@@ -225,14 +234,14 @@ jobs:
     permissions:
       id-token: write # trusted publishing + attestations
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to Test PyPI
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           skip-existing: true
           repository-url: https://test.pypi.org/legacy/
@@ -248,13 +257,13 @@ jobs:
     permissions:
       id-token: write # trusted publishing + attestations
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           # unpacks all PyPI artifacts into dist/
           pattern: pypi-*
           path: dist
           merge-multiple: true
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           skip-existing: true
