@@ -13,6 +13,10 @@ updates:
       interval: "monthly"
     cooldown:
       default-days: 7
+    groups:
+      pip:
+        patterns:
+          - "*"
 
   # Maintain dependencies for git submodule (base64)
   - package-ecosystem: "gitsubmodule"
@@ -29,3 +33,7 @@ updates:
       interval: "monthly"
     cooldown:
       default-days: 7
+    groups:
+      actions:
+        patterns:
+          - "*"
