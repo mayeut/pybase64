@@ -17,6 +17,8 @@ updates:
       pip:
         patterns:
           - "*"
+        exclude-patterns:
+          - "pytest"
 
   # Maintain dependencies for git submodule (base64)
   - package-ecosystem: "gitsubmodule"
