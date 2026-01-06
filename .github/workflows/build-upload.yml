@@ -31,41 +31,41 @@ jobs:
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   build_wheels:
-    name: ${{ matrix.build || matrix.platform }} ${{ matrix.archs }} wheels
+    name: ${{ matrix.build || matrix.platform }} ${{ join(matrix.archs, ', ') }} wheels
     needs: [lint]
     permissions:
       contents: read
-    runs-on: "${{ matrix.runs-on }}${{ startsWith(matrix.archs, 'aarch64') && '-arm' || '' }}"
+    runs-on: "${{ matrix.runs-on }}${{ startsWith(matrix.archs[0], 'aarch64') && '-arm' || '' }}"
     strategy:
       matrix:
         platform: ["linux"]
-        archs: ["x86_64, i686", "aarch64, armv7l", "ppc64le", "s390x", "riscv64"]
+        archs: [["x86_64", "i686"], ["aarch64", "armv7l"], ["ppc64le"], ["s390x"], ["riscv64"]]
         build: ["manylinux", "musllinux"]
         runs-on: [ubuntu-24.04]
         include:
           - platform: "windows"
-            archs: "AMD64"
+            archs: ["AMD64"]
             runs-on: windows-2022
           - platform: "windows"
-            archs: "x86"
+            archs: ["x86"]
             runs-on: windows-2022
           - platform: "windows"
-            archs: "ARM64"
+            archs: ["ARM64"]
             runs-on: windows-11-arm
           - platform: "macos"
-            archs: "x86_64"
+            archs: ["x86_64"]
             runs-on: macos-15-intel
           - platform: "macos"
-            archs: "arm64"
+            archs: ["arm64"]
             runs-on: macos-14
           - platform: "ios"
-            archs: "x86_64_iphonesimulator"
+            archs: ["x86_64_iphonesimulator"]
             runs-on: macos-15-intel
           - platform: "ios"
-            archs: "arm64_iphonesimulator,arm64_iphoneos"
+            archs: ["arm64_iphonesimulator" , "arm64_iphoneos"]
             runs-on: macos-14
           - platform: "android"
-            archs: "arm64_v8a,x86_64"
+            archs: ["arm64_v8a" , "x86_64"]
             runs-on: ubuntu-24.04
           - platform: "pyodide"
             archs: "wasm32"
@@ -144,7 +144,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@298ed2fb2c105540f5ed055e8a6ad78d82dd3a7e # v3.3.1
         env:
-          CIBW_ARCHS: "${{ matrix.archs }}"
+          CIBW_ARCHS: "${{ join(matrix.archs, ',') }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_ENABLE: "${{ startsWith(github.ref, 'refs/tags/v') && '' || 'cpython-prerelease'}}"
           CIBW_PLATFORM: "${{ matrix.platform }}"
@@ -152,7 +152,7 @@ jobs:
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ join(matrix.archs, ', ') }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
