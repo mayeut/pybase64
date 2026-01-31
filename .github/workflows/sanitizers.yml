@@ -99,3 +99,14 @@ jobs:
           set -exuo pipefail
           CFLAGS="-O0" CIBUILDWHEEL=1 python-pb64 -m pip install -e .
           PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(which python-pb64) -m pytest
+
+  check_sanitizers:
+    if: always()
+    name: Check sanitizers
+    needs: [asan, valgrind]
+    runs-on: ubuntu-slim
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
