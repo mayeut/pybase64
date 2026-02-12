@@ -35,7 +35,7 @@ def _get_simd_name(simd_id: int) -> str:
 param_simd = pytest.mark.parametrize(
     "simd",
     range(len(compile_flags)),
-    ids=lambda x: _get_simd_name(x),
+    ids=_get_simd_name,
     indirect=True,
 )
 
