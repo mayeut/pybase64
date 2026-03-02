@@ -12,7 +12,7 @@ test = [
 ]
 benchmark = [
     {include-group = "test"},
-    "pytest-codspeed==4.2.0",
+    "pytest-codspeed==4.3.0",
 ]
 coverage = [
     {include-group = "test"},
