@@ -216,3 +216,9 @@ def docs(session: nox.Session) -> None:
         ".",
         "build",
     )
+
+
+@nox.session(python="3.14", reuse_venv=True)
+def sbom(session: nox.Session) -> None:
+    """Embed SBOM file in wheels."""
+    session.run("python", "tools/embed_sbom.py", *session.posargs)

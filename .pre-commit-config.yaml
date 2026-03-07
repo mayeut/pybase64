@@ -30,7 +30,7 @@ repos:
     'types_or': [ python, pyi ]
     require_serial: true
     minimum_pre_commit_version: '2.9.2'
-    exclude: docs|conftest.py
+    exclude: docs|tools|conftest.py
     args: ["--python-version=3.8"]
     additional_dependencies:
       - mypy==1.16.1
@@ -43,7 +43,7 @@ repos:
   hooks:
   - id: mypy
     name: mypy 3.9
-    exclude: docs|conftest.py
+    exclude: docs|tools|conftest.py
     args: ["--python-version=3.9"]
     additional_dependencies:
       - nox
@@ -51,7 +51,7 @@ repos:
       - types-setuptools
   - id: mypy
     name: mypy 3.10
-    exclude: docs|conftest.py
+    exclude: docs|tools|conftest.py
     args: ["--python-version=3.10"]
     additional_dependencies:
       - nox
