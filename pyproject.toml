@@ -36,11 +36,24 @@ dev = [
 build-frontend = "build[uv]"
 build-verbosity = 1
 enable = ["cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
+repair-wheel-command = ["uv run --script tools/embed_sbom.py {dest_dir} {wheel}"]
 test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
 test-groups = ["test"]
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
-test-command = "python -m pytest"
-xbuild-tools = ["cmake"]
+test-command = "python -m pytest --pypi-distribution"
+xbuild-tools = ["cmake", "uv"]
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+    "auditwheel repair -w {dest_dir} {wheel}",
+    "python3.14 tools/embed_sbom.py {dest_dir}",
+]
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = [
+    "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}",
+    "uv run --script tools/embed_sbom.py {dest_dir}",
+]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux*"
@@ -68,7 +81,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "class .*\\(Protocol\\):", "if TYPE_CHECKING:"]
+exclude_also = ["class .*\\(Protocol\\):"]
 
 [tool.mypy]
 python_version = "3.8"
@@ -102,13 +115,13 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils"]
+module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils", "embed_sbom"]
 disallow_any_explicit = false
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "-p", "no:legacypath"]
-markers = ["benchmark"]
+markers = ["benchmark", "pypi_distribution"]
 
 [tool.ruff]
 target-version = "py38"
@@ -129,6 +142,10 @@ lint.typing-modules = ["pybase64._typing"]
 "docs/**.py" = ["ANN", "DTZ011", "ERA001", "INP001", "PTH"]
 "tests/**.py" = ["ANN401", "PERF", "S101", "SLF001"]
 "noxfile.py" = ["FIX002", "S101", "TD"]
+"tools/**.py" = ["C901", "S607", "T201"]
+
+[tool.ruff.per-file-target-version]
+"tools/**.py" = "py314"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.Callable".msg = "Use collections.abc.Callable instead."
