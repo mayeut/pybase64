@@ -164,7 +164,7 @@ def embed_sbom(sbom_template: str, file: Path, dist_path: Path) -> None:
     metadata_path = f"{dist_info_path}METADATA"
     record_path = f"{dist_info_path}RECORD"
     sboms_path = f"{dist_info_path}sboms/"
-    sbom_path = f"{sboms_path}/{distribution}.cdx.json"
+    sbom_path = f"{sboms_path}{distribution}.cdx.json"
     overwrite = dist_path in file.parents
     output_file = file.with_suffix(".whl.tmp") if overwrite else dist_path / file.name
     with zipfile.ZipFile(file, "r") as input_zip:
