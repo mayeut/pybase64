@@ -5,6 +5,7 @@
 import base64
 import csv
 import dataclasses
+import datetime as dt
 import email
 import hashlib
 import io
@@ -129,6 +130,8 @@ def update_sbom(sbom_json: Any, metadata: bytes) -> None:  # noqa: ANN401
         if author_email:
             author["email"] = author_email
         component["authors"] = [author]
+    if keywords := message.get("Keywords"):
+        component["tags"] = [keyword.strip() for keyword in keywords.split(",")]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -206,6 +209,10 @@ def embed_sbom(sbom_template: str, file: Path, dist_path: Path) -> None:
                 output_zip.mkdir(sboms_info)
             # embed SBOM
             sbom_info = zipfile.ZipInfo(sbom_path, date_time=record_info.date_time)
+            sbom_json["metadata"]["timestamp"] = dt.datetime(
+                *sbom_info.date_time,
+                tzinfo=dt.UTC,
+            ).isoformat()
             update_sbom(sbom_json, metadata_content)
             sbom_bytes = json.dumps(sbom_json).encode("utf-8")
             output_zip.writestr(sbom_info, sbom_bytes, compress_type=zipfile.ZIP_DEFLATED)
