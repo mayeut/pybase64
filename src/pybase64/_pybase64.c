@@ -85,7 +85,7 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
     if (buffer.len != 2) {
         PyBuffer_Release(&buffer);
         Py_DECREF(alphabetObject);
-        PyErr_SetString(PyExc_AssertionError, "len(altchars) != 2");
+        PyErr_SetString(PyExc_ValueError, "len(altchars) != 2");
         return -1;
     }
 
