@@ -7,9 +7,11 @@ from binascii import Error as BinAsciiError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Final
+
     from ._typing import Buffer
 
-_bytes_types = (bytes, bytearray)  # Types acceptable as binary data
+_BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 
 
 def _get_simd_name(flags: int) -> str:
@@ -28,7 +30,7 @@ def _get_bytes(s: str | Buffer) -> bytes | bytearray:
         except UnicodeEncodeError:
             msg = "string argument should contain only ASCII characters"
             raise ValueError(msg) from None
-    if isinstance(s, _bytes_types):
+    if isinstance(s, _BYTES_TYPES):
         return s
     try:
         mv = memoryview(s)
@@ -42,6 +44,12 @@ def _get_bytes(s: str | Buffer) -> bytes | bytearray:
             f"string, not {s.__class__.__name__!r:s}"
         )
         raise TypeError(msg) from None
+
+
+def _validate_altchars(altchars: bytes | bytearray) -> None:
+    if len(altchars) != 2:
+        msg = "len(altchars) != 2"
+        raise ValueError(msg) from None
 
 
 def b64decode(
@@ -71,6 +79,7 @@ def b64decode(
     s = _get_bytes(s)
     if altchars is not None:
         altchars = _get_bytes(altchars)
+        _validate_altchars(altchars)
     if validate:
         if len(s) % 4 != 0:
             msg = "Incorrect padding"
@@ -138,6 +147,7 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None) -> bytes:
         raise BufferError(msg)
     if altchars is not None:
         altchars = _get_bytes(altchars)
+        _validate_altchars(altchars)
     return builtin_encode(s, altchars)
 
 

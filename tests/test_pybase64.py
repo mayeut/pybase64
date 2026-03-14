@@ -96,9 +96,11 @@ for altchars in altchars_lut:
     test_vectors_b64.append([vector.translate(trans) for vector in test_vectors_b64_list])
 
 test_vectors_bin = []
-for altchars in altchars_lut:
+for altchars_id in AltCharsId:
+    altchars = altchars_lut[altchars_id]
+    vectors = test_vectors_b64[altchars_id]
     test_vectors_bin.append(
-        [base64.b64decode(vector, altchars) for vector in test_vectors_b64_list],
+        [base64.b64decode(vector, altchars) for vector in vectors],
     )
 
 
@@ -307,9 +309,9 @@ def test_invalid_padding_dec(
 
 
 params_invalid_altchars_values = [
-    [b"", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
-    [b"-", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
-    [b"-__", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
+    [b"", ValueError],
+    [b"-", ValueError],
+    [b"-__", ValueError],
     [3.0, TypeError],
     ["-€", ValueError],
     [memoryview(b"- _")[::2], BufferError],

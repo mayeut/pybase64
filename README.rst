@@ -124,6 +124,7 @@ Changelog
 Future
 ------
 - Speed-up translation on aarch64
+- Use ``ValueError`` instead of ``AssertionError`` on altchars length validation
 - Add SBOM to PyPI wheels
 - Add initial support for Python 3.15
 
