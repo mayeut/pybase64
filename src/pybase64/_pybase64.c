@@ -188,15 +188,13 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
     }
 }
 
-static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet, int* has_bad_char)
+static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet)
 {
     size_t i = 0U;
     const char c0 = alphabet[0];
     const char c1 = alphabet[1];
     const char replace_plus = ((c0 != '/') && (c0 != '+')) ? c0 : c1;
     const char replace_slash = ((c1 != '/') && (c1 != '+')) ? c1 : c0;
-
-    (void)has_bad_char;
 
 #ifdef __SSE2__
     if (len >= 16U) {
@@ -273,102 +271,6 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         }
         pDst[i] = cd;
     }
-}
-
-static void translate_deprecated(const char* pSrc, char* pDst, size_t len, const char* alphabet, int* has_bad_char)
-{
-    size_t i = 0U;
-    const char c0 = alphabet[0];
-    const char c1 = alphabet[1];
-    int input_has_plus = 0;
-    int input_has_slash = 0;
-
-#ifdef __SSE2__
-    if (len >= 16U) {
-        const __m128i plus  = _mm_set1_epi8('+');
-        const __m128i slash = _mm_set1_epi8('/');
-        const __m128i c0_ = _mm_set1_epi8(c0);
-        const __m128i c1_ = _mm_set1_epi8(c1);
-        __m128i input_has_plus_ = _mm_setzero_si128();
-        __m128i input_has_slash_ = _mm_setzero_si128();
-
-        for (; i < (len & ~(size_t)15U); i += 16) {
-            __m128i srcDst = _mm_loadu_si128((const __m128i*)(pSrc + i));
-            __m128i m0     = _mm_cmpeq_epi8(srcDst, c0_);
-            __m128i m1     = _mm_cmpeq_epi8(srcDst, c1_);
-
-            input_has_plus_ = _mm_or_si128(input_has_plus_, _mm_cmpeq_epi8(srcDst, plus));
-            input_has_slash_ = _mm_or_si128(input_has_slash_, _mm_cmpeq_epi8(srcDst, slash));
-
-            srcDst = _mm_or_si128(_mm_andnot_si128(m0, srcDst), _mm_and_si128(m0, plus));
-            srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, slash));
-
-            _mm_storeu_si128((__m128i*)(pDst + i), srcDst);
-        }
-
-        if (_mm_movemask_epi8(input_has_plus_)) {
-            input_has_plus = (c0 != '+') && (c1 != '+');
-        }
-        if (_mm_movemask_epi8(input_has_slash_)) {
-            input_has_slash = (c0 != '/') && (c1 != '/');
-        }
-    }
-#elif BASE64_WITH_NEON64
-    if (len >= 16U) {
-        const uint8x16_t plus  = vdupq_n_u8('+');
-        const uint8x16_t slash = vdupq_n_u8('/');
-        const uint8x16_t c0_ = vdupq_n_u8(c0);
-        const uint8x16_t c1_ = vdupq_n_u8(c1);
-        uint8x16_t input_has_plus_ = vdupq_n_u8(0);
-        uint8x16_t input_has_slash_ = vdupq_n_u8(0);
-
-        for (; i < (len & ~(size_t)15U); i += 16) {
-            uint8x16_t srcDst = vld1q_u8((uint8_t const*)pSrc + i);
-            uint8x16_t m0     = vceqq_u8(srcDst, c0_);
-            uint8x16_t m1     = vceqq_u8(srcDst, c1_);
-
-            input_has_plus_ = vorrq_u8(input_has_plus_, vceqq_u8(srcDst, plus));
-            input_has_slash_ = vorrq_u8(input_has_slash_, vceqq_u8(srcDst, slash));
-
-            srcDst = vbslq_u8(m0, plus, srcDst);
-            srcDst = vbslq_u8(m1, slash, srcDst);
-
-            vst1q_u8((uint8_t*)pDst + i, srcDst);
-        }
-
-        if (vmaxvq_u32(vreinterpretq_u32_u8(input_has_plus_))) {
-            input_has_plus = (c0 != '+') && (c1 != '+');
-        }
-        if (vmaxvq_u32(vreinterpretq_u32_u8(input_has_slash_))) {
-            input_has_slash = (c0 != '/') && (c1 != '/');
-        }
-    }
-#endif
-
-    for (; i < len; ++i) {
-        const char cs = pSrc[i];
-        char cd;
-
-        if (cs == c0) {
-            cd = '+';
-        }
-        else if (cs == c1) {
-            cd = '/';
-        }
-        else if (cs == '+') {
-            input_has_plus = 1;
-            cd = cs;
-        }
-        else if (cs == '/') {
-            input_has_slash = 1;
-            cd = cs;
-        }
-        else {
-            cd = cs;
-        }
-        pDst[i] = cd;
-    }
-    *has_bad_char |= input_has_slash | input_has_plus;
 }
 
 static int check_ignore(uint8_t c, Py_buffer const* ignorechars, uint32_t* ignorecache)
@@ -878,7 +780,7 @@ static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, cha
     translate_dst = PyBytes_AS_STRING(tmp_result);
 #endif
 
-    translate(in_buffer.buf, translate_dst, in_buffer.len, alphabet, NULL);
+    translate(in_buffer.buf, translate_dst, in_buffer.len, alphabet);
 
 #if PY_VERSION_HEX >= 0x030f0000
     tmp_result = PyBytesWriter_Finish(writer);
@@ -907,7 +809,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
     int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
-    int has_bad_char = 0;
     char alphabet[2];
     int validation;
     Py_buffer buffer;
@@ -928,7 +829,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     Py_ssize_t source_len;
     int source_use_buffer = 0;
     void* dest;
-    void (*translate_fn)(const char*, char*, size_t, const char*, int*) = &translate_deprecated;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
@@ -976,9 +876,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         ignorechars_object = get_ignorechars_buffer(ignorechars_object, &ignorechars_buffer, use_alphabet_for_ignore_chars ? alphabet : NULL);
         if (ignorechars_object == NULL) {
             return NULL;
-        }
-        if (validation) {
-            translate_fn = &translate;
         }
         if ((ignorechars_buffer.len == 0) && padded) {
             PyBuffer_Release(&ignorechars_buffer);
@@ -1049,7 +946,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        translate_fn(source, translate_dst, source_len, alphabet, &has_bad_char);
+        translate(source, translate_dst, source_len, alphabet);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
@@ -1164,7 +1061,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
-            translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
+            translate(src, cache, src_slice, alphabet);
             result = base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag);
             if (result <= 0) {
                 break;
@@ -1176,7 +1073,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             dst += dst_slice;
         }
         if (result > 0) {
-            translate_fn(src, cache, len, alphabet, &has_bad_char);
+            translate(src, cache, len, alphabet);
             result = base64_decode(cache, len, dst, &out_len, libbase64_simd_flag);
         }
 
@@ -1271,16 +1168,6 @@ FINALLY:
     if (ignorechars_object) {
         PyBuffer_Release(&ignorechars_buffer);
         Py_DECREF(ignorechars_object);
-    }
-    if (has_bad_char && (out_object != NULL)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/4 */
-        static const char format_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=True will be an error in future versions";
-        static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=False will be discarded in future versions";
-        char const* format = validation ? format_validation : format_no_validation;
-        PyObject* category = validation ? PyExc_DeprecationWarning : PyExc_FutureWarning;
-        if (PyErr_WarnFormat(category, 2, format, in_alphabet) < 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            Py_XDECREF(out_object); /* GCOVR_EXCL_LINE */
-            out_object = NULL; /* GCOVR_EXCL_LINE */
-        }
     }
     return out_object;
 }
