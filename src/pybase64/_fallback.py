@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from base64 import b64decode as builtin_decode
 from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
 
     from ._typing import Buffer
 
+_SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 
 
@@ -80,7 +82,7 @@ def b64decode(
     if altchars is not None:
         altchars = _get_bytes(altchars)
         _validate_altchars(altchars)
-    if validate:
+    if _SLOW_VALIDATION and validate:
         if len(s) % 4 != 0:
             msg = "Incorrect padding"
             raise BinAsciiError(msg)
@@ -99,8 +101,9 @@ def b64decode(
         if expected_len != len(result):
             msg = "Non-base64 digit found"
             raise BinAsciiError(msg)
-        return result
-    return builtin_decode(s, altchars, validate=False)
+    else:
+        result = builtin_decode(s, altchars, validate=validate)
+    return result
 
 
 def b64decode_as_bytearray(
