@@ -11,6 +11,8 @@
 
 #ifdef __SSE2__
 #include <emmintrin.h>
+#elif BASE64_WITH_NEON64
+#include <arm_neon.h>
 #endif
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
@@ -125,6 +127,24 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
             _mm_storeu_si128((__m128i*)(pSrcDst + i), srcDst);
         }
     }
+#elif BASE64_WITH_NEON64
+    if (len >= 16U) {
+        const uint8x16_t plus  = vdupq_n_u8('+');
+        const uint8x16_t slash = vdupq_n_u8('/');
+        const uint8x16_t c0_ = vdupq_n_u8(c0);
+        const uint8x16_t c1_ = vdupq_n_u8(c1);
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            uint8x16_t srcDst = vld1q_u8(pSrcDst + i);
+            uint8x16_t m0     = vceqq_u8(srcDst, plus);
+            uint8x16_t m1     = vceqq_u8(srcDst, slash);
+
+            srcDst = vbslq_u8(m0, c0_, srcDst);
+            srcDst = vbslq_u8(m1, c1_, srcDst);
+
+            vst1q_u8(pSrcDst + i, srcDst);
+        }
+    }
 #endif
 
     for (; i < len; ++i) {
@@ -161,6 +181,24 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
             srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, slash));
 
             _mm_storeu_si128((__m128i*)(pDst + i), srcDst);
+        }
+    }
+#elif BASE64_WITH_NEON64
+    if (len >= 16U) {
+        const uint8x16_t plus  = vdupq_n_u8('+');
+        const uint8x16_t slash = vdupq_n_u8('/');
+        const uint8x16_t c0_ = vdupq_n_u8(c0);
+        const uint8x16_t c1_ = vdupq_n_u8(c1);
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            uint8x16_t srcDst = vld1q_u8(pSrc + i);
+            uint8x16_t m0     = vceqq_u8(srcDst, c0_);
+            uint8x16_t m1     = vceqq_u8(srcDst, c1_);
+
+            srcDst = vbslq_u8(m0, plus, srcDst);
+            srcDst = vbslq_u8(m1, slash, srcDst);
+
+            vst1q_u8(pDst + i, srcDst);
         }
     }
 #endif
