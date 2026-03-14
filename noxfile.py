@@ -62,7 +62,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python="3.12")
+@nox.session(python="3.15")
 def develop(session: nox.Session) -> None:
     """Create venv for dev."""
     session.install(*_get_group_dependencies("dev"))

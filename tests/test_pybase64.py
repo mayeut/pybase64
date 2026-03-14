@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import sys
-import warnings
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from enum import IntEnum
@@ -385,6 +384,11 @@ params_invalid_data_validate_values = [
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError],
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError],
     [b"A@@@@FGH" * 10000, b"-_", BinAsciiError],
+    [std, b"-_", BinAsciiError],
+    [b"/---------------/-", b"-+", BinAsciiError],
+    [b"/---------------/-", b"+-", BinAsciiError],
+    [b"+---------------+-", b"-/", BinAsciiError],
+    [b"+---------------+-", b"/-", BinAsciiError],
 ]
 params_invalid_data_all = pytest.mark.parametrize(
     ("vector", "altchars", "exception"),
@@ -437,7 +441,20 @@ def test_invalid_data_dec_skip(
     test = dfn(vector, altchars)
     if sys.implementation.name == "graalpy" and vector.startswith((b"A@@@=F", b"A@@=@")):
         pytest.xfail(reason="graalpy fails decoding those entries")  # pragma: no cover
-    base = base64.b64decode(vector, altchars)
+    if altchars is not None:
+        altchars = bytes(altchars)
+        trans_in_add = set(b"+/") - set(altchars)
+        if len(trans_in_add) == 2:
+            # we don't want to use an unordered set for 2 elements
+            trans_ = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
+        else:
+            # 0 or 1 element in the set
+            trans_ = bytes.maketrans(
+                altchars + bytes(trans_in_add),
+                b"+/" + bytes(set(altchars) - set(b"+/")),
+            )
+        vector = vector.translate(trans_)
+    base = base64.b64decode(vector)
     assert test == base
 
 
@@ -454,34 +471,6 @@ def test_invalid_data_dec_validate(
     utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(vector, altchars, validate=True)
-
-
-@utils.param_simd
-@param_validate
-@param_decode_functions
-def test_warning_data_dec(
-    dfn: Decode,
-    validate: bool,
-    simd: int,
-) -> None:
-    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
-    exception, match = {
-        True: (DeprecationWarning, r"invalid character.*will be an error in future"),
-        False: (FutureWarning, r"invalid character.*will be discarded in future"),
-    }[validate]
-    # src_slice in the C code is 16 * 1024 = 16384 bytes; the large vector tests
-    # that has_bad_char is accumulated (not overwritten) across chunks so that a
-    # '+' or '/' in the first chunk is not silently lost when later chunks are clean.
-    src_slice = 16 * 1024
-    vector_ = "+/" + "A" * (src_slice - 2) + "AAAA"
-    for vector in [vector_, vector_[:4]]:
-        with pytest.warns(exception, match=match):
-            dfn(vector, b"-_", validate=validate)
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            with pytest.raises(exception, match=match):
-                dfn(vector, b"-_", validate=validate)
-            dfn(vector, b"/+", validate=validate)
 
 
 params_invalid_data_enc_values = [

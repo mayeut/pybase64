@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from ._typing import Buffer
 
 _SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
-_ALTCHARS_WARNINGS: Final = sys.version_info[:2] < (3, 15)
 _HAS_WRAPCOL: Final = sys.version_info[:2] >= (3, 15)  # wrapcol support in builtin b64encode
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 
@@ -56,7 +55,7 @@ def _validate_altchars(altchars: bytes | bytearray) -> None:
         raise ValueError(msg) from None
 
 
-def b64decode(  # noqa: C901
+def b64decode(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
     validate: bool = False,
@@ -81,20 +80,27 @@ def b64decode(  # noqa: C901
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
     s = _get_bytes(s)
-    has_bad_chars = False
     if altchars is not None:
         altchars = _get_bytes(altchars)
-        _validate_altchars(altchars)
-        if _ALTCHARS_WARNINGS:
-            for b in b"+/":
-                if b not in altchars and b in s:
-                    has_bad_chars = True
-                    break
+        if altchars != b"+/":
+            _validate_altchars(altchars)
+            trans_in_add = set(b"+/") - set(altchars)
+            if len(trans_in_add) == 2:
+                # we don't want to use an unordered set for 2 elements
+                trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
+            else:
+                # 0 or 1 element in the set
+                trans = bytes.maketrans(
+                    altchars + bytes(trans_in_add),
+                    b"+/" + bytes(set(altchars) - set(b"+/")),
+                )
+            s = s.translate(trans)
+
     if _SLOW_VALIDATION and validate:
         if len(s) % 4 != 0:
             msg = "Incorrect padding"
             raise BinAsciiError(msg)
-        result = builtin_decode(s, altchars, validate=False)
+        result = builtin_decode(s, validate=False)
 
         # check length of result vs length of input
         expected_len = 0
@@ -110,17 +116,7 @@ def b64decode(  # noqa: C901
             msg = "Non-base64 digit found"
             raise BinAsciiError(msg)
     else:
-        result = builtin_decode(s, altchars, validate=validate)
-    if _ALTCHARS_WARNINGS and has_bad_chars:
-        import warnings  # noqa: PLC0415 lazy import
-
-        msg = f"invalid characters '+' or '/' in Base64 data with altchars={altchars!r}"
-        if validate:
-            msg = f"{msg} and validate=True will be an error in future versions"
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        else:
-            msg = f"{msg} and validate=False will be discarded in future versions"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+        result = builtin_decode(s, validate=validate)
     return result
 
 
