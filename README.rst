@@ -121,6 +121,12 @@ Running Python 3.7.2, Apple LLVM version 10.0.0 (clang-1000.11.45.5), Mac OS X 1
 
 Changelog
 =========
+Future
+------
+- Speed-up translation on aarch64
+- Add SBOM to PyPI wheels
+- Add initial support for Python 3.15
+
 1.4.3
 -----
 - Publish Android Python 3.14 wheels
