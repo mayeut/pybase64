@@ -307,9 +307,9 @@ def test_invalid_padding_dec(
 
 
 params_invalid_altchars_values = [
-    [b"", AssertionError],
-    [b"-", AssertionError],
-    [b"-__", AssertionError],
+    [b"", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
+    [b"-", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
+    [b"-__", (AssertionError, ValueError)],  # Python 3.15+ uses ValueError for decoding
     [3.0, TypeError],
     ["-€", ValueError],
     [memoryview(b"- _")[::2], BufferError],
