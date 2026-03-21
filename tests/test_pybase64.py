@@ -571,7 +571,9 @@ def _ref_b64encode_wrapcol(s: bytes, altchars: bytes | None, wrapcol: int) -> by
     if wrapcol == 0 or not encoded:
         return encoded
     effective_wrapcol = (wrapcol // 4) * 4 or 4
-    return b"\n".join(encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol))
+    return b"\n".join(
+        encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol)
+    )
 
 
 param_wrapcol_values = pytest.mark.parametrize(

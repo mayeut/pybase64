@@ -185,7 +185,9 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     if not encoded:
         return encoded
     effective_wrapcol = (wrapcol // 4) * 4 or 4
-    return b"\n".join(encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol))
+    return b"\n".join(
+        encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol)
+    )
 
 
 def b64encode_as_string(
