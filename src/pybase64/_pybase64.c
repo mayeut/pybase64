@@ -841,6 +841,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
     result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, 0, NULL, 76, 0);
 
     PyBuffer_Release(&buffer);
+    if (result != NULL && PyBytes_GET_SIZE(result) > 0) {
+        if (_PyBytes_Resize(&result, PyBytes_GET_SIZE(result) + 1) == 0) {
+            PyBytes_AS_STRING(result)[PyBytes_GET_SIZE(result) - 1] = '\n';
+        }
+    }
     return result;
 }
 
