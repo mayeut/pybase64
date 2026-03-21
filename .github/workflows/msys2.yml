@@ -2,10 +2,10 @@ name: MSYS2 Tests
 
 on:
   push:
-    branches-ignore:
-      - "copilot/**"
-      - "dependabot/**"
-      - "pre-commit-ci-update-config"
+    branches:
+      - main
+      - master
+      - "temp/**"
   pull_request:
 
 concurrency:
