@@ -383,49 +383,43 @@ END:
     return 0;
 }
 
-static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_string)
+static PyObject* pybase64_encode_impl_core(
+    pybase64_state* state,
+    const void* src_buf,
+    Py_ssize_t src_len,
+    int use_alphabet,
+    const char* alphabet,
+    Py_ssize_t wrapcol,
+    int return_string)
 {
-    static const char *kwlist[] = { "", "altchars", NULL };
-
-    int use_alphabet = 0;
-    char alphabet[2];
-    Py_buffer buffer;
+    size_t encoded_len;
     size_t out_len;
+    size_t newlines = 0;
     PyObject* out_object;
 #if PY_VERSION_HEX >= 0x030f0000
-    PyBytesWriter* writer;
+    PyBytesWriter* writer = NULL;
 #endif
-    PyObject* in_object;
-    PyObject* in_alphabet = NULL;
     char* dst;
-    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
-    }
 
-    /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", KW_CONST_CAST kwlist, &in_object, &in_alphabet)) {
-        return NULL;
-    }
-
-    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
-        return NULL;
-    }
-
-    if (get_buffer(in_object, &buffer) != 0) {
-        return NULL;
-    }
-
-    if (buffer.len > (3 * (PY_SSIZE_T_MAX / 4))) {
-        PyBuffer_Release(&buffer);
+    if (src_len > (3 * (PY_SSIZE_T_MAX / 4))) {
         return PyErr_NoMemory();
     }
 
-    out_len = (size_t)(((buffer.len + 2) / 3) * 4);
+    encoded_len = (size_t)(((src_len + 2) / 3) * 4);
+    out_len = encoded_len;
+
+    if (wrapcol > 0 && encoded_len > 0) {
+        size_t wrap = (size_t)wrapcol;
+        newlines = (encoded_len - 1U) / wrap + 1U;
+        if (newlines > (size_t)PY_SSIZE_T_MAX - out_len) {
+            return PyErr_NoMemory();
+        }
+        out_len += newlines;
+    }
+
     if (return_string) {
         out_object = PyUnicode_New((Py_ssize_t)out_len, 127);
         if (out_object == NULL) {
-            PyBuffer_Release(&buffer);
             return NULL;
         }
         dst = (char*)PyUnicode_1BYTE_DATA(out_object);
@@ -434,14 +428,12 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
 #if PY_VERSION_HEX >= 0x030f0000
         writer = PyBytesWriter_Create((Py_ssize_t)out_len);
         if (writer == NULL) {
-            PyBuffer_Release(&buffer);
             return NULL;
         }
         dst = PyBytesWriter_GetData(writer);
 #else
         out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
         if (out_object == NULL) {
-            PyBuffer_Release(&buffer);
             return NULL;
         }
         dst = PyBytes_AS_STRING(out_object);
@@ -455,29 +447,53 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
 
     if (use_alphabet) {
         /* TODO, make this more efficient */
-        const size_t dst_slice = 16U * 1024U;
-        const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
-        Py_ssize_t len = buffer.len;
-        const char* src = (const char*)buffer.buf;
+        const size_t dst_chunk = 16U * 1024U;
+        const Py_ssize_t src_chunk = (Py_ssize_t)((dst_chunk / 4U) * 3U);
+        Py_ssize_t len = src_len;
+        const char* src = (const char*)src_buf;
+        char* d = dst;
+        size_t remaining = encoded_len;
         size_t remainder;
 
-        while (out_len > dst_slice) {
-            size_t dst_len = dst_slice;
+        while (len > src_chunk) {
+            size_t dc = dst_chunk;
 
-            base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
-            translate_inplace(dst, dst_slice, alphabet);
+            base64_encode(src, (size_t)src_chunk, d, &dc, libbase64_simd_flag);
+            translate_inplace(d, dst_chunk, alphabet);
 
-            len -= src_slice;
-            src += src_slice;
-            out_len -= dst_slice;
-            dst += dst_slice;
+            src += src_chunk;
+            d += dst_chunk;
+            len -= src_chunk;
+            remaining -= dst_chunk;
         }
-        remainder = out_len;
-        base64_encode(src, len, dst, &out_len, libbase64_simd_flag);
-        translate_inplace(dst, remainder, alphabet);
+        remainder = remaining;
+        base64_encode(src, (size_t)len, d, &remaining, libbase64_simd_flag);
+        translate_inplace(d, remainder, alphabet);
     }
     else {
-        base64_encode(buffer.buf, buffer.len, dst, &out_len, libbase64_simd_flag);
+        size_t enc = encoded_len;
+        base64_encode(src_buf, (size_t)src_len, dst, &enc, libbase64_simd_flag);
+    }
+
+    /* Insert newlines using a backward pass to shift data and insert '\n' markers */
+    if (newlines > 0) {
+        size_t wrap = (size_t)wrapcol;
+        Py_ssize_t write = (Py_ssize_t)out_len;
+        Py_ssize_t iwrap = (Py_ssize_t)wrap;
+
+        for (Py_ssize_t k = (Py_ssize_t)newlines - 1; k >= 0; k--) {
+            Py_ssize_t line_start = k * iwrap;
+            Py_ssize_t line_end = line_start + iwrap;
+            Py_ssize_t line_len;
+            if (line_end > (Py_ssize_t)encoded_len) {
+                line_end = (Py_ssize_t)encoded_len;
+            }
+            line_len = line_end - line_start;
+            --write;
+            dst[write] = '\n';
+            write -= line_len;
+            memmove(dst + write, dst + line_start, (size_t)line_len);
+        }
     }
 
     /* restore the GIL */
@@ -489,9 +505,48 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     }
 #endif
 
+    return out_object;
+}
+
+static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_string)
+{
+    static const char *kwlist[] = { "", "altchars", "wrapcol", NULL };
+
+    int use_alphabet = 0;
+    char alphabet[2];
+    Py_buffer buffer;
+    PyObject* in_object;
+    PyObject* in_alphabet = NULL;
+    Py_ssize_t wrapcol = 0;
+    PyObject* result;
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) {
+        return NULL;
+    }
+
+    /* Parse the input tuple */
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|On", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &wrapcol)) {
+        return NULL;
+    }
+
+    if (wrapcol < 0) {
+        PyErr_SetString(PyExc_ValueError, "wrapcol must be >= 0");
+        return NULL;
+    }
+
+    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
+        return NULL;
+    }
+
+    if (get_buffer(in_object, &buffer) != 0) {
+        return NULL;
+    }
+
+    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, use_alphabet, alphabet, wrapcol, return_string);
+
     PyBuffer_Release(&buffer);
 
-    return out_object;
+    return result;
 }
 
 static PyObject* pybase64_encode(PyObject* self, PyObject* args, PyObject *kwds)
@@ -764,12 +819,7 @@ static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject* args, Py
 static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 {
     Py_buffer buffer;
-    size_t out_len;
-#if PY_VERSION_HEX >= 0x030f0000
-    PyBytesWriter* out_object;
-#else
-    PyObject* out_object;
-#endif
+    PyObject* result;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) {
         return NULL;
@@ -785,73 +835,11 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         PyBuffer_Release(&buffer);
         return PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer.ndim, Py_TYPE(in_object));
     }
-    if (buffer.len > (3 * (PY_SSIZE_T_MAX / 4))) {
-        PyBuffer_Release(&buffer);
-        return PyErr_NoMemory();
-    }
 
-    out_len = (size_t)(((buffer.len + 2) / 3) * 4);
-    if (out_len != 0U) {
-        if ((((out_len - 1U) / 76U) + 1U) > (PY_SSIZE_T_MAX - out_len)) {
-            PyBuffer_Release(&buffer);
-            return PyErr_NoMemory();
-        }
-        out_len += ((out_len - 1U) / 76U) + 1U;
-    }
-
-#if PY_VERSION_HEX >= 0x030f0000
-    out_object = PyBytesWriter_Create((Py_ssize_t)out_len);
-#else
-    out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-#endif
-    if (out_object == NULL) {
-        PyBuffer_Release(&buffer);
-        return NULL;
-    }
-
-    if (out_len > 0)
-    {
-        const size_t dst_slice = 77U;
-        const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
-        Py_ssize_t len = buffer.len;
-        const char* src = (const char*)buffer.buf;
-#if PY_VERSION_HEX >= 0x030f0000
-        char* dst = PyBytesWriter_GetData(out_object);
-#else
-        char* dst = PyBytes_AS_STRING(out_object);
-#endif
-        size_t remainder;
-
-        /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
-
-        int const libbase64_simd_flag = state->libbase64_simd_flag;
-        while (out_len > dst_slice) {
-            size_t dst_len = dst_slice - 1U;
-
-            base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
-            dst[dst_slice - 1U] = '\n';
-
-            len -= src_slice;
-            src += src_slice;
-            out_len -= dst_slice;
-            dst += dst_slice;
-        }
-        remainder = out_len - 1;
-        base64_encode(src, len, dst, &remainder, libbase64_simd_flag);
-        dst[out_len - 1] = '\n';
-
-        /* restore the GIL */
-        Py_END_ALLOW_THREADS
-    }
+    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, 0, NULL, 76, 0);
 
     PyBuffer_Release(&buffer);
-
-#if PY_VERSION_HEX >= 0x030f0000
-    return PyBytesWriter_Finish(out_object);
-#else
-    return out_object;
-#endif
+    return result;
 }
 
 static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)

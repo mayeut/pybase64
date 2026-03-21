@@ -25,7 +25,7 @@ class Encode(Protocol):
     __name__: str
     __module__: str
 
-    def __call__(self, s: Buffer, altchars: Buffer | None = None) -> bytes: ...
+    def __call__(self, s: Buffer, altchars: Buffer | None = None, wrapcol: int = 0) -> bytes: ...
 
 
 class EncodeBytes(Protocol):
