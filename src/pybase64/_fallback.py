@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ._typing import Buffer
 
 _SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
+_ALTCHARS_WARNINGS: Final = sys.version_info[:2] < (3, 15)
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 
 
@@ -54,7 +55,7 @@ def _validate_altchars(altchars: bytes | bytearray) -> None:
         raise ValueError(msg) from None
 
 
-def b64decode(
+def b64decode(  # noqa: C901
     s: str | Buffer,
     altchars: str | Buffer | None = None,
     validate: bool = False,
@@ -79,9 +80,15 @@ def b64decode(
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
     s = _get_bytes(s)
+    has_bad_chars = False
     if altchars is not None:
         altchars = _get_bytes(altchars)
         _validate_altchars(altchars)
+        if _ALTCHARS_WARNINGS:
+            for b in b"+/":
+                if b not in altchars and b in s:
+                    has_bad_chars = True
+                    break
     if _SLOW_VALIDATION and validate:
         if len(s) % 4 != 0:
             msg = "Incorrect padding"
@@ -103,6 +110,16 @@ def b64decode(
             raise BinAsciiError(msg)
     else:
         result = builtin_decode(s, altchars, validate=validate)
+    if _ALTCHARS_WARNINGS and has_bad_chars:
+        import warnings  # noqa: PLC0415 lazy import
+
+        msg = f"invalid characters '+' or '/' in Base64 data with altchars={altchars!r}"
+        if validate:
+            msg = f"{msg} and validate=True will be an error in future versions"
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        else:
+            msg = f"{msg}and validate=False will be discarded in future versions"
+            warnings.warn(msg, FutureWarning, stacklevel=2)
     return result
 
 

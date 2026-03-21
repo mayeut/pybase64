@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import sys
+import warnings
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from enum import IntEnum
@@ -46,9 +47,10 @@ class AltCharsId(IntEnum):
     ALT1 = 2
     ALT2 = 3
     ALT3 = 4
+    ALT4 = 5
 
 
-altchars_lut = [b"+/", b"-_", b"@&", b"+,", b";/"]
+altchars_lut = [b"+/", b"-_", b"@&", b"+,", b";/", b"/+"]
 enc_helper_lut: list[Callable[[Buffer], bytes]] = [
     pybase64.standard_b64encode,
     pybase64.urlsafe_b64encode,
@@ -379,7 +381,6 @@ params_invalid_data_validate_values = [
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError],
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError],
     [b"A@@@@FGH" * 10000, b"-_", BinAsciiError],
-    # [std, b'-_', BinAsciiError],  TODO does no fail with base64 module
 ]
 params_invalid_data_all = pytest.mark.parametrize(
     ("vector", "altchars", "exception"),
@@ -449,6 +450,30 @@ def test_invalid_data_dec_validate(
     utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception):
         dfn(vector, altchars, validate=True)
+
+
+@utils.param_simd
+@param_validate
+@param_decode_functions
+def test_warning_data_dec(
+    dfn: Decode,
+    validate: bool,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    exception, match = {
+        True: (DeprecationWarning, r"invalid character.*will be an error in future"),
+        False: (FutureWarning, r"invalid character.*will be discarded in future"),
+    }[validate]
+    vector_ = "+/ABCDEFGHIJKLMN"
+    for vector in [vector_, vector_[:4]]:
+        with pytest.warns(exception, match=match):
+            dfn(vector, b"-_", validate=validate)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            with pytest.raises(exception, match=match):
+                dfn(vector, b"-_", validate=validate)
+            dfn(vector, b"/+", validate=validate)
 
 
 params_invalid_data_enc_values = [
