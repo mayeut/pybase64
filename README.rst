@@ -127,6 +127,7 @@ Future
 - Use ``ValueError`` instead of ``AssertionError`` on altchars length validation
 - Add SBOM to PyPI wheels
 - Add initial support for Python 3.15
+- Deprecate accepting the `+` and `/` characters with an alternative alphabet when decoding
 
 1.4.3
 -----
