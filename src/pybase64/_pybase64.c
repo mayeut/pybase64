@@ -390,7 +390,8 @@ static PyObject* pybase64_encode_impl_core(
     int use_alphabet,
     const char* alphabet,
     Py_ssize_t wrapcol,
-    int return_string)
+    int return_string,
+    int append_new_line)
 {
     size_t encoded_len;
     size_t out_len;
@@ -416,6 +417,13 @@ static PyObject* pybase64_encode_impl_core(
             return PyErr_NoMemory();
         }
         out_len += newlines;
+    }
+
+    if (append_new_line && encoded_len > 0) {
+        if (out_len == (size_t)PY_SSIZE_T_MAX) {
+            return PyErr_NoMemory();
+        }
+        out_len += 1;
     }
 
     if (return_string) {
@@ -498,6 +506,10 @@ static PyObject* pybase64_encode_impl_core(
         }
     }
 
+    if (append_new_line && encoded_len > 0) {
+        dst[out_len - 1] = '\n';
+    }
+
     /* restore the GIL */
     Py_END_ALLOW_THREADS
 
@@ -544,7 +556,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, use_alphabet, alphabet, wrapcol, return_string);
+    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, use_alphabet, alphabet, wrapcol, return_string, 0);
 
     PyBuffer_Release(&buffer);
 
@@ -838,14 +850,9 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
         return PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer.ndim, Py_TYPE(in_object));
     }
 
-    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, 0, NULL, 76, 0);
+    result = pybase64_encode_impl_core(state, buffer.buf, buffer.len, 0, NULL, 76, 0, 1);
 
     PyBuffer_Release(&buffer);
-    if (result != NULL && PyBytes_GET_SIZE(result) > 0) {
-        if (_PyBytes_Resize(&result, PyBytes_GET_SIZE(result) + 1) == 0) {
-            PyBytes_AS_STRING(result)[PyBytes_GET_SIZE(result) - 1] = '\n';
-        }
-    }
     return result;
 }
 
