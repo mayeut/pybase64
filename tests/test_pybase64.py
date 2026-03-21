@@ -476,6 +476,41 @@ def test_warning_data_dec(
             dfn(vector, b"/+", validate=validate)
 
 
+@utils.param_simd
+@param_validate
+@param_decode_functions
+def test_warning_data_dec_sliced(
+    dfn: Decode,
+    validate: bool,
+    simd: int,
+) -> None:
+    """Test that deprecation warning is raised when bad chars appear only in the first chunk.
+
+    The sliced decode path processes input in chunks of 16 KiB. Previously,
+    has_bad_char was overwritten (not accumulated) on each translate() call, so
+    bad characters detected in early chunks could be lost if later chunks were clean.
+    """
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    exception, match = {
+        True: (DeprecationWarning, r"invalid character.*will be an error in future"),
+        False: (FutureWarning, r"invalid character.*will be discarded in future"),
+    }[validate]
+    # src_slice in the C code is 16 * 1024 = 16384 bytes.
+    # Place '+' only in the first chunk; the second chunk contains only 'A's.
+    # Without the accumulation fix, the second translate() call would clear
+    # has_bad_char set by the first call, suppressing the warning.
+    src_slice = 16 * 1024
+    first_chunk = b"+" + b"A" * (src_slice - 1)  # 16384 bytes, starts with '+'
+    second_chunk = b"AAAA"  # 4 more bytes, no '+' or '/'
+    vector = first_chunk + second_chunk
+    with pytest.warns(exception, match=match):
+        dfn(vector, b"-_", validate=validate)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(exception, match=match):
+            dfn(vector, b"-_", validate=validate)
+
+
 params_invalid_data_enc_values = [
     ["this is a test", TypeError],
     [memoryview(b"abcd")[::2], BufferError],
