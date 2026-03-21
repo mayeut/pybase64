@@ -159,11 +159,13 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
     }
 }
 
-static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet)
+static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet, int* has_bad_char)
 {
     size_t i = 0U;
     const char c0 = alphabet[0];
     const char c1 = alphabet[1];
+    int input_has_plus = 0;
+    int input_has_slash = 0;
 
 #ifdef __SSE2__
     if (len >= 16U) {
@@ -171,16 +173,28 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         const __m128i slash = _mm_set1_epi8('/');
         const __m128i c0_ = _mm_set1_epi8(c0);
         const __m128i c1_ = _mm_set1_epi8(c1);
+        __m128i input_has_plus_ = _mm_setzero_si128();
+        __m128i input_has_slash_ = _mm_setzero_si128();
 
         for (; i < (len & ~(size_t)15U); i += 16) {
             __m128i srcDst = _mm_loadu_si128((const __m128i*)(pSrc + i));
             __m128i m0     = _mm_cmpeq_epi8(srcDst, c0_);
             __m128i m1     = _mm_cmpeq_epi8(srcDst, c1_);
 
+            input_has_plus_ = _mm_or_si128(input_has_plus_, _mm_cmpeq_epi8(srcDst, plus));
+            input_has_slash_ = _mm_or_si128(input_has_slash_, _mm_cmpeq_epi8(srcDst, slash));
+
             srcDst = _mm_or_si128(_mm_andnot_si128(m0, srcDst), _mm_and_si128(m0, plus));
             srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, slash));
 
             _mm_storeu_si128((__m128i*)(pDst + i), srcDst);
+        }
+
+        if (_mm_movemask_epi8(input_has_plus_)) {
+            input_has_plus = (c0 != '+') && (c1 != '+');
+        }
+        if (_mm_movemask_epi8(input_has_slash_)) {
+            input_has_slash = (c0 != '/') && (c1 != '/');
         }
     }
 #elif BASE64_WITH_NEON64
@@ -189,16 +203,28 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         const uint8x16_t slash = vdupq_n_u8('/');
         const uint8x16_t c0_ = vdupq_n_u8(c0);
         const uint8x16_t c1_ = vdupq_n_u8(c1);
+        uint8x16_t input_has_plus_ = vdupq_n_u8(0);
+        uint8x16_t input_has_slash_ = vdupq_n_u8(0);
 
         for (; i < (len & ~(size_t)15U); i += 16) {
             uint8x16_t srcDst = vld1q_u8(pSrc + i);
             uint8x16_t m0     = vceqq_u8(srcDst, c0_);
             uint8x16_t m1     = vceqq_u8(srcDst, c1_);
 
+            input_has_plus_ = vorrq_u8(input_has_plus_, vceqq_u8(srcDst, plus));
+            input_has_slash_ = vorrq_u8(input_has_slash_, vceqq_u8(srcDst, slash));
+
             srcDst = vbslq_u8(m0, plus, srcDst);
             srcDst = vbslq_u8(m1, slash, srcDst);
 
             vst1q_u8(pDst + i, srcDst);
+        }
+
+        if (vmaxvq_u32(vreinterpretq_u32_u8(input_has_plus_))) {
+            input_has_plus = (c0 != '+') && (c1 != '+');
+        }
+        if (vmaxvq_u32(vreinterpretq_u32_u8(input_has_slash_))) {
+            input_has_slash = (c0 != '/') && (c1 != '/');
         }
     }
 #endif
@@ -213,19 +239,20 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         else if (cs == c1) {
             cd = '/';
         }
-#if 0 /* TODO, python does not do this, add option */
         else if (cs == '+') {
-            cd = c0;
+            input_has_plus = 1;
+            cd = cs; /* cd = c0;  TODO, python does not do this, add option */
         }
         else if (cs == '/') {
-            cd = c1;
+            input_has_slash = 1;
+            cd = cs; /* cd = c1; TODO, python does not do this, add option */
         }
-#endif
         else {
             cd = cs;
         }
         pDst[i] = cd;
     }
+    *has_bad_char |= input_has_slash | input_has_plus;
 }
 
 
@@ -482,6 +509,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     static const char *kwlist[] = { "", "altchars", "validate", NULL };
 
     int use_alphabet = 0;
+    int has_bad_char = 0;
     char alphabet[2];
     char validation = 0;
     Py_buffer buffer;
@@ -559,7 +587,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        translate(source, translate_dst, source_len, alphabet);
+        translate(source, translate_dst, source_len, alphabet, &has_bad_char);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
@@ -646,7 +674,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
-            translate(src, cache, src_slice, alphabet);
+            translate(src, cache, src_slice, alphabet, &has_bad_char);
             result = base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag);
             if (result <= 0) {
                 break;
@@ -658,7 +686,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             dst += dst_slice;
         }
         if (result > 0) {
-            translate(src, cache, len, alphabet);
+            translate(src, cache, len, alphabet, &has_bad_char);
             result = base64_decode(cache, len, dst, &out_len, libbase64_simd_flag);
         }
 
@@ -709,6 +737,16 @@ FINALLY:
     if (source_use_buffer) {
         PyBuffer_Release(&buffer);
         Py_DECREF(in_object);
+    }
+    if (has_bad_char && (out_object != NULL)) {
+        static const char format_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=True will be an error in future versions";
+        static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=False will be discarded in future versions";
+        char const* format = validation ? format_validation : format_no_validation;
+        PyObject* category = validation ? PyExc_DeprecationWarning : PyExc_FutureWarning;
+        if (PyErr_WarnFormat(category, 2, format, in_alphabet) < 0) {
+            Py_XDECREF(out_object);
+            out_object = NULL;
+        }
     }
     return out_object;
 }
