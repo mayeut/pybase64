@@ -409,8 +409,9 @@ static PyObject* pybase64_encode_impl_core(
     out_len = encoded_len;
 
     if (wrapcol > 0 && encoded_len > 0) {
-        size_t wrap = (size_t)wrapcol;
-        newlines = (encoded_len - 1U) / wrap + 1U;
+        size_t wrap = ((size_t)wrapcol / 4U) * 4U;
+        if (wrap == 0U) wrap = 4U;
+        newlines = (encoded_len - 1U) / wrap;
         if (newlines > (size_t)PY_SSIZE_T_MAX - out_len) {
             return PyErr_NoMemory();
         }
@@ -477,22 +478,23 @@ static PyObject* pybase64_encode_impl_core(
 
     /* Insert newlines using a backward pass to shift data and insert '\n' markers */
     if (newlines > 0) {
-        size_t wrap = (size_t)wrapcol;
+        size_t wrap = ((size_t)wrapcol / 4U) * 4U;
+        if (wrap == 0U) wrap = 4U;
         Py_ssize_t write = (Py_ssize_t)out_len;
         Py_ssize_t iwrap = (Py_ssize_t)wrap;
 
         for (Py_ssize_t k = (Py_ssize_t)newlines - 1; k >= 0; k--) {
-            Py_ssize_t line_start = k * iwrap;
-            Py_ssize_t line_end = line_start + iwrap;
-            Py_ssize_t line_len;
-            if (line_end > (Py_ssize_t)encoded_len) {
-                line_end = (Py_ssize_t)encoded_len;
+            Py_ssize_t block_start = (k + 1) * iwrap;
+            Py_ssize_t block_end = block_start + iwrap;
+            Py_ssize_t block_len;
+            if (block_end > (Py_ssize_t)encoded_len) {
+                block_end = (Py_ssize_t)encoded_len;
             }
-            line_len = line_end - line_start;
+            block_len = block_end - block_start;
+            write -= block_len;
+            memmove(dst + write, dst + block_start, (size_t)block_len);
             --write;
             dst[write] = '\n';
-            write -= line_len;
-            memmove(dst + write, dst + line_start, (size_t)line_len);
         }
     }
 

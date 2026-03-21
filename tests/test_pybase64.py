@@ -566,11 +566,12 @@ def test_dec_multi_dimensional(dfn: Decode) -> None:
 
 
 def _ref_b64encode_wrapcol(s: bytes, altchars: bytes | None, wrapcol: int) -> bytes:
-    """Reference implementation of b64encode with wrapcol for Python < 3.15."""
+    """Reference implementation of b64encode with wrapcol."""
     encoded = base64.b64encode(s, altchars)
     if wrapcol == 0 or not encoded:
         return encoded
-    return b"\n".join(encoded[i : i + wrapcol] for i in range(0, len(encoded), wrapcol)) + b"\n"
+    effective_wrapcol = (wrapcol // 4) * 4 or 4
+    return b"\n".join(encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol))
 
 
 param_wrapcol_values = pytest.mark.parametrize(
@@ -607,7 +608,8 @@ def test_enc_wrapcol_matches_encodebytes(vector_id: int, wrapcol: int, simd: int
     utils.unused_args(simd)
     vector = test_vectors_bin[AltCharsId.STD][vector_id]
     if wrapcol == 76:
-        assert pybase64.b64encode(vector, wrapcol=76) == pybase64.encodebytes(vector)
+        enc = pybase64.b64encode(vector, wrapcol=76)
+        assert pybase64.encodebytes(vector) == enc + (b"\n" if enc else b"")
 
 
 @utils.param_simd

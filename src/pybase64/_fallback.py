@@ -161,8 +161,9 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     application to e.g. generate url or filesystem safe Base64 strings.
 
     Optional ``wrapcol`` specifies after how many characters the output should
-    be split with a newline character (``b'\n'``).  This includes a trailing
-    newline.  If ``wrapcol`` is 0 (the default), no newlines are added.
+    be split with a newline character (``b'\n'``).  The value is rounded down
+    to the nearest multiple of 4.  If ``wrapcol`` is 0 (the default), no
+    newlines are added.
 
     The result is returned as a :class:`bytes` object.
     """
@@ -183,7 +184,8 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     encoded = builtin_encode(s, altchars)
     if not encoded:
         return encoded
-    return b"\n".join(encoded[i : i + wrapcol] for i in range(0, len(encoded), wrapcol)) + b"\n"
+    effective_wrapcol = (wrapcol // 4) * 4 or 4
+    return b"\n".join(encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol))
 
 
 def b64encode_as_string(
@@ -201,8 +203,9 @@ def b64encode_as_string(
     application to e.g. generate url or filesystem safe Base64 strings.
 
     Optional ``wrapcol`` specifies after how many characters the output should
-    be split with a newline character (``'\n'``).  This includes a trailing
-    newline.  If ``wrapcol`` is 0 (the default), no newlines are added.
+    be split with a newline character (``'\n'``).  The value is rounded down
+    to the nearest multiple of 4.  If ``wrapcol`` is 0 (the default), no
+    newlines are added.
 
     The result is returned as a :class:`str` object.
     """

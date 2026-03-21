@@ -17,8 +17,10 @@ if TYPE_CHECKING:
     from pybase64._typing import Buffer, Decode, Encode, EncodeBytes
 
 
-def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:  # noqa: ARG001
-    return base64.b64encode(s, altchars)
+def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:
+    if wrapcol == 0 or sys.version_info < (3, 15):
+        return base64.b64encode(s, altchars)
+    return base64.b64encode(s, altchars, wrapcol=wrapcol)  # type: ignore[call-arg]
 
 
 def bench_one(
