@@ -118,7 +118,7 @@ def b64decode(  # noqa: C901
             msg = f"{msg} and validate=True will be an error in future versions"
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
         else:
-            msg = f"{msg}and validate=False will be discarded in future versions"
+            msg = f"{msg} and validate=False will be discarded in future versions"
             warnings.warn(msg, FutureWarning, stacklevel=2)
     return result
 
