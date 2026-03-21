@@ -152,7 +152,7 @@ def b64decode_as_bytearray(
 
 
 def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes:
-    """Encode bytes using the standard Base64 alphabet.
+    r"""Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
 
@@ -161,7 +161,7 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     application to e.g. generate url or filesystem safe Base64 strings.
 
     Optional ``wrapcol`` specifies after how many characters the output should
-    be split with a newline character (``b'\\n'``).  This includes a trailing
+    be split with a newline character (``b'\n'``).  This includes a trailing
     newline.  If ``wrapcol`` is 0 (the default), no newlines are added.
 
     The result is returned as a :class:`bytes` object.
@@ -186,8 +186,13 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     return b"\n".join(encoded[i : i + wrapcol] for i in range(0, len(encoded), wrapcol)) + b"\n"
 
 
-def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> str:
-    """Encode bytes using the standard Base64 alphabet.
+def b64encode_as_string(
+    s: Buffer,
+    altchars: str | Buffer | None = None,
+    *,
+    wrapcol: int = 0,
+) -> str:
+    r"""Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
 
@@ -196,7 +201,7 @@ def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, *, wrap
     application to e.g. generate url or filesystem safe Base64 strings.
 
     Optional ``wrapcol`` specifies after how many characters the output should
-    be split with a newline character (``'\\n'``).  This includes a trailing
+    be split with a newline character (``'\n'``).  This includes a trailing
     newline.  If ``wrapcol`` is 0 (the default), no newlines are added.
 
     The result is returned as a :class:`str` object.

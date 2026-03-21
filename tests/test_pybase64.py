@@ -20,7 +20,12 @@ if TYPE_CHECKING:
 from . import utils
 
 
-def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes:
+def b64encode_as_string(
+    s: Buffer,
+    altchars: str | Buffer | None = None,
+    *,
+    wrapcol: int = 0,
+) -> bytes:
     """Helper returning bytes instead of string for tests"""
     return pybase64.b64encode_as_string(s, altchars, wrapcol=wrapcol).encode("ascii")
 
@@ -580,7 +585,13 @@ param_wrapcol_values = pytest.mark.parametrize(
 @param_altchars
 @param_wrapcol_values
 @param_encode_functions
-def test_enc_wrapcol(efn: Encode, altchars_id: int, vector_id: int, wrapcol: int, simd: int) -> None:
+def test_enc_wrapcol(
+    efn: Encode,
+    altchars_id: int,
+    vector_id: int,
+    wrapcol: int,
+    simd: int,
+) -> None:
     utils.unused_args(simd)
     vector = test_vectors_bin[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
@@ -610,7 +621,7 @@ def test_enc_wrapcol_empty(wrapcol: int, simd: int) -> None:
 @utils.param_simd
 def test_enc_wrapcol_invalid(simd: int) -> None:
     utils.unused_args(simd)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="wrapcol must be >= 0"):
         pybase64.b64encode(b"test", wrapcol=-1)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="wrapcol must be >= 0"):
         pybase64.b64encode_as_string(b"test", wrapcol=-1)
