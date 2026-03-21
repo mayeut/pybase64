@@ -465,7 +465,11 @@ def test_warning_data_dec(
         True: (DeprecationWarning, r"invalid character.*will be an error in future"),
         False: (FutureWarning, r"invalid character.*will be discarded in future"),
     }[validate]
-    vector_ = "+/ABCDEFGHIJKLMN"
+    # src_slice in the C code is 16 * 1024 = 16384 bytes; the large vector tests
+    # that has_bad_char is accumulated (not overwritten) across chunks so that a
+    # '+' or '/' in the first chunk is not silently lost when later chunks are clean.
+    src_slice = 16 * 1024
+    vector_ = "+/" + "A" * (src_slice - 2) + "AAAA"
     for vector in [vector_, vector_[:4]]:
         with pytest.warns(exception, match=match):
             dfn(vector, b"-_", validate=validate)

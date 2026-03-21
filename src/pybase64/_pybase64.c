@@ -252,7 +252,7 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         }
         pDst[i] = cd;
     }
-    *has_bad_char = input_has_slash | input_has_plus;
+    *has_bad_char |= input_has_slash | input_has_plus;
 }
 
 
