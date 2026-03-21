@@ -151,7 +151,7 @@ def b64decode_as_bytearray(
     return bytearray(b64decode(s, altchars=altchars, validate=validate))
 
 
-def b64encode(s: Buffer, altchars: str | Buffer | None = None, wrapcol: int = 0) -> bytes:
+def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes:
     """Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -186,7 +186,7 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, wrapcol: int = 0)
     return b"\n".join(encoded[i : i + wrapcol] for i in range(0, len(encoded), wrapcol)) + b"\n"
 
 
-def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, wrapcol: int = 0) -> str:
+def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> str:
     """Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -201,7 +201,7 @@ def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, wrapcol
 
     The result is returned as a :class:`str` object.
     """
-    return b64encode(s, altchars, wrapcol).decode("ascii")
+    return b64encode(s, altchars, wrapcol=wrapcol).decode("ascii")
 
 
 def encodebytes(s: Buffer) -> bytes:

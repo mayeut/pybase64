@@ -20,9 +20,9 @@ if TYPE_CHECKING:
 from . import utils
 
 
-def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, wrapcol: int = 0) -> bytes:
+def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes:
     """Helper returning bytes instead of string for tests"""
-    return pybase64.b64encode_as_string(s, altchars, wrapcol).encode("ascii")
+    return pybase64.b64encode_as_string(s, altchars, wrapcol=wrapcol).encode("ascii")
 
 
 def b64decode_as_bytearray(
@@ -584,7 +584,7 @@ def test_enc_wrapcol(efn: Encode, altchars_id: int, vector_id: int, wrapcol: int
     utils.unused_args(simd)
     vector = test_vectors_bin[altchars_id][vector_id]
     altchars = altchars_lut[altchars_id]
-    test = efn(vector, altchars, wrapcol)
+    test = efn(vector, altchars, wrapcol=wrapcol)
     base = _ref_b64encode_wrapcol(vector, altchars, wrapcol)
     assert test == base
 

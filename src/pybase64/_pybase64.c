@@ -525,7 +525,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     }
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|On", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &wrapcol)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O$n", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &wrapcol)) {
         return NULL;
     }
 
