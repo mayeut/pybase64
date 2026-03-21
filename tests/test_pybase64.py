@@ -469,17 +469,15 @@ def test_warning_data_dec(
     # that has_bad_char is accumulated (not overwritten) across chunks so that a
     # '+' or '/' in the first chunk is not silently lost when later chunks are clean.
     src_slice = 16 * 1024
-    large_vector = "+" + "A" * (src_slice - 1) + "AAAA"
-    vector_ = "+/ABCDEFGHIJKLMN"
-    for vector in [vector_, vector_[:4], large_vector]:
+    vector_ = "+/" + "A" * (src_slice - 2) + "AAAA"
+    for vector in [vector_, vector_[:4]]:
         with pytest.warns(exception, match=match):
             dfn(vector, b"-_", validate=validate)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             with pytest.raises(exception, match=match):
                 dfn(vector, b"-_", validate=validate)
-            if vector is not large_vector:
-                dfn(vector, b"/+", validate=validate)
+            dfn(vector, b"/+", validate=validate)
 
 
 params_invalid_data_enc_values = [
