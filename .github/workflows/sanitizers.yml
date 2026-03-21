@@ -3,6 +3,7 @@ name: Sanitizers
 on:
   push:
     branches-ignore:
+      - "copilot/**"
       - "dependabot/**"
       - "pre-commit-ci-update-config"
   pull_request:

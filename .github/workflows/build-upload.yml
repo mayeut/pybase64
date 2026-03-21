@@ -5,6 +5,7 @@ on:
     tags:
       - '**'
     branches-ignore:
+      - "copilot/**"
       - "dependabot/**"
       - "pre-commit-ci-update-config"
   pull_request:
