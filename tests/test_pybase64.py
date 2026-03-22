@@ -52,10 +52,9 @@ class AltCharsId(IntEnum):
     ALT1 = 2
     ALT2 = 3
     ALT3 = 4
-    ALT4 = 5
 
 
-altchars_lut = [b"+/", b"-_", b"@&", b"+,", b";/", b"/+"]
+altchars_lut = [b"+/", b"-_", b",+", b"/;", b"/+"]
 enc_helper_lut: list[Callable[[Buffer], bytes]] = [
     pybase64.standard_b64encode,
     pybase64.urlsafe_b64encode,
@@ -580,17 +579,10 @@ else:
         )
 
 
-param_wrapcol_values = pytest.mark.parametrize(
-    "wrapcol",
-    [0, 4, 5, 76, 77, 100],
-    ids=["0", "4", "5", "76", "77", "100"],
-)
-
-
 @utils.param_simd
 @param_vector
-@param_altchars
-@param_wrapcol_values
+@param_altchars_helper
+@pytest.mark.parametrize("wrapcol", [0, 1, 76, 77, 78, 79, 80])
 @param_encode_functions
 def test_enc_wrapcol(
     efn: Encode,

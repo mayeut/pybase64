@@ -476,7 +476,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         if (alphabet) {
             while (out_len > dst_slice) {
                 base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
-                translate_inplace(dst, dst_slice, alphabet);
+                translate_inplace(dst, dst_len, alphabet);
                 dst[dst_len] = '\n';
 
                 len -= src_slice;
