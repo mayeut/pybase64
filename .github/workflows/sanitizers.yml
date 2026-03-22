@@ -98,7 +98,7 @@ jobs:
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
-          CFLAGS="-O0" CIBUILDWHEEL=1 python-pb64 -m pip install -e .
+          CFLAGS="-O0 -g" CIBUILDWHEEL=1 python-pb64 -m pip install -e .
           PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(which python-pb64) -m pytest
 
   check_sanitizers:

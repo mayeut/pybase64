@@ -14,7 +14,14 @@ import pybase64
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from pybase64._typing import Decode, Encode, EncodeBytes
+    from pybase64._typing import Buffer, Decode, Encode, EncodeBytes
+
+if sys.version_info < (3, 15):
+
+    def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:  # noqa: ARG001
+        return base64.b64encode(s, altchars)
+else:
+    _b64encode = base64.b64encode
 
 
 def bench_one(
@@ -128,7 +135,7 @@ def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
             bench_one(
                 duration,
                 data,
-                base64.b64encode,
+                _b64encode,
                 b64decode_validate,
                 b64encodebytes,
                 altchars,
