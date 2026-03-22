@@ -133,6 +133,7 @@ Future
 - Reject non-ASCII strings in ``b64decode`` when ``validate=False``
 - Drop python 3.8 support
 - Stop publishing python 3.13t wheels
+- Add ``ignorechars`` parameter to ``b64decode``
 
 1.4.3
 -----

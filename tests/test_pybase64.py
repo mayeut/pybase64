@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import base64
+import re
 import sys
 import warnings
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
 import pybase64
+from pybase64._unspecified import _Unspecified
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,6 +20,8 @@ if TYPE_CHECKING:
     from pybase64._typing import Buffer, Decode, Encode
 
 from . import utils
+
+IGNORECHARS_EQUAL_SUPPORTED = utils.has_extension or sys.version_info >= (3, 15)
 
 
 def b64encode_as_string(
@@ -34,10 +38,17 @@ def b64encode_as_string(
 def b64decode_as_bytearray(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
 ) -> bytes:
     """Helper returning bytes instead of bytearray for tests"""
-    return bytes(pybase64.b64decode_as_bytearray(s, altchars, validate))
+    kwargs: dict[str, Any] = {}
+    if not isinstance(validate, _Unspecified):
+        kwargs["validate"] = validate
+    if not isinstance(ignorechars, _Unspecified):
+        kwargs["ignorechars"] = ignorechars
+    return bytes(pybase64.b64decode_as_bytearray(s, altchars, **kwargs))
 
 
 param_encode_functions = pytest.mark.parametrize("efn", [pybase64.b64encode, b64encode_as_string])
@@ -380,6 +391,9 @@ params_invalid_data_novalidate_values = [
     ["a\x80aa", None, ValueError, "ASCII|Non-base64 digit found"],
     [b"a\x80aa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
     ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
+    [b"ab", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
+    [b"abc", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
+    [b"ab=", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
@@ -466,6 +480,22 @@ def test_invalid_data_dec_validate(
     utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
     with pytest.raises(exception, match=match):
         dfn(vector, altchars, validate=True)
+
+
+@utils.param_simd
+@params_invalid_data_all
+@param_decode_functions
+def test_invalid_data_dec_ignorechars_empty(
+    dfn: Decode,
+    vector: Any,
+    altchars: Buffer | None,
+    exception: type[BaseException],
+    match: str | None,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    with pytest.raises(exception, match=match):
+        dfn(vector, altchars, ignorechars=b"")
 
 
 @utils.param_simd
@@ -665,3 +695,155 @@ def test_b64encode_padded(efn: Encode, vector: bytes, expected: bytes, simd: int
 def test_urlsafe_b64encode_padded(vector: bytes, expected: bytes, simd: int) -> None:
     utils.unused_args(simd)
     assert pybase64.urlsafe_b64encode(vector, padded=False) == expected
+
+
+@utils.param_simd
+def test_ignorechars_altchars_limit(simd: int) -> None:
+    utils.unused_args(simd)
+    assert pybase64.b64decode(b"/----", altchars=b"-+", ignorechars=b"/") == b"\xfb\xef\xbe"
+    assert pybase64.b64decode(b"/----", altchars=b"+-", ignorechars=b"/") == b"\xff\xff\xff"
+    assert pybase64.b64decode(b"+----", altchars=b"-/", ignorechars=b"+") == b"\xfb\xef\xbe"
+    assert pybase64.b64decode(b"+----", altchars=b"/-", ignorechars=b"+") == b"\xff\xff\xff"
+    assert pybase64.b64decode(b"+/+/", altchars=b"/+", ignorechars=b"") == b"\xff\xef\xfe"
+    assert pybase64.b64decode(b"/+/+", altchars=b"+/", ignorechars=b"") == b"\xff\xef\xfe"
+
+
+@utils.param_simd
+def test_ignorechars_invalid(simd: int) -> None:
+    utils.unused_args(simd)
+    with pytest.raises(TypeError):
+        pybase64.b64decode(b"", ignorechars="")  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        pybase64.b64decode(b"", ignorechars=[])  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        pybase64.b64decode(b"", ignorechars=None)  # type: ignore[arg-type]
+    msg = re.escape("validate must be True or unspecified when ignorechars is specified")
+    with pytest.raises(ValueError, match=msg):
+        pybase64.b64decode(b"", validate=False, ignorechars=b"")
+    with pytest.raises(ValueError, match="ASCII"):
+        pybase64.b64decode("YW\x80Jj", ignorechars=b"\x80")
+
+
+@param_decode_functions
+@utils.param_simd
+def test_ignorechars(dfn: Decode, simd: int) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    assert dfn(b"YW\nJj", ignorechars=b"\n") == b"abc"
+    assert dfn(b"YW\nJj", ignorechars=bytearray(b"\n")) == b"abc"
+    assert dfn(b"YW\nJj", ignorechars=memoryview(b"\n")) == b"abc"
+    assert dfn(b"{YWJj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"Y}WJj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"YW{Jj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"YWJ}j", ignorechars=b"{}") == b"abc"
+    # base64 alphabet ignored in ignorechars
+    assert dfn(b"YWJj", ignorechars=b"Y") == b"abc"
+    assert dfn(b"YW{Jj", ignorechars=b"Y{") == b"abc"
+    # non ASCII
+    assert dfn(b"YW\x80Jj", ignorechars=b"\x80") == b"abc"
+
+
+@pytest.mark.parametrize(
+    ("data", "ignorechars", "no_validation_expected_result", "ignorechars_expected_result"),
+    [
+        # excess padding
+        (b"ab===", b"=", b"i", None),
+        (b"ab====", b"=", b"i", None),
+        (b"abc==", b"=", b"i\xb7", None),
+        (b"abc===", b"=", b"i\xb7", None),
+        (b"abc====", b"=", b"i\xb7", None),
+        (b"abc=====", b"=", b"i\xb7", None),
+        (b"abcd=", b"=", b"i\xb7\x1d", None),
+        (b"abcd==", b"=", b"i\xb7\x1d", None),
+        (b"abcd===", b"=", b"i\xb7\x1d", None),
+        (b"abcd====", b"=", b"i\xb7\x1d", None),
+        (b"abcd=====", b"=", b"i\xb7\x1d", None),
+        (b"abcd=efgh", b"=", b"i\xb7\x1dy\xf8!", None),
+        (b"abcd==efgh", b"=", b"i\xb7\x1dy\xf8!", None),
+        (b"abcd===efgh", b"=", b"i\xb7\x1dy\xf8!", None),
+        (b"abcd====efgh", b"=", b"i\xb7\x1dy\xf8!", None),
+        (b"abcd=====efgh", b"=", b"i\xb7\x1dy\xf8!", None),
+        (b"YWJj=", b"=", b"abc", None),
+        # leading padding
+        (b"=", b"=", b"", None),
+        (b"==", b"=", b"", None),
+        (b"===", b"=", b"", None),
+        (b"====", b"=", b"", None),
+        (b"=====", b"=", b"", None),
+        (b"=abcd", b"=", b"i\xb7\x1d", None),
+        (b"==abcd", b"=", b"i\xb7\x1d", None),
+        (b"===abcd", b"=", b"i\xb7\x1d", None),
+        (b"====abcd", b"=", b"i\xb7\x1d", None),
+        (b"=====abcd", b"=", b"i\xb7\x1d", None),
+        (b"[==", b"[=", b"", None),
+        (b"=YWJj", b"=", b"abc", None),
+        # invalid length
+        (b"a=b==", b"=", b"i", None),
+        (b"a=bc=", b"=", b"i\xb7", None),
+        (b"a=bc==", b"=", b"i\xb7", None),
+        (b"a=bcd", b"=", b"i\xb7\x1d", None),
+        (b"a=bcd=", b"=", b"i\xb7\x1d", None),
+        # discontinuous padding
+        (b"ab=c=", b"=", b"i\xb7", None),
+        (b"ab=cd", b"=", b"i\xb7\x1d", None),
+        (b"ab=cd==", b"=", b"i\xb7\x1d", None),
+        (b"Y=WJj", b"=", b"abc", None),
+        (b"Y==WJj", b"=", b"abc", None),
+        (b"YW=Jj", b"=", b"abc", None),
+        # excess data
+        (b"ab==c", b"=", b"i", BinAsciiError),
+        (b"ab==cd", b"=", b"i", b"i\xb7\x1d"),
+        (b"abc=d", b"=", b"i\xb7", b"i\xb7\x1d"),
+        # invalid data
+        (b"ab:(){:|:&};:==", b":;(){}|&", b"i", None),
+        (b"\nab==", b"\n", b"i", None),
+        (b"ab==\n", b"\n", b"i", None),
+        (b"a\nb==", b"\n", b"i", None),
+        (b"a\x00b==", b"\x00", b"i", None),
+        (b"a\x00b==", b"@\x00", b"i", None),
+        (b"\x00ab==", b"@\x00", b"i", None),
+        (b"ab:==", b":", b"i", None),
+        (b"ab=:=", b":", b"i", None),
+        (b"ab==:", b":", b"i", None),
+        (b"abc=:", b":", b"i\xb7", None),
+        (b"@ab==", b":", b"i", BinAsciiError),
+        (b"ab@==", b":", b"i", BinAsciiError),
+        (b"ab=@=", b":", b"i", BinAsciiError),
+        (b"abc@=", b":", b"i\xb7", BinAsciiError),
+    ],
+)
+@utils.param_simd
+def test_base64_dec_invalid_partial(
+    data: bytes,
+    ignorechars: bytes,
+    no_validation_expected_result: bytes,
+    ignorechars_expected_result: bytes | type | None,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)
+    if ignorechars_expected_result is None:
+        ignorechars_expected_result = no_validation_expected_result
+    with pytest.raises(BinAsciiError):
+        pybase64.b64decode(data, validate=True)
+    with pytest.raises(BinAsciiError):
+        pybase64.b64decode(data, validate=True, ignorechars=b"")
+    ignorechars_no_equal = bytes(set(ignorechars) - set(b"="))
+    ignorechars_has_equal = len(ignorechars_no_equal) != len(ignorechars)
+    if ignorechars_has_equal:
+        with pytest.raises(BinAsciiError):
+            pybase64.b64decode(data, ignorechars=ignorechars_no_equal)
+        if ignorechars_no_equal == b"":
+            with pytest.raises(BinAsciiError):
+                pybase64.b64decode(data, ignorechars=b"@")
+    if isinstance(ignorechars_expected_result, type) and (
+        IGNORECHARS_EQUAL_SUPPORTED or not ignorechars_has_equal
+    ):
+        assert ignorechars_expected_result is BinAsciiError
+        with pytest.raises(BinAsciiError):
+            pybase64.b64decode(data, ignorechars=ignorechars)
+    elif IGNORECHARS_EQUAL_SUPPORTED or not ignorechars_has_equal:
+        assert pybase64.b64decode(data, ignorechars=ignorechars) == ignorechars_expected_result
+    else:
+        with pytest.raises(ValueError, match=r"'=' not supported in ignorechars"):
+            pybase64.b64decode(data, ignorechars=ignorechars)
+    assert pybase64.b64decode(data, validate=False) == no_validation_expected_result
+    assert pybase64.b64decode(data) == no_validation_expected_result
