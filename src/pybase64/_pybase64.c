@@ -38,7 +38,7 @@ typedef struct pybase64_state {
 #endif
 
 /* returns 0 on success */
-static int get_buffer(PyObject* object, Py_buffer* buffer)
+static int get_buffer(PyObject* object, Py_buffer* buffer, int bytes_like)
 {
     if (PyObject_GetBuffer(object, buffer, PyBUF_RECORDS_RO | PyBUF_C_CONTIGUOUS) != 0) {
         return -1;
@@ -51,6 +51,18 @@ static int get_buffer(PyObject* object, Py_buffer* buffer)
         return -1;
     }
 #endif
+    if (bytes_like) {
+        if (((buffer->format[0] != 'c') && (buffer->format[0] != 'b') && (buffer->format[0] != 'B')) || buffer->format[1] != '\0' ) {
+            PyBuffer_Release(buffer);
+            PyErr_Format(PyExc_TypeError, "expected single byte elements, not '%s' from %R", buffer->format, Py_TYPE(object));
+            return -1;
+        }
+        if (buffer->ndim != 1) {
+            PyBuffer_Release(buffer);
+            PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer->ndim, Py_TYPE(object));
+            return -1;
+        }
+    }
     return 0;
 }
 
@@ -80,7 +92,7 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
         Py_INCREF(alphabetObject);
     }
 
-    if (get_buffer(alphabetObject, &buffer) != 0) {
+    if (get_buffer(alphabetObject, &buffer, 1) != 0) {
         Py_DECREF(alphabetObject);
         return -1;
     }
@@ -138,14 +150,14 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
         const uint8x16_t c1_ = vdupq_n_u8(c1);
 
         for (; i < (len & ~(size_t)15U); i += 16) {
-            uint8x16_t srcDst = vld1q_u8(pSrcDst + i);
+            uint8x16_t srcDst = vld1q_u8((uint8_t const*)pSrcDst + i);
             uint8x16_t m0     = vceqq_u8(srcDst, plus);
             uint8x16_t m1     = vceqq_u8(srcDst, slash);
 
             srcDst = vbslq_u8(m0, c0_, srcDst);
             srcDst = vbslq_u8(m1, c1_, srcDst);
 
-            vst1q_u8(pSrcDst + i, srcDst);
+            vst1q_u8((uint8_t*)pSrcDst + i, srcDst);
         }
     }
 #endif
@@ -163,6 +175,97 @@ static void translate_inplace(char* pSrcDst, size_t len, const char* alphabet)
 }
 
 static void translate(const char* pSrc, char* pDst, size_t len, const char* alphabet, int* has_bad_char)
+{
+    size_t i = 0U;
+    const char c0 = alphabet[0];
+    const char c1 = alphabet[1];
+    const char replace_plus = ((c0 != '/') && (c0 != '+')) ? c0 : c1;
+    const char replace_slash = ((c1 != '/') && (c1 != '+')) ? c1 : c0;
+
+    (void)has_bad_char;
+
+#if 0 // def __SSE2__
+    if (len >= 16U) {
+        const __m128i plus  = _mm_set1_epi8('+');
+        const __m128i slash = _mm_set1_epi8('/');
+        const __m128i c0_ = _mm_set1_epi8(c0);
+        const __m128i c1_ = _mm_set1_epi8(c1);
+        __m128i input_has_plus_ = _mm_setzero_si128();
+        __m128i input_has_slash_ = _mm_setzero_si128();
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            __m128i srcDst = _mm_loadu_si128((const __m128i*)(pSrc + i));
+            __m128i m0     = _mm_cmpeq_epi8(srcDst, c0_);
+            __m128i m1     = _mm_cmpeq_epi8(srcDst, c1_);
+
+            input_has_plus_ = _mm_or_si128(input_has_plus_, _mm_cmpeq_epi8(srcDst, plus));
+            input_has_slash_ = _mm_or_si128(input_has_slash_, _mm_cmpeq_epi8(srcDst, slash));
+
+            srcDst = _mm_or_si128(_mm_andnot_si128(m0, srcDst), _mm_and_si128(m0, plus));
+            srcDst = _mm_or_si128(_mm_andnot_si128(m1, srcDst), _mm_and_si128(m1, slash));
+
+            _mm_storeu_si128((__m128i*)(pDst + i), srcDst);
+        }
+
+        if (_mm_movemask_epi8(input_has_plus_)) {
+            input_has_plus = (c0 != '+') && (c1 != '+');
+        }
+        if (_mm_movemask_epi8(input_has_slash_)) {
+            input_has_slash = (c0 != '/') && (c1 != '/');
+        }
+    }
+#elif BASE64_WITH_NEON64
+    if (len >= 16U) {
+        const uint8x16_t plus  = vdupq_n_u8('+');
+        const uint8x16_t slash = vdupq_n_u8('/');
+        const uint8x16_t c0_ = vdupq_n_u8(c0);
+        const uint8x16_t c1_ = vdupq_n_u8(c1);
+        const char replace_plus__ = ((c0 == '+') || (c1 == '+')) ? '+' : replace_plus;
+        const uint8x16_t replace_plus_ = vdupq_n_u8(replace_plus__);
+        const char replace_slash__ = ((c0 == '/') || (c1 == '/')) ? '/' : replace_slash;
+        const uint8x16_t replace_slash_ = vdupq_n_u8(replace_slash__);
+
+        for (; i < (len & ~(size_t)15U); i += 16) {
+            uint8x16_t srcDst = vld1q_u8((const uint8_t*)pSrc + i);
+            uint8x16_t m0     = vceqq_u8(srcDst, plus);
+            uint8x16_t m1     = vceqq_u8(srcDst, slash);
+            uint8x16_t m2     = vceqq_u8(srcDst, c0_);
+            uint8x16_t m3     = vceqq_u8(srcDst, c1_);
+
+            srcDst = vbslq_u8(m0, replace_plus_, srcDst);
+            srcDst = vbslq_u8(m1, replace_slash_, srcDst);
+            srcDst = vbslq_u8(m2, plus, srcDst);
+            srcDst = vbslq_u8(m3, slash, srcDst);
+
+            vst1q_u8((uint8_t*)pDst + i, srcDst);
+        }
+    }
+#endif
+
+    for (; i < len; ++i) {
+        const char cs = pSrc[i];
+        char cd;
+
+        if (cs == c0) {
+            cd = '+';
+        }
+        else if (cs == c1) {
+            cd = '/';
+        }
+        else if (cs == '+') {
+            cd = replace_plus;
+        }
+        else if (cs == '/') {
+            cd = replace_slash;
+        }
+        else {
+            cd = cs;
+        }
+        pDst[i] = cd;
+    }
+}
+
+static void translate_deprecated(const char* pSrc, char* pDst, size_t len, const char* alphabet, int* has_bad_char)
 {
     size_t i = 0U;
     const char c0 = alphabet[0];
@@ -210,7 +313,7 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         uint8x16_t input_has_slash_ = vdupq_n_u8(0);
 
         for (; i < (len & ~(size_t)15U); i += 16) {
-            uint8x16_t srcDst = vld1q_u8(pSrc + i);
+            uint8x16_t srcDst = vld1q_u8((uint8_t const*)pSrc + i);
             uint8x16_t m0     = vceqq_u8(srcDst, c0_);
             uint8x16_t m1     = vceqq_u8(srcDst, c1_);
 
@@ -220,7 +323,7 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
             srcDst = vbslq_u8(m0, plus, srcDst);
             srcDst = vbslq_u8(m1, slash, srcDst);
 
-            vst1q_u8(pDst + i, srcDst);
+            vst1q_u8((uint8_t*)pDst + i, srcDst);
         }
 
         if (vmaxvq_u32(vreinterpretq_u32_u8(input_has_plus_))) {
@@ -244,11 +347,11 @@ static void translate(const char* pSrc, char* pDst, size_t len, const char* alph
         }
         else if (cs == '+') {
             input_has_plus = 1;
-            cd = cs; /* cd = c0;  TODO, python does not do this, add option */
+            cd = cs;
         }
         else if (cs == '/') {
             input_has_slash = 1;
-            cd = cs; /* cd = c1; TODO, python does not do this, add option */
+            cd = cs;
         }
         else {
             cd = cs;
@@ -272,10 +375,25 @@ static int next_valid_padding(const uint8_t *src, size_t srclen)
     return ret;
 }
 
-static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, size_t*outlen)
+static int check_ignore(uint8_t c, Py_buffer const* ignorechars, uint32_t* ignorecache)
+{
+    if (ignorecache[c >> 5] & (1U << (c & 31U))) {
+        return 1;
+    }
+    if ((ignorechars->buf == NULL) || memchr(ignorechars->buf, c, ignorechars->len)) {
+        ignorecache[c >> 5] |= 1U << (c & 31U);
+        return 1;
+    }
+    return 0;
+}
+
+static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t* out, size_t* outlen, Py_buffer const* ignorechars)
 {
     uint8_t* out_start = out;
     uint8_t carry;
+    uint32_t ignorecache[8];
+
+    memset(ignorecache, 0, sizeof(ignorecache));
 
     while (srclen > 0U)
     {
@@ -322,7 +440,10 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             uint8_t c = *src++; srclen--;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
-                continue;
+                if (check_ignore(c, ignorechars, ignorecache)) {
+                    continue;
+                }
+                return 1;
             }
             carry = q << 2;
         }
@@ -335,7 +456,10 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             uint8_t c = *src++;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
-                continue;
+                if (check_ignore(c, ignorechars, ignorecache)) {
+                    continue;
+                }
+                return 1;
             }
             *out++ = carry | (q >> 4);
             carry = q << 4;
@@ -356,7 +480,10 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
                         goto END;
                     }
                 }
-                continue;
+                if (check_ignore(c, ignorechars, ignorecache)) {
+                    continue;
+                }
+                return 1;
             }
             *out++ = carry | (q >> 2);
             carry = q << 6;
@@ -375,7 +502,10 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
                     srclen = 0U;
                     break;
                 }
-                continue;
+                if (check_ignore(c, ignorechars, ignorecache)) {
+                    continue;
+                }
+                return 1;
             }
             *out++ = carry | q;
             break;
@@ -466,8 +596,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     }
 
     if (wrapcol) {
-        const size_t dst_len = (size_t)wrapcol;
-        const size_t dst_slice = dst_len + 1U;
+        const size_t dst_slice = (size_t)wrapcol + 1U;
         const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
         Py_ssize_t len = buffer->len;
         const char* src = (const char*)buffer->buf;
@@ -475,6 +604,8 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
 
         if (alphabet) {
             while (out_len > dst_slice) {
+                size_t dst_len = (size_t)wrapcol;
+
                 base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
                 translate_inplace(dst, dst_len, alphabet);
                 dst[dst_len] = '\n';
@@ -491,6 +622,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         }
         else {
             while (out_len > dst_slice) {
+                size_t dst_len = (size_t)wrapcol;
                 base64_encode(src, src_slice, dst, &dst_len, libbase64_simd_flag);
                 dst[dst_len] = '\n';
 
@@ -569,7 +701,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    if (get_buffer(in_object, &buffer) != 0) {
+    if (get_buffer(in_object, &buffer, 0) != 0) {
         return NULL;
     }
 
@@ -590,18 +722,72 @@ static PyObject* pybase64_encode_as_string(PyObject* self, PyObject* args, PyObj
     return pybase64_encode_impl(self, args, kwds, PYBASE64_FLAGS_ENCODE_AS_STRING);
 }
 
+static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, char const* alphabet)
+{
+    if (get_buffer(object, buffer, 1) != 0) {
+        return NULL;
+    }
+    if ((buffer->len == 0) || (alphabet == NULL)) {
+        Py_INCREF(object);
+        return object;
+    }
+
+    PyObject* result = NULL;
+    PyObject* tmp_result = NULL;
+    void* translate_dst;
+    Py_buffer in_buffer = *buffer;
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter* writer = PyBytesWriter_Create(in_buffer.len);
+    if (writer == NULL) {
+        goto END;
+    }
+    translate_dst = PyBytesWriter_GetData(writer);
+#else
+    tmp_result = PyBytes_FromStringAndSize(NULL, in_buffer.len);
+    if (tmp_result == NULL) {
+        goto END;
+    }
+    translate_dst = PyBytes_AS_STRING(tmp_result);
+#endif
+
+    translate(in_buffer.buf, translate_dst, in_buffer.len, alphabet, NULL);
+
+#if PY_VERSION_HEX >= 0x030f0000
+    tmp_result = PyBytesWriter_Finish(writer);
+    writer = NULL;
+    if (tmp_result == NULL) {
+        goto END;
+    }
+#endif
+    if (get_buffer(tmp_result, buffer, 0) != 0) {
+       goto END;
+    }
+    result = tmp_result;
+    tmp_result = NULL;
+END:
+    Py_XDECREF(tmp_result);
+#if PY_VERSION_HEX >= 0x030f0000
+    PyBytesWriter_Discard(writer);
+#endif
+    PyBuffer_Release(&in_buffer);
+    return result;
+}
+
 static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_bytearray)
 {
-    static const char *kwlist[] = { "", "altchars", "validate", NULL };
+    static const char *kwlist[] = { "", "altchars", "validate", "ignorechars", NULL };
 
     int use_alphabet = 0;
     int has_bad_char = 0;
     char alphabet[2];
-    char validation = 0;
+    int validation;
     Py_buffer buffer;
+    Py_buffer ignorechars_buffer;
     size_t out_len;
     PyObject* in_alphabet = NULL;
     PyObject* in_object;
+    PyObject* validation_object = NULL;
+    PyObject* ignorechars_object = NULL;
     PyObject* out_object = NULL;
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer = NULL;
@@ -610,13 +796,28 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     Py_ssize_t source_len;
     int source_use_buffer = 0;
     void* dest;
+    void (*translate_fn)(const char*, char*, size_t, const char*, int*) = &translate_deprecated;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) {
         return NULL;
     }
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Ob", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$O", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &ignorechars_object)) {
         return NULL;
+    }
+
+    if (validation_object == NULL) {
+        validation = (ignorechars_object != NULL);
+    }
+    else {
+        validation = PyObject_IsTrue(validation_object);
+        if (validation < 0) {
+            return NULL;
+        }
+        if ((ignorechars_object != NULL) && !validation ) {
+            PyErr_SetString(PyExc_ValueError, "validate must be True or unspecified when ignorechars is specified");
+            return NULL;
+        }
     }
 
     if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
@@ -642,7 +843,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_INCREF(in_object);
     }
     if (source == NULL) {
-        if (get_buffer(in_object, &buffer) != 0) {
+        if (get_buffer(in_object, &buffer, 0) != 0) {
             Py_DECREF(in_object);
             return NULL;
         }
@@ -651,7 +852,25 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         source_use_buffer = 1;
     }
 
+    memset(&ignorechars_buffer, 0, sizeof(ignorechars_buffer));
 /* TRY: */
+    if (ignorechars_object != NULL) {
+        ignorechars_object = get_ignorechars_buffer(ignorechars_object, &ignorechars_buffer, use_alphabet ? alphabet : NULL);
+        if (ignorechars_object == NULL) {
+            goto EXCEPT;
+        }
+        if (ignorechars_buffer.len == 0) {
+            PyBuffer_Release(&ignorechars_buffer);
+            Py_DECREF(ignorechars_object);
+            ignorechars_object = NULL;
+            validation = 1;
+        }
+        else {
+            validation = 0;
+        }
+        translate_fn = &translate;
+    }
+
     if (!validation && use_alphabet) {
         PyObject* translate_object;
         char* translate_dst;
@@ -673,7 +892,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        translate(source, translate_dst, source_len, alphabet, &has_bad_char);
+        translate_fn(source, translate_dst, source_len, alphabet, &has_bad_char);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
@@ -691,7 +910,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             Py_DECREF(in_object);
         }
         in_object = translate_object;
-        if (get_buffer(in_object, &buffer) != 0) {
+        if (get_buffer(in_object, &buffer, 0) != 0) {
             Py_DECREF(in_object);
             return NULL;
         }
@@ -733,7 +952,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        result = decode_novalidate(source, source_len, dest, &out_len);
+        result = decode_novalidate(source, source_len, dest, &out_len, &ignorechars_buffer);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
@@ -760,7 +979,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
-            translate(src, cache, src_slice, alphabet, &has_bad_char);
+            translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
             result = base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag);
             if (result <= 0) {
                 break;
@@ -772,7 +991,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             dst += dst_slice;
         }
         if (result > 0) {
-            translate(src, cache, len, alphabet, &has_bad_char);
+            translate_fn(src, cache, len, alphabet, &has_bad_char);
             result = base64_decode(cache, len, dst, &out_len, libbase64_simd_flag);
         }
 
@@ -820,6 +1039,10 @@ EXCEPT:
     Py_XDECREF(out_object);
     out_object = NULL;
 FINALLY:
+    if (ignorechars_object) {
+        PyBuffer_Release(&ignorechars_buffer);
+        Py_DECREF(ignorechars_object);
+    }
     if (source_use_buffer) {
         PyBuffer_Release(&buffer);
         Py_DECREF(in_object);
@@ -852,17 +1075,10 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
     Py_buffer buffer;
     PyObject* out_object;
 
-    if (get_buffer(in_object, &buffer) != 0) {
+    if (get_buffer(in_object, &buffer, 1) != 0) {
         return NULL;
     }
-    if (((buffer.format[0] != 'c') && (buffer.format[0] != 'b') && (buffer.format[0] != 'B')) || buffer.format[1] != '\0' ) {
-        PyBuffer_Release(&buffer);
-        return PyErr_Format(PyExc_TypeError, "expected single byte elements, not '%s' from %R", buffer.format, Py_TYPE(in_object));
-    }
-    if (buffer.ndim != 1) {
-        PyBuffer_Release(&buffer);
-        return PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer.ndim, Py_TYPE(in_object));
-    }
+
     out_object = pybase64_encode_impl_core(self, &buffer, NULL, 76, PYBASE64_FLAGS_APPEND_NEW_LINE);
 
     PyBuffer_Release(&buffer);

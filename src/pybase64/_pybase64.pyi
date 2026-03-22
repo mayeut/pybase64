@@ -1,4 +1,7 @@
+from typing import Literal
+
 from ._typing import Buffer
+from ._unspecified import _Unspecified
 
 def _get_simd_flags_compile() -> int: ...
 def _get_simd_flags_runtime() -> int: ...
@@ -8,12 +11,16 @@ def _set_simd_path(flags: int) -> None: ...
 def b64decode(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = ...,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = ...,
 ) -> bytes: ...
 def b64decode_as_bytearray(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = ...,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = ...,
 ) -> bytearray: ...
 def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes: ...
 def b64encode_as_string(

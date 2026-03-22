@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import sys
-from typing import Protocol
+from typing import Literal, Protocol
 
 if sys.version_info < (3, 12):
     from typing_extensions import Buffer
 else:
     from collections.abc import Buffer
+
+from ._unspecified import _Unspecified
 
 
 class Decode(Protocol):
@@ -17,7 +19,9 @@ class Decode(Protocol):
         self,
         s: str | Buffer,
         altchars: str | Buffer | None = None,
-        validate: bool = False,
+        validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+        *,
+        ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
     ) -> bytes: ...
 
 

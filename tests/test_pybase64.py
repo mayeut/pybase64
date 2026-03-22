@@ -6,11 +6,12 @@ import warnings
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
 import pybase64
+from pybase64._unspecified import _Unspecified
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,10 +34,17 @@ def b64encode_as_string(
 def b64decode_as_bytearray(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
 ) -> bytes:
     """Helper returning bytes instead of bytearray for tests"""
-    return bytes(pybase64.b64decode_as_bytearray(s, altchars, validate))
+    kwargs: dict[str, Any] = {}
+    if not isinstance(validate, _Unspecified):
+        kwargs["validate"] = validate
+    if not isinstance(ignorechars, _Unspecified):
+        kwargs["ignorechars"] = ignorechars
+    return bytes(pybase64.b64decode_as_bytearray(s, altchars, **kwargs))
 
 
 param_encode_functions = pytest.mark.parametrize("efn", [pybase64.b64encode, b64encode_as_string])
@@ -457,6 +465,21 @@ def test_invalid_data_dec_validate(
 
 
 @utils.param_simd
+@params_invalid_data_all
+@param_decode_functions
+def test_invalid_data_dec_ignorechars_empty(
+    dfn: Decode,
+    vector: Any,
+    altchars: Buffer | None,
+    exception: type[BaseException],
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    with pytest.raises(exception):
+        dfn(vector, altchars, ignorechars=b"")
+
+
+@utils.param_simd
 @param_validate
 @param_decode_functions
 def test_warning_data_dec(
@@ -632,3 +655,47 @@ def test_enc_wrapcol_limit(simd: int) -> None:
     encoded = pybase64.b64encode(vector, wrapcol=76)
     assert len(encoded) == 76
     assert (encoded + b"\n") == pybase64.encodebytes(vector)
+
+
+@utils.param_simd
+def test_ignorechars_altchars_limit(simd: int) -> None:
+    utils.unused_args(simd)
+    assert pybase64.b64decode(b"/----", altchars=b"-+", ignorechars=b"/") == b"\xfb\xef\xbe"
+    assert pybase64.b64decode(b"/----", altchars=b"+-", ignorechars=b"/") == b"\xff\xff\xff"
+    assert pybase64.b64decode(b"+----", altchars=b"-/", ignorechars=b"+") == b"\xfb\xef\xbe"
+    assert pybase64.b64decode(b"+----", altchars=b"/-", ignorechars=b"+") == b"\xff\xff\xff"
+    assert pybase64.b64decode(b"+/+/", altchars=b"/+", ignorechars=b"") == b"\xff\xef\xfe"
+    assert pybase64.b64decode(b"/+/+", altchars=b"+/", ignorechars=b"") == b"\xff\xef\xfe"
+
+
+@pytest.mark.parametrize("ignorechars", ["", [], None])
+@utils.param_simd
+def test_ignorechars_bad_type(simd: int, ignorechars: Any) -> None:
+    utils.unused_args(simd)
+    with pytest.raises(TypeError):
+        pybase64.b64decode(b"", ignorechars=ignorechars)
+
+
+@param_decode_functions
+@utils.param_simd
+def test_ignorechars(dfn: Decode, simd: int) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    assert dfn(b"YW\nJj", ignorechars=b"\n") == b"abc"
+    assert dfn(b"YW\nJj", ignorechars=bytearray(b"\n")) == b"abc"
+    assert dfn(b"YW\nJj", ignorechars=memoryview(b"\n")) == b"abc"
+    assert dfn(b"{YWJj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"Y}WJj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"YW{Jj", ignorechars=b"{}") == b"abc"
+    assert dfn(b"YWJ}j", ignorechars=b"{}") == b"abc"
+
+
+@param_decode_functions
+@utils.param_simd
+def test_ignorechars_valid_data(dfn: Decode, simd: int) -> None:
+    utils.unused_args(simd)
+    assert dfn(b"[==", ignorechars=b"[=") == b""
+    assert dfn(b"=YWJj", ignorechars=b"=") == b"abc"
+    assert dfn(b"Y=WJj", ignorechars=b"=") == b"abc"
+    assert dfn(b"Y==WJj", ignorechars=b"=") == b"abc"
+    assert dfn(b"YW=Jj", ignorechars=b"=") == b"abc"
+    assert dfn(b"YWJj=", ignorechars=b"=") == b"abc"

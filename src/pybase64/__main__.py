@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import base64
 import sys
-from base64 import b64decode as b64decode_validate
-from base64 import encodebytes as b64encodebytes
 from pathlib import Path
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pybase64
+from pybase64._unspecified import _Unspecified
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -22,6 +21,19 @@ if sys.version_info < (3, 15):
         return base64.b64encode(s, altchars)
 else:
     _b64encode = base64.b64encode
+
+
+def _b64decode(
+    s: str | Buffer,
+    altchars: str | Buffer | None = None,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,  # noqa: ARG001
+) -> bytes:
+    kwargs: dict[str, Any] = {}
+    if not isinstance(validate, _Unspecified):
+        kwargs["validate"] = validate
+    return base64.b64decode(s, altchars, **kwargs)
 
 
 def bench_one(
@@ -136,8 +148,8 @@ def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
                 duration,
                 data,
                 _b64encode,
-                b64decode_validate,
-                b64encodebytes,
+                _b64decode,
+                base64.encodebytes,
                 altchars,
                 validate,
             )
