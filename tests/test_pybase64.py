@@ -20,9 +20,14 @@ if TYPE_CHECKING:
 from . import utils
 
 
-def b64encode_as_string(s: Buffer, altchars: str | Buffer | None = None) -> bytes:
+def b64encode_as_string(
+    s: Buffer,
+    altchars: str | Buffer | None = None,
+    *,
+    wrapcol: int = 0,
+) -> bytes:
     """Helper returning bytes instead of string for tests"""
-    return pybase64.b64encode_as_string(s, altchars).encode("ascii")
+    return pybase64.b64encode_as_string(s, altchars, wrapcol=wrapcol).encode("ascii")
 
 
 def b64decode_as_bytearray(
@@ -558,3 +563,80 @@ def test_dec_multi_dimensional(dfn: Decode) -> None:
     test = dfn(vector, None)
     base = base64.b64decode(source)
     assert test == base
+
+
+if sys.version_info >= (3, 15):
+    _ref_b64encode_wrapcol = base64.b64encode
+else:
+
+    def _ref_b64encode_wrapcol(s: bytes, altchars: bytes | None, *, wrapcol: int) -> bytes:
+        """Reference implementation of b64encode with wrapcol."""
+        encoded = base64.b64encode(s, altchars)
+        if wrapcol == 0 or not encoded:
+            return encoded
+        effective_wrapcol = (wrapcol // 4) * 4 or 4
+        return b"\n".join(
+            encoded[i : i + effective_wrapcol] for i in range(0, len(encoded), effective_wrapcol)
+        )
+
+
+param_wrapcol_values = pytest.mark.parametrize(
+    "wrapcol",
+    [0, 4, 5, 76, 77, 100],
+    ids=["0", "4", "5", "76", "77", "100"],
+)
+
+
+@utils.param_simd
+@param_vector
+@param_altchars
+@param_wrapcol_values
+@param_encode_functions
+def test_enc_wrapcol(
+    efn: Encode,
+    altchars_id: int,
+    vector_id: int,
+    wrapcol: int,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)
+    vector = test_vectors_bin[altchars_id][vector_id]
+    altchars = altchars_lut[altchars_id]
+    test = efn(vector, altchars, wrapcol=wrapcol)
+    base = _ref_b64encode_wrapcol(vector, altchars, wrapcol=wrapcol)
+    assert test == base
+
+
+@utils.param_simd
+@param_vector
+def test_enc_wrapcol_matches_encodebytes(vector_id: int, simd: int) -> None:
+    utils.unused_args(simd)
+    vector = test_vectors_bin[AltCharsId.STD][vector_id]
+    enc = pybase64.b64encode(vector, wrapcol=76)
+    assert pybase64.encodebytes(vector) == enc + (b"\n" if enc else b"")
+
+
+@utils.param_simd
+def test_enc_wrapcol_empty(simd: int) -> None:
+    utils.unused_args(simd)
+    assert pybase64.b64encode(b"", wrapcol=76) == b""
+    assert pybase64.b64encode_as_string(b"", wrapcol=76) == ""
+    assert pybase64.encodebytes(b"") == b""
+
+
+@utils.param_simd
+def test_enc_wrapcol_invalid(simd: int) -> None:
+    utils.unused_args(simd)
+    with pytest.raises(ValueError, match="wrapcol must be >= 0"):
+        pybase64.b64encode(b"test", wrapcol=-1)
+    with pytest.raises(ValueError, match="wrapcol must be >= 0"):
+        pybase64.b64encode_as_string(b"test", wrapcol=-1)
+
+
+@utils.param_simd
+def test_enc_wrapcol_limit(simd: int) -> None:
+    utils.unused_args(simd)
+    vector = b"A" * ((76 // 4) * 3)
+    encoded = pybase64.b64encode(vector, wrapcol=76)
+    assert len(encoded) == 76
+    assert (encoded + b"\n") == pybase64.encodebytes(vector)
