@@ -7,12 +7,13 @@ from base64 import b64decode as b64decode_validate
 from base64 import encodebytes as b64encodebytes
 from pathlib import Path
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Any
 
 import pybase64
 
+TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
     from pybase64._typing import Buffer, Decode, Encode, EncodeBytes
 
