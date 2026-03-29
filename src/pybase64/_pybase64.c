@@ -624,7 +624,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     }
 
     if (PyUnicode_Check(in_object)) {
-        if ((PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
+        if (validation && (PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
             source = PyUnicode_1BYTE_DATA(in_object);
             source_len = PyUnicode_GET_LENGTH(in_object);
         }
