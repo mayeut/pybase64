@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ._license import _license
 from ._version import _version
 
+TYPE_CHECKING = False
 if TYPE_CHECKING:
     from ._typing import Buffer
 
