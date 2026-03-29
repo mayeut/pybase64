@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from ._license import _license
-from ._version import _version
+__lazy_modules__ = ["pybase64._license"]
+
+from pybase64._license import _license
+from pybase64._version import _version
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
-    from ._typing import Buffer
+    from pybase64._typing import Buffer
 
 try:
-    from ._pybase64 import (
+    from pybase64._pybase64 import (
         _get_simd_flags_compile,  # noqa: F401
         _get_simd_flags_runtime,  # noqa: F401
         _get_simd_name,
@@ -21,7 +23,7 @@ try:
         encodebytes,
     )
 except ImportError:
-    from ._fallback import (
+    from pybase64._fallback import (
         _get_simd_name,
         _get_simd_path,
         b64decode,

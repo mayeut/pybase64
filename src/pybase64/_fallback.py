@@ -10,7 +10,7 @@ TYPE_CHECKING = False
 if TYPE_CHECKING:
     from typing import Final
 
-    from ._typing import Buffer
+    from pybase64._typing import Buffer
 
 _SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
 _ALTCHARS_WARNINGS: Final = sys.version_info[:2] < (3, 15)
