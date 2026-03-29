@@ -134,13 +134,14 @@ lint.ignore = [
   "PLR",    # Design related pylint codes
 ]
 lint.typing-modules = ["pybase64._typing"]
+lint.flake8-tidy-imports.ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
 "src/pybase64/__main__.py" = ["C901", "D", "T201"]
 "!src/**.py" = ["D"]
 "setup.py" = ["TRY400"]  # TODO
 "docs/**.py" = ["ANN", "DTZ011", "ERA001", "INP001", "PTH"]
-"tests/**.py" = ["ANN401", "PERF", "S101", "SLF001"]
+"tests/**.py" = ["ANN401", "PERF", "S101", "SLF001", "TID252"]
 "noxfile.py" = ["FIX002", "S101", "TD"]
 "tools/**.py" = ["C901", "S607", "T201"]
 

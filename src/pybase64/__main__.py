@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__lazy_modules__ = ["base64", "pathlib", "timeit"]
+
 import argparse
 import base64
 import sys
@@ -16,13 +18,6 @@ if TYPE_CHECKING:
     from typing import Any
 
     from pybase64._typing import Buffer, Decode, Encode, EncodeBytes
-
-if sys.version_info < (3, 15):
-
-    def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:  # noqa: ARG001
-        return base64.b64encode(s, altchars)
-else:
-    _b64encode = base64.b64encode
 
 
 def bench_one(
@@ -120,6 +115,13 @@ def writeall(file: str, data: bytes) -> None:
 
 def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     print(__package__ + " " + pybase64.get_version())
+    if sys.version_info < (3, 15):
+
+        def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:  # noqa: ARG001
+            return base64.b64encode(s, altchars)
+    else:
+        _b64encode = base64.b64encode
+
     data = readall(input)
     for altchars in [None, b"-_"]:
         for validate in [False, True]:
