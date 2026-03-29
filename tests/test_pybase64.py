@@ -393,6 +393,7 @@ params_invalid_data_novalidate_values = [
     [b"ab", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
     [b"abc", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
     [b"ab=", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
+    [b"ab==c", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Excess data after"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
@@ -768,9 +769,8 @@ def test_ignorechars(dfn: Decode, simd: int) -> None:
         (b"Y==WJj", b"=", b"abc", None),
         (b"YW=Jj", b"=", b"abc", None),
         # excess data
-        (b"ab==c", b"=", b"i", BinAsciiError),
-        (b"ab==cd", b"=", b"i", b"i\xb7\x1d"),
-        (b"abc=d", b"=", b"i\xb7", b"i\xb7\x1d"),
+        (b"ab==cd", b"=", b"i\xb7\x1d", None),
+        (b"abc=d", b"=", b"i\xb7\x1d", None),
         # invalid data
         (b"ab:(){:|:&};:==", b":;(){}|&", b"i", None),
         (b"\nab==", b"\n", b"i", None),

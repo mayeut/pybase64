@@ -102,29 +102,6 @@ def b64decode(  # noqa: C901
     has_bad_chars = False
     if altchars is not None:
         altchars = _validate_altchars(_get_bytes(altchars))
-    # move those 2 blocks after "if _PYTHON_3_15_API:" once python 3.15.0a8 is released
-    if ignorechars is not _UNSPECIFIED:
-        ignorechars = _get_bytes(ignorechars, allow_str=False)
-    if altchars is not None:
-        if ignorechars is _UNSPECIFIED and not _PYTHON_3_15_API:
-            for b in b"+/":
-                if b not in altchars and b in s:
-                    has_bad_chars = True
-                    break
-        elif ignorechars is not _UNSPECIFIED:
-            trans_in_add = set(b"+/") - set(altchars)
-            if len(trans_in_add) == 2:
-                # we don't want to use an unordered set for 2 elements
-                trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
-            else:
-                # 0 or 1 element in the set
-                trans = bytes.maketrans(
-                    altchars + bytes(trans_in_add),
-                    b"+/" + bytes(set(altchars) - set(b"+/")),
-                )
-            s = s.translate(trans)
-            ignorechars = ignorechars.translate(trans)
-            altchars = None
 
     if validate is _UNSPECIFIED:
         validate = ignorechars is not _UNSPECIFIED
@@ -138,6 +115,29 @@ def b64decode(  # noqa: C901
         if ignorechars is not _UNSPECIFIED:
             kwargs["ignorechars"] = ignorechars
         return builtin_decode(s, altchars, **kwargs)
+
+    if ignorechars is not _UNSPECIFIED:
+        ignorechars = _get_bytes(ignorechars, allow_str=False)
+    if altchars is not None:
+        if ignorechars is _UNSPECIFIED:
+            for b in b"+/":
+                if b not in altchars and b in s:
+                    has_bad_chars = True
+                    break
+        else:
+            trans_in_add = set(b"+/") - set(altchars)
+            if len(trans_in_add) == 2:
+                # we don't want to use an unordered set for 2 elements
+                trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
+            else:
+                # 0 or 1 element in the set
+                trans = bytes.maketrans(
+                    altchars + bytes(trans_in_add),
+                    b"+/" + bytes(set(altchars) - set(b"+/")),
+                )
+            s = s.translate(trans)
+            ignorechars = ignorechars.translate(trans)
+            altchars = None
 
     if ignorechars is not _UNSPECIFIED and ignorechars:
         # we need to filter s before calling builtin_decode this might be quite slow
