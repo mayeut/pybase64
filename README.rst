@@ -128,7 +128,8 @@ Future
 - Add SBOM to PyPI wheels
 - Add initial support for Python 3.15
 - Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
-- Add ``wrapcol`` parameter to b64encode
+- Add ``wrapcol`` parameter to ``b64encode``
+- Reject non-ASCII strings in ``b64decode`` when ``validate=False``
 
 1.4.3
 -----

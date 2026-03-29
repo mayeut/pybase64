@@ -24,6 +24,10 @@
 #define PYBASE64_FLAGS_ENCODE_AS_STRING (1U << 0)
 #define PYBASE64_FLAGS_APPEND_NEW_LINE  (1U << 1)
 
+#define PYBASE64_SUCCESS 0
+#define PYBASE64_INVALID_PADDING 1
+#define PYBASE64_NOT_ASCII 2
+
 typedef struct pybase64_state {
     PyObject *binAsciiError;
     uint32_t active_simd_flag;
@@ -322,6 +326,9 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
             uint8_t c = *src++; srclen--;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
+                if (c >= 128U) {
+                    return PYBASE64_NOT_ASCII;
+                }
                 continue;
             }
             carry = q << 2;
@@ -330,11 +337,14 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
         for(;;)
         {
             if (srclen-- == 0) {
-                return 1;
+                return PYBASE64_INVALID_PADDING;
             }
             uint8_t c = *src++;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
+                if (c >= 128U) {
+                    return PYBASE64_NOT_ASCII;
+                }
                 continue;
             }
             *out++ = carry | (q >> 4);
@@ -345,11 +355,14 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
         for(;;)
         {
             if (srclen-- == 0) {
-                return 1;
+                return PYBASE64_INVALID_PADDING;
             }
             uint8_t c = *src++;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
+                if (c >= 128U) {
+                    return PYBASE64_NOT_ASCII;
+                }
                 if (q == 254) {
                     /* if the next valid byte is '=' => end */
                     if (next_valid_padding(src, srclen) == 254) {
@@ -366,11 +379,14 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
         for(;;)
         {
             if (srclen-- == 0) {
-                return 1;
+                return PYBASE64_INVALID_PADDING;
             }
             uint8_t c = *src++;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
+                if (c >= 128U) {
+                    return PYBASE64_NOT_ASCII;
+                }
                 if (q == 254) {
                     srclen = 0U;
                     break;
@@ -383,7 +399,7 @@ static int decode_novalidate(const uint8_t *src, size_t srclen, uint8_t *out, si
     }
 END:
     *outlen = out - out_start;
-    return 0;
+    return PYBASE64_SUCCESS;
 }
 
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
@@ -739,7 +755,15 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_END_ALLOW_THREADS
 
         if (result != 0) {
-            PyErr_SetString(state->binAsciiError, "Incorrect padding");
+            switch (result)
+            {
+            case PYBASE64_INVALID_PADDING:
+                PyErr_SetString(state->binAsciiError, "Incorrect padding");
+                break;
+            case PYBASE64_NOT_ASCII:
+                PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
+                break;
+            }
             goto EXCEPT;
         }
     }

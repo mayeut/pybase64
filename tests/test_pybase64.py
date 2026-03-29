@@ -372,22 +372,31 @@ def test_invalid_altchars_dec_validate(
 
 
 params_invalid_data_novalidate_values = [
-    [b"A@@@@FG", None, BinAsciiError],
-    ["ABC€", None, ValueError],
-    [3.0, None, TypeError],
-    [memoryview(b"ABCDEFGH")[::2], None, BufferError],
+    [
+        b"A@@@@FG",
+        None,
+        BinAsciiError,
+        "Incorrect padding|Non-base64 digit found|Only base64 data is allowed",
+    ],
+    ["ABC€", None, ValueError, "ASCII"],
+    [3.0, None, TypeError, "bytes-like|buffer interface"],
+    [memoryview(b"ABCDEFGH")[::2], None, BufferError, "contiguous"],
+    ["\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["a\x80aa", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["aa\x80a", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["aaa\x80", None, ValueError, "ASCII|Non-base64 digit found"],
 ]
 params_invalid_data_validate_values = [
-    [b"\x00\x00\x00\x00", None, BinAsciiError],
-    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError],
-    [b"A@@@=FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError],
-    [b"A@@=@FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError],
-    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError],
-    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError],
-    [b"A@@@@FGH" * 10000, b"-_", BinAsciiError],
+    [b"\x00\x00\x00\x00", None, BinAsciiError, None],
+    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError, None],
+    [b"A@@@=FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError, None],
+    [b"A@@=@FGHIJKLMNOPQRSTUVWXYZabcdef", b"-_", BinAsciiError, None],
+    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError, None],
+    [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError, None],
+    [b"A@@@@FGH" * 10000, b"-_", BinAsciiError, None],
 ]
 params_invalid_data_all = pytest.mark.parametrize(
-    ("vector", "altchars", "exception"),
+    ("vector", "altchars", "exception", "match"),
     params_invalid_data_novalidate_values + params_invalid_data_validate_values,
     ids=[
         str(i)
@@ -397,12 +406,12 @@ params_invalid_data_all = pytest.mark.parametrize(
     ],
 )
 params_invalid_data_novalidate = pytest.mark.parametrize(
-    ("vector", "altchars", "exception"),
+    ("vector", "altchars", "exception", "match"),
     params_invalid_data_novalidate_values,
     ids=[str(i) for i in range(len(params_invalid_data_novalidate_values))],
 )
 params_invalid_data_validate = pytest.mark.parametrize(
-    ("vector", "altchars", "exception"),
+    ("vector", "altchars", "exception", "match"),
     params_invalid_data_validate_values,
     ids=[str(i) for i in range(len(params_invalid_data_validate_values))],
 )
@@ -416,10 +425,11 @@ def test_invalid_data_dec(
     vector: Any,
     altchars: Buffer | None,
     exception: type[BaseException],
+    match: str | None,
     simd: int,
 ) -> None:
     utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
-    with pytest.raises(exception):
+    with pytest.raises(exception, match=match):
         dfn(vector, altchars)
 
 
@@ -431,9 +441,14 @@ def test_invalid_data_dec_skip(
     vector: Any,
     altchars: Buffer | None,
     exception: type[BaseException],
+    match: str | None,
     simd: int,
 ) -> None:
-    utils.unused_args(exception, simd)  # simd is a parameter in order to control the order of tests
+    utils.unused_args(
+        exception,
+        match,
+        simd,
+    )  # simd is a parameter in order to control the order of tests
     test = dfn(vector, altchars)
     if sys.implementation.name == "graalpy" and vector.startswith((b"A@@@=F", b"A@@=@")):
         pytest.xfail(reason="graalpy fails decoding those entries")  # pragma: no cover
@@ -449,10 +464,11 @@ def test_invalid_data_dec_validate(
     vector: Any,
     altchars: Buffer | None,
     exception: type[BaseException],
+    match: str | None,
     simd: int,
 ) -> None:
     utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
-    with pytest.raises(exception):
+    with pytest.raises(exception, match=match):
         dfn(vector, altchars, validate=True)
 
 
