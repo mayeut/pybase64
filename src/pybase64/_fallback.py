@@ -10,15 +10,22 @@ from pybase64._unspecified import _Unspecified
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
-    from typing import Any, Final, Literal
+    from typing import Final, Literal
 
     from pybase64._typing import Buffer
 
-_SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 12)  # fast validation with CPython 3.12+
-_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # start with 3.15.0a8, move to sys.version_info[:2] >= (3, 15)
+
+_SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 13)  # fast/correct validation in CPython 3.13+
+_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # in 3.15.0a8, move sys.version_info check
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 _EQUAL_ASCII: Final = 61  # '='
 _UNSPECIFIED: Final = _Unspecified.UNSPECIFIED
+
+if not _PYTHON_3_15_API:
+    # we consider '=' part of the alphabet, it will be handled separately
+    _BASE64_ALPHABET = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+    # we do not keep '=' on purpose, it will be handled separately
+    _IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
 
 
 def _get_simd_name(flags: int) -> str:
@@ -103,16 +110,32 @@ def b64decode(  # noqa: C901
     has_bad_chars = False
     if altchars is not None:
         altchars = _validate_altchars(_get_bytes(altchars))
-    # move those 2 blocks after "if _PYTHON_3_15_API:" once python 3.15.0a8 is released
+
+    if validate is _UNSPECIFIED:
+        validate = ignorechars is not _UNSPECIFIED
+
+    if ignorechars is not _UNSPECIFIED and not validate:
+        msg = "validate must be True or unspecified when ignorechars is specified"
+        raise ValueError(msg)
+
+    if _PYTHON_3_15_API:
+        kwargs: dict[str, bool | Buffer] = {"validate": validate}
+        if ignorechars is not _UNSPECIFIED:
+            kwargs["ignorechars"] = ignorechars
+        return builtin_decode(s, altchars, **kwargs)  # type: ignore[arg-type]
+
     if ignorechars is not _UNSPECIFIED:
-        ignorechars = _get_bytes(ignorechars, allow_str=False)
+        ignorechars_ = _get_bytes(ignorechars, allow_str=False)
+
     if altchars is not None:
-        if ignorechars is _UNSPECIFIED and not _PYTHON_3_15_API:
+        if ignorechars is _UNSPECIFIED:
             for b in b"+/":
                 if b not in altchars and b in s:
                     has_bad_chars = True
                     break
-        elif ignorechars is not _UNSPECIFIED:
+            trans = bytes.maketrans(altchars, b"+/")
+            s = s.translate(trans)
+        else:
             trans_in_add = set(b"+/") - set(altchars)
             if len(trans_in_add) == 2:
                 # we don't want to use an unordered set for 2 elements
@@ -124,37 +147,44 @@ def b64decode(  # noqa: C901
                     b"+/" + bytes(set(altchars) - set(b"+/")),
                 )
             s = s.translate(trans)
-            ignorechars = ignorechars.translate(trans)
-            altchars = None
+            ignorechars_ = ignorechars_.translate(trans)
 
-    if validate is _UNSPECIFIED:
-        validate = ignorechars is not _UNSPECIFIED
-
-    if ignorechars is not _UNSPECIFIED and not validate:
-        msg = "validate must be True or unspecified when ignorechars is specified"
-        raise ValueError(msg)
-
-    if _PYTHON_3_15_API:
-        kwargs: dict[str, Any] = {"validate": validate}  # type: ignore[explicit-any]
-        if ignorechars is not _UNSPECIFIED:
-            kwargs["ignorechars"] = ignorechars
-        return builtin_decode(s, altchars, **kwargs)
-
-    if ignorechars is not _UNSPECIFIED and ignorechars:
+    if (not validate) or (ignorechars is not _UNSPECIFIED):
         # we need to filter s before calling builtin_decode this might be quite slow
-        base64_alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-        ignorechars = bytes(set(ignorechars) - set(base64_alphabet))
-        if ignorechars:
-            if 61 in ignorechars:
-                msg = "'=' not supported in ignorechars with python<3.15"
-                raise ValueError(msg)
-            s = bytes(b for b in s if b not in ignorechars)
+        if not validate:
+            has_equal = True
+            ignorechars_ = _IGNORECHARS_VALIDATE_FALSE
+        else:
+            has_equal = 61 in ignorechars_
+            ignorechars_ = bytes(set(ignorechars_) - set(_BASE64_ALPHABET))
+        if ignorechars_:
+            s = s.translate(None, delete=ignorechars_)
+        if has_equal and s:
+            if s[-1] != 61:  # there's data at the end, strip all padding bytes
+                s = s.translate(None, delete=b"=")
+            else:
+                # get s without padding
+                last_equal = len(s) - 1
+                while (last_equal >= 0) and s[last_equal] == 61:
+                    last_equal -= 1
+                last_equal += 1
+                equal_count = len(s) - last_equal
+                s2 = s[:last_equal].translate(None, delete=b"=")
+                quad_pos = len(s2) % 4
+                if quad_pos in {0, 1} or (
+                    quad_pos == 2 and equal_count == 1
+                ):  # 0 is OK, 1 will fail
+                    s = s2
+                else:
+                    s = s2 + b"=" * (4 - quad_pos)
 
-    if _SLOW_VALIDATION and validate:
-        if len(s) % 4 != 0:
-            msg = "Incorrect padding"
-            raise BinAsciiError(msg)
-        result = builtin_decode(s, altchars, validate=False)
+    # we always do validation, start with a simple check
+    if len(s) % 4 != 0:
+        msg = "Incorrect padding"
+        raise BinAsciiError(msg)
+
+    if _SLOW_VALIDATION:
+        result = builtin_decode(s, validate=False)
 
         # check length of result vs length of input
         expected_len = 0
@@ -170,7 +200,7 @@ def b64decode(  # noqa: C901
             msg = "Non-base64 digit found"
             raise BinAsciiError(msg)
     else:
-        result = builtin_decode(s, altchars, validate=validate)
+        result = builtin_decode(s, validate=True)
     if has_bad_chars:
         import warnings  # noqa: PLC0415 lazy import
 

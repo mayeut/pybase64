@@ -21,8 +21,6 @@ if TYPE_CHECKING:
 
 from . import utils
 
-IGNORECHARS_EQUAL_SUPPORTED = utils.has_extension or sys.version_info >= (3, 15)
-
 
 def b64encode_as_string(
     s: Buffer,
@@ -394,6 +392,7 @@ params_invalid_data_novalidate_values = [
     [b"ab", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
     [b"abc", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
     [b"ab=", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
+    [b"ab==c", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Excess data after"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
@@ -790,9 +789,8 @@ def test_ignorechars(dfn: Decode, simd: int) -> None:
         (b"Y==WJj", b"=", b"abc", None),
         (b"YW=Jj", b"=", b"abc", None),
         # excess data
-        (b"ab==c", b"=", b"i", BinAsciiError),
-        (b"ab==cd", b"=", b"i", b"i\xb7\x1d"),
-        (b"abc=d", b"=", b"i\xb7", b"i\xb7\x1d"),
+        (b"ab==cd", b"=", b"i\xb7\x1d", None),
+        (b"abc=d", b"=", b"i\xb7\x1d", None),
         # invalid data
         (b"ab:(){:|:&};:==", b":;(){}|&", b"i", None),
         (b"\nab==", b"\n", b"i", None),
@@ -834,16 +832,11 @@ def test_base64_dec_invalid_partial(
         if ignorechars_no_equal == b"":
             with pytest.raises(BinAsciiError):
                 pybase64.b64decode(data, ignorechars=b"@")
-    if isinstance(ignorechars_expected_result, type) and (
-        IGNORECHARS_EQUAL_SUPPORTED or not ignorechars_has_equal
-    ):
+    if isinstance(ignorechars_expected_result, type) and not ignorechars_has_equal:
         assert ignorechars_expected_result is BinAsciiError
         with pytest.raises(BinAsciiError):
             pybase64.b64decode(data, ignorechars=ignorechars)
-    elif IGNORECHARS_EQUAL_SUPPORTED or not ignorechars_has_equal:
+    elif not ignorechars_has_equal:
         assert pybase64.b64decode(data, ignorechars=ignorechars) == ignorechars_expected_result
-    else:
-        with pytest.raises(ValueError, match=r"'=' not supported in ignorechars"):
-            pybase64.b64decode(data, ignorechars=ignorechars)
     assert pybase64.b64decode(data, validate=False) == no_validation_expected_result
     assert pybase64.b64decode(data) == no_validation_expected_result

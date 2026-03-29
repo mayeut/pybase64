@@ -36,6 +36,7 @@
 
 typedef struct pybase64_state {
     PyObject *binAsciiError;
+    PyObject *ignoreCharsValidateFalse;
     uint32_t active_simd_flag;
     uint32_t simd_flags;
     int libbase64_simd_flag;
@@ -372,7 +373,7 @@ static int check_ignore(uint8_t c, Py_buffer const* ignorechars, uint32_t* ignor
     if (ignorecache[c >> 5] & (1U << (c & 31U))) {
         return 1;
     }
-    if ((ignorechars->buf == NULL) || memchr(ignorechars->buf, c, ignorechars->len)) {
+    if (memchr(ignorechars->buf, c, ignorechars->len)) {
         ignorecache[c >> 5] |= 1U << (c & 31U);
         return 1;
     }
@@ -397,22 +398,13 @@ static int next_valid_padding(uint8_t const** pSrc, size_t* pSrclen, Py_buffer c
     int ret = 255;
     uint8_t const* src = *pSrc;
     size_t srclen = *pSrclen;
-    if (ignorechars->buf != NULL) {
-        while (srclen && (*src != '=') && check_ignore(*src, ignorechars, ignorecache)) {
-            src++;
-            srclen--;
-        }
-        if (srclen > 0) {
-            ret = base64_table_dec_8bit[*src++];
-            srclen--;
-        }
+    while (srclen && (*src != '=') && check_ignore(*src, ignorechars, ignorecache)) {
+        src++;
+        srclen--;
     }
-    else {
-        while (srclen && (ret == 255))
-        {
-            ret = base64_table_dec_8bit[*src++];
-            srclen--;
-        }
+    if (srclen > 0) {
+        ret = base64_table_dec_8bit[*src++];
+        srclen--;
     }
     *pSrc = src;
     *pSrclen = srclen;
@@ -520,19 +512,17 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
                         return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
                     }
                     if (next_valid_padding(&src_next, &srclen_next, ignorechars, ignorecache) == 254) {
-                        if (ignorechars->buf != NULL) {
-                            if (check_excess_data(&src_next, &srclen_next, ignorechars, ignorecache)) {
-                                if (check_ignore('=', ignorechars, ignorecache)) {
-                                    /* restart at excess data */
-                                    src = src_next;
-                                    srclen = srclen_next;
-                                    continue;
-                                }
-                                if (*src_next == '=') {
-                                    return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
-                                }
-                                return PYBASE64_DECODE_SLOW_EXCESS_DATA;
+                        if (check_excess_data(&src_next, &srclen_next, ignorechars, ignorecache)) {
+                            if (check_ignore('=', ignorechars, ignorecache)) {
+                                /* restart at excess data */
+                                src = src_next;
+                                srclen = srclen_next;
+                                continue;
                             }
+                            if (*src_next == '=') {
+                                return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
+                            }
+                            return PYBASE64_DECODE_SLOW_EXCESS_DATA;
                         }
                         goto END;
                     }
@@ -559,16 +549,14 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
                 if (q == 254) {  /* padding */
-                    if (ignorechars->buf != NULL) {
-                        if (check_excess_data(&src, &srclen, ignorechars, ignorecache)) {
-                            if (check_ignore('=', ignorechars, ignorecache)) {
-                                continue;
-                            }
-                            if (*src == '=') {
-                                return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
-                            }
-                            return PYBASE64_DECODE_SLOW_EXCESS_DATA;
+                    if (check_excess_data(&src, &srclen, ignorechars, ignorecache)) {
+                        if (check_ignore('=', ignorechars, ignorecache)) {
+                            continue;
                         }
+                        if (*src == '=') {
+                            return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
+                        }
+                        return PYBASE64_DECODE_SLOW_EXCESS_DATA;
                     }
                     srclen = 0U;
                     break;
@@ -894,6 +882,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     static const char *kwlist[] = { "", "altchars", "validate", "ignorechars", NULL };
 
     int use_alphabet = 0;
+    int use_alphabet_for_ignore_chars;
     int has_bad_char = 0;
     char alphabet[2];
     int validation;
@@ -940,11 +929,20 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    memset(&ignorechars_buffer, 0, sizeof(ignorechars_buffer));
+    use_alphabet_for_ignore_chars = use_alphabet;
+    if (!validation) {
+        assert(ignorechars_object == NULL);
+        ignorechars_object = state->ignoreCharsValidateFalse;
+        use_alphabet_for_ignore_chars = 0;
+    }
+
     if (ignorechars_object != NULL) {
-        ignorechars_object = get_ignorechars_buffer(ignorechars_object, &ignorechars_buffer, use_alphabet ? alphabet : NULL);
+        ignorechars_object = get_ignorechars_buffer(ignorechars_object, &ignorechars_buffer, use_alphabet_for_ignore_chars ? alphabet : NULL);
         if (ignorechars_object == NULL) {
             return NULL;
+        }
+        if (validation) {
+            translate_fn = &translate;
         }
         if (ignorechars_buffer.len == 0) {
             PyBuffer_Release(&ignorechars_buffer);
@@ -955,7 +953,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         else {
             validation = 0;
         }
-        translate_fn = &translate;
     }
 
     if (PyUnicode_Check(in_object)) {
@@ -1447,6 +1444,24 @@ static PyObject* pybase64_import_BinAsciiError()
 
 static int _pybase64_exec(PyObject *m)
 {
+    static uint8_t const ignoreCharsValidateFalse[] = {
+          0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
+         16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
+         32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,       44,  45,  46,      /* 43: '+', 47: '/' */
+         /* 48: '0' -> 57: '9' */                          58,  59,  60,  61,  62,  63,
+         64, /* 65: 'A' -> 90: 'Z' */
+                                                                91,  92,  93,  94,  95,
+         96, /* 97: 'a' -> 122: 'z' */
+                                                               123, 124, 125, 126, 127,
+        128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143,
+        144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
+        160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175,
+        176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
+        192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
+        208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
+        224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
+        240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
+    };
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
     if (state == NULL) {
         return -1;
@@ -1463,6 +1478,12 @@ static int _pybase64_exec(PyObject *m)
         return -1;
     }
 
+    assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
+    state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize(ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
+    if (state->ignoreCharsValidateFalse == NULL) {
+        return -1;
+    }
+
     state->simd_flags = pybase64_get_simd_flags();
     set_simd_path(state, state->simd_flags);
 
@@ -1474,6 +1495,7 @@ static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
     if (state) {
         Py_VISIT(state->binAsciiError);
+        Py_VISIT(state->ignoreCharsValidateFalse);
     }
     return 0;
 }
@@ -1483,6 +1505,7 @@ static int _pybase64_clear(PyObject *m)
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
     if (state) {
         Py_CLEAR(state->binAsciiError);
+        Py_CLEAR(state->ignoreCharsValidateFalse);
     }
     return 0;
 }
