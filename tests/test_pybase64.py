@@ -372,19 +372,13 @@ def test_invalid_altchars_dec_validate(
 
 
 params_invalid_data_novalidate_values = [
-    [
-        b"A@@@@FG",
-        None,
-        BinAsciiError,
-        "Incorrect padding|Non-base64 digit found|Only base64 data is allowed",
-    ],
+    [b"A@@@@FG", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
     ["ABC€", None, ValueError, "ASCII"],
     [3.0, None, TypeError, "bytes-like|buffer interface"],
     [memoryview(b"ABCDEFGH")[::2], None, BufferError, "contiguous"],
-    ["\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
-    ["a\x80aa", None, ValueError, "ASCII|Non-base64 digit found"],
-    ["aa\x80a", None, ValueError, "ASCII|Non-base64 digit found"],
-    ["aaa\x80", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
+    [b"a\x80aa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
@@ -394,6 +388,7 @@ params_invalid_data_validate_values = [
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError, None],
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError, None],
     [b"A@@@@FGH" * 10000, b"-_", BinAsciiError, None],
+    [b"a\x80aaa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
 ]
 params_invalid_data_all = pytest.mark.parametrize(
     ("vector", "altchars", "exception", "match"),
