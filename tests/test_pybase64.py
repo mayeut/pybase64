@@ -376,9 +376,9 @@ params_invalid_data_novalidate_values = [
     ["ABC€", None, ValueError, "ASCII"],
     [3.0, None, TypeError, "bytes-like|buffer interface"],
     [memoryview(b"ABCDEFGH")[::2], None, BufferError, "contiguous"],
-    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
-    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
+    ["a\x80aa", None, ValueError, "ASCII|Non-base64 digit found"],
     [b"a\x80aa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
+    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
