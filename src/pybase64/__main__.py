@@ -120,7 +120,7 @@ def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     data = readall(input)
     for altchars in [None, b"-_"]:
         for validate in [False, True]:
-            for ignorechars in [None, b"", b"@"]:
+            for ignorechars in [None, b"", b"\n"]:
                 kwargs: dict[str, bool | bytes] = {"validate": validate}
                 if ignorechars is not None:
                     if not validate:
