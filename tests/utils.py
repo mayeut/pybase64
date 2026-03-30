@@ -10,12 +10,12 @@ import pytest
 
 import pybase64
 
-_has_extension = hasattr(pybase64, "_set_simd_path")
-assert _has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
+has_extension = hasattr(pybase64, "_set_simd_path")
+assert has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
 
 compile_flags = [0]
 runtime_flags = 0
-if _has_extension:
+if has_extension:
     runtime_flags = pybase64._get_simd_flags_runtime()  # type: ignore[attr-defined]
     flags = pybase64._get_simd_flags_compile()  # type: ignore[attr-defined]
     for i in range(31):
@@ -24,7 +24,7 @@ if _has_extension:
 
 
 def _get_simd_name(simd_id: int) -> str:
-    if _has_extension:
+    if has_extension:
         simd_flag = compile_flags[simd_id]
         simd_name = "C" if simd_flag == 0 else pybase64._get_simd_name(simd_flag)  # type: ignore[attr-defined]
     else:
@@ -43,7 +43,7 @@ param_simd = pytest.mark.parametrize(
 @pytest.fixture
 def simd(request: pytest.FixtureRequest) -> Iterator[int]:
     simd_id = request.param
-    if not _has_extension:
+    if not has_extension:
         assert simd_id == 0
         yield simd_id
         return

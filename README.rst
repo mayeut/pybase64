@@ -130,6 +130,7 @@ Future
 - Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
 - Add ``wrapcol`` parameter to ``b64encode``
 - Reject non-ASCII strings in ``b64decode`` when ``validate=False``
+- Add ``ignorechars`` parameter to ``b64decode``
 
 1.4.3
 -----

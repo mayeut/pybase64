@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import sys
-from typing import Protocol
+from typing import Literal, Protocol
 
 if sys.version_info < (3, 12):
     from typing_extensions import Buffer
 else:
     from collections.abc import Buffer
+
+from pybase64._unspecified import _Unspecified
 
 
 class Decode(Protocol):
@@ -17,7 +19,9 @@ class Decode(Protocol):
         self,
         s: str | Buffer,
         altchars: str | Buffer | None = None,
-        validate: bool = False,
+        validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+        *,
+        ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
     ) -> bytes: ...
 
 
@@ -28,11 +32,4 @@ class Encode(Protocol):
     def __call__(self, s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes: ...
 
 
-class EncodeBytes(Protocol):
-    __name__: str
-    __module__: str
-
-    def __call__(self, s: Buffer) -> bytes: ...
-
-
-__all__ = ("Buffer", "Decode", "Encode", "EncodeBytes")
+__all__ = ("Buffer", "Decode", "Encode")
