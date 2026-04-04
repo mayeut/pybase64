@@ -84,7 +84,7 @@ dev = [
 [tool.cibuildwheel]
 build-frontend = "build[uv]"
 build-verbosity = 1
-enable = ["cpython-freethreading", "graalpy", "pypy", "pypy-eol"]
+enable = ["graalpy", "pypy", "pypy-eol"]
 repair-wheel-command = ["uv run --script tools/embed_sbom.py {dest_dir} {wheel}"]
 test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
 test-groups = ["test"]

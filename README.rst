@@ -131,6 +131,7 @@ Future
 - Add ``wrapcol`` parameter to ``b64encode``
 - Reject non-ASCII strings in ``b64decode`` when ``validate=False``
 - Drop python 3.8 support
+- Stop publishing python 3.13t wheels
 
 1.4.3
 -----
