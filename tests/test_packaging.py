@@ -1,6 +1,5 @@
 import importlib.metadata
 import json
-import sys
 
 import pytest
 
