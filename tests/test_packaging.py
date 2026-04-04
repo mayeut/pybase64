@@ -23,11 +23,6 @@ def test_license() -> None:
 
 
 @pytest.mark.pypi_distribution
-@pytest.mark.xfail(
-    sys.platform.startswith("ios"),
-    reason="no repair step for iOS in cibuildwheel",
-    strict=True,
-)
 def test_sbom() -> None:  # pragma: no cover
     metadata = importlib.metadata.metadata("pybase64")
     distribution = metadata["Name"]
