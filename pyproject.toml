@@ -54,40 +54,47 @@ pybase64 = ["py.typed", "_pybase64.pyi"]
 
 [dependency-groups]
 test = [
-    "pytest==8.4.2 ; python_version == '3.9'",
-    "pytest==9.0.2 ; python_version >= '3.10'",
-    "pytest-run-parallel==0.8.2 ; python_version >= '3.13'",
-    "typing_extensions>=4.6.0",
+    "packaging==24.2; sys_platform == 'emscripten'",
+    "packaging>=26.0; sys_platform != 'emscripten'",
+    "pytest>=8",
+    "pytest-run-parallel>=0.8.2 ; python_version >= '3.13'",
+    "typing_extensions>=4.6",
 ]
+# we don't support benchmark for python<3.10
 benchmark = [
     {include-group = "test"},
-    "pytest-codspeed==4.3.0",
+    "pytest-codspeed>=4 ; python_version >= '3.10'",
 ]
 coverage = [
     {include-group = "test"},
-    "gcovr==8.5",
-    "pytest-cov==7.1.0",
-    "coverage==7.13.0",
+    "coverage[toml]>=7.10",  # >= 7.10, we use tool.coverage.run.patch config
+    "gcovr>=8",
+    "pytest-cov>=7",  # needed for coverage>=7.10
 ]
+# we don't support docs for python<3.12
 docs = [
-    "sphinx==8.2.3",
-    "furo==2025.12.19",
+    "sphinx>=8 ; python_version >= '3.12'",
+    "furo>=2025.12.19 ; python_version >= '3.12'",
 ]
+lint = ["prek"]
+nox = ["nox>=2025.11.12"]
+setuptools = ["setuptools>=77"]
 dev = [
     {include-group = "coverage"},
     {include-group = "docs"},
+    {include-group = "lint"},
+    {include-group = "nox"},
+    {include-group = "setuptools"},
     {include-group = "test"},
-    "nox",
-    "setuptools",
 ]
 
 [tool.cibuildwheel]
-build-frontend = "build[uv]"
+build-frontend = { name = "uv", args = ["--build-constraints", "requirements/requirements-setuptools.txt", "--require-hashes"] }
 build-verbosity = 1
 enable = ["graalpy", "pypy", "pypy-eol"]
 repair-wheel-command = ["uv run --script tools/embed_sbom.py {dest_dir} {wheel}"]
 test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
-test-groups = ["test"]
+test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/requirements-test.txt"]
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
 xbuild-tools = ["cmake", "uv"]
@@ -114,11 +121,21 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux_{ppc64le,riscv64,s390x}"
-build-frontend = "build"
+build-frontend = { name = "build", args = ["--no-isolation"] }
+before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-ios*"
-build-frontend = "build"
+build-frontend = { name = "build", args = ["--no-isolation"] }
+before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
+test-groups = ["test"]
+test-requires = []
+
+# remove after https://github.com/pypa/cibuildwheel/pull/2809
+[[tool.cibuildwheel.overrides]]
+select = "*-android*"
+build-frontend = { name = "build[uv]", args = ["--no-isolation"] }
+before-build = "uv pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
 
 [tool.coverage.run]
 branch = true
@@ -201,3 +218,6 @@ lint.flake8-tidy-imports.ban-relative-imports = "all"
 "typing.Callable".msg = "Use collections.abc.Callable instead."
 "typing.Iterator".msg = "Use collections.abc.Iterator instead."
 "typing.Sequence".msg = "Use collections.abc.Sequence instead."
+
+[tool.uv]
+exclude-newer = "P7D"

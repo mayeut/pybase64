@@ -24,7 +24,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
       - name: Set up pyenv
         run: |
           git clone https://github.com/pyenv/pyenv.git "$HOME/.pyenv"
@@ -34,10 +33,8 @@ jobs:
           echo "$PYENV_BIN" >> $GITHUB_PATH
           echo "$PYENV_SHIMS" >> $GITHUB_PATH
           echo "PYENV_ROOT=$PYENV_ROOT" >> $GITHUB_ENV
-
       - name: Check pyenv is working
         run: pyenv --version
-
       - name: Install python build dependencies
         run: |
           sudo apt-get update
@@ -57,18 +54,15 @@ jobs:
             tk-dev \
             uuid-dev \
             zlib1g-dev
-
       - name: Build Python with address sanitizer
         run: |
           CONFIGURE_OPTS="--with-address-sanitizer" pyenv install 3.14
           pyenv global 3.14
-
       - name: Install dependencies
         run: |
           set -exuo pipefail
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --group test
-
       - name: Run tests
         run: |
           set -exuo pipefail
@@ -84,7 +78,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
       - name: Install dependencies
         run: |
           set -exuo pipefail
@@ -94,7 +87,6 @@ jobs:
           ln -sf $(pwd)/venv-dbg/bin/python /usr/local/bin/python-pb64
           python-pb64 -m pip install --upgrade pip setuptools wheel
           python-pb64 -m pip install --group test
-
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
