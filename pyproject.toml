@@ -224,7 +224,6 @@ lint.flake8-tidy-imports.ban-relative-imports = "all"
 
 [tool.uv]
 required-version = ">=0.7.14"
-exclude-newer = "P7D"
 
 [tool.uv.dependency-groups]
 benchmark = { requires-python = ">=3.12" }
