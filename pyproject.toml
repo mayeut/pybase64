@@ -227,4 +227,5 @@ required-version = ">=0.7.14"
 
 [tool.uv.dependency-groups]
 benchmark = { requires-python = ">=3.12" }
+coverage = { requires-python = ">=3.10" }
 docs = { requires-python = ">=3.12" }
