@@ -72,7 +72,7 @@ def test(session: nox.Session) -> None:
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install("--no-build-isolation", ".", env=env)
+    session.install("--no-deps", "--no-build-isolation", ".", env=env)
     session.run("pytest", *session.posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
@@ -90,7 +90,7 @@ def test_parallel(session: nox.Session) -> None:
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install("--no-build-isolation", ".", env=env)
+    session.install("--no-deps", "--no-build-isolation", ".", env=env)
     session.run("pytest", *posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
@@ -126,7 +126,7 @@ def _coverage(session: nox.Session) -> None:
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
-    session.install("--no-build-isolation", "-e", ".", env=env)
+    session.install("--no-deps", "--no-build-isolation", "-e", ".", env=env)
     if clean:
         session.run("coverage", "erase", env=env)
     session.run(*pytest_command, env=env)
@@ -186,7 +186,7 @@ def benchmark(session: nox.Session) -> None:
         project_install = (posargs.pop(index),)
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install("--no-build-isolation", *project_install, env=env)
+    session.install("--no-deps", "--no-build-isolation", *project_install, env=env)
     session.run("pytest", "--codspeed", *posargs)
 
 
@@ -194,7 +194,7 @@ def benchmark(session: nox.Session) -> None:
 def docs(session: nox.Session) -> None:
     """Build the docs."""
     _install_dep_group(session, "setuptools", "docs")
-    session.install("--no-build-isolation", ".")
+    session.install("--no-deps", "--no-build-isolation", ".")
     session.chdir("docs")
     session.run(
         "python",

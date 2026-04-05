@@ -154,7 +154,7 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: "${{ needs.prebuild.outputs.SOURCE_DATE_EPOCH }}"
       - name: Install
-        run: uv venv && uv pip install ./dist/pybase64*.tar.gz
+        run: uv venv && uv pip install --build-constraints requirements/requirements-setuptools.txt ./dist/pybase64*.tar.gz
       - name: Test
         run: uv run --frozen --only-group test pytest
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0

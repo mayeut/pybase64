@@ -67,7 +67,7 @@ jobs:
         run: |
           set -exuo pipefail
           export ASAN_OPTIONS="detect_leaks=1:symbolize=1:allocator_may_return_null=1"
-          CFLAGS="-O0 -fsanitize=address -fno-omit-frame-pointer" CIBUILDWHEEL=1 python -m pip install --no-build-isolation -e .
+          CFLAGS="-O0 -fsanitize=address -fno-omit-frame-pointer" CIBUILDWHEEL=1 python -m pip install --no-deps --no-build-isolation -e .
           python -m pytest
 
   valgrind:
@@ -90,7 +90,7 @@ jobs:
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
-          CFLAGS="-O0 -g" CIBUILDWHEEL=1 python-pb64 -m pip install --no-build-isolation -e .
+          CFLAGS="-O0 -g" CIBUILDWHEEL=1 python-pb64 -m pip install --no-deps --no-build-isolation -e .
           PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(which python-pb64) -m pytest
 
   check_sanitizers:
