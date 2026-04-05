@@ -440,7 +440,12 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         if (out_object == NULL) {
             return NULL;
         }
-        dst = (char*)PyUnicode_1BYTE_DATA(out_object);
+        if (PyUnicode_KIND(out_object) != PyUnicode_1BYTE_KIND) {
+            Py_DECREF(out_object);
+            PyErr_SetString(PyExc_RuntimeError, "Not a PyUnicode_1BYTE_KIND object");
+            return NULL;
+        }
+        dst = (char*)PyUnicode_DATA(out_object);
     }
     else {
 #if PY_VERSION_HEX >= 0x030f0000
@@ -555,7 +560,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     if (flags & PYBASE64_FLAGS_NO_PADDING)
     {
         if (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) {
-#if defined(PYPY_VERSION)
+#if defined(PYPY_VERSION) || defined(GRAALVM_PYTHON)
             /* SystemError: PyUnicode_Resize called on already created string... */
             /* we'll be less efficient */
             PyObject* temp_object = PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, dst_start, dst - dst_start);
