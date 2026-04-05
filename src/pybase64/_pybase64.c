@@ -555,10 +555,18 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     if (flags & PYBASE64_FLAGS_NO_PADDING)
     {
         if (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) {
+#if defined(PYPY_VERSION)
+            /* SystemError: PyUnicode_Resize called on already created string... */
+            /* we'll be less efficient */
+            PyObject* temp_object = PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, dst_start, dst - dst_start);
+            Py_DECREF(out_object);
+            out_object = temp_object;
+#else
             if (PyUnicode_Resize(&out_object, dst - dst_start) != 0) {
                 Py_DECREF(out_object);
                 return NULL;
             }
+#endif
         }
         else {
 #if PY_VERSION_HEX < 0x030f0000
