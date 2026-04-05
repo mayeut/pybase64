@@ -23,6 +23,7 @@
 
 #define PYBASE64_FLAGS_ENCODE_AS_STRING (1U << 0)
 #define PYBASE64_FLAGS_APPEND_NEW_LINE  (1U << 1)
+#define PYBASE64_FLAGS_NO_PADDING       (1U << 2)
 
 typedef struct pybase64_state {
     PyObject *binAsciiError;
@@ -393,6 +394,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer;
 #endif
+    char* dst_start;
     char* dst;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) {
@@ -455,6 +457,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         dst = PyBytes_AS_STRING(out_object);
 #endif
     }
+    dst_start = dst;
 
     /* not interacting with Python objects from here, release the GIL */
     Py_BEGIN_ALLOW_THREADS
@@ -532,16 +535,41 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         base64_encode(buffer->buf, buffer->len, dst, &out_len, libbase64_simd_flag);
         dst += out_len;
     }
+    if (flags & PYBASE64_FLAGS_NO_PADDING) {
+        /* we have at least 4 bytes, at most 2 '=' */
+        assert((dst - dst_start) >= 4);
+        if (dst[-1] == '=') {
+            dst -= 1;
+        }
+        if (dst[-1] == '=') {
+            dst -= 1;
+        }
+    }
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
-        *dst = '\n';
+        *dst++ = '\n';
     }
 
     /* restore the GIL */
     Py_END_ALLOW_THREADS
 
+    if (flags & PYBASE64_FLAGS_NO_PADDING)
+    {
+        if (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) {
+            if (PyUnicode_Resize(&out_object, dst - dst_start) != 0) {
+                Py_DECREF(out_object);
+                return NULL;
+            }
+        }
+        else {
+#if PY_VERSION_HEX < 0x030f0000
+            _PyBytes_Resize(&out_object, dst - dst_start);
+#endif
+        }
+    }
+
 #if PY_VERSION_HEX >= 0x030f0000
     if (!(flags & PYBASE64_FLAGS_ENCODE_AS_STRING)) {
-        out_object = PyBytesWriter_Finish(writer);
+        out_object = PyBytesWriter_FinishWithPointer(writer, dst);
     }
 #endif
 
@@ -550,7 +578,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
 
 static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *kwds, unsigned int flags)
 {
-    static const char *kwlist[] = { "", "altchars", "wrapcol", NULL };
+    static const char *kwlist[] = { "", "altchars", "padded", "wrapcol", NULL };
 
     int use_alphabet = 0;
     char alphabet[2];
@@ -558,10 +586,11 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
     PyObject* out_object;
     PyObject* in_object;
     PyObject* in_alphabet = NULL;
+    int padded = 1;
     Py_ssize_t wrapcol = 0;
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O$n", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &wrapcol)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O$pn", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &padded, &wrapcol)) {
         return NULL;
     }
 
@@ -571,6 +600,10 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
 
     if (get_buffer(in_object, &buffer) != 0) {
         return NULL;
+    }
+
+    if ((buffer.len > 0) && !padded) {
+        flags |= PYBASE64_FLAGS_NO_PADDING;
     }
 
     out_object = pybase64_encode_impl_core(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);

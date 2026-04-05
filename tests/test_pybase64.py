@@ -24,10 +24,11 @@ def b64encode_as_string(
     s: Buffer,
     altchars: str | Buffer | None = None,
     *,
+    padded: bool = True,
     wrapcol: int = 0,
 ) -> bytes:
     """Helper returning bytes instead of string for tests"""
-    return pybase64.b64encode_as_string(s, altchars, wrapcol=wrapcol).encode("ascii")
+    return pybase64.b64encode_as_string(s, altchars, padded=padded, wrapcol=wrapcol).encode("ascii")
 
 
 def b64decode_as_bytearray(
@@ -643,3 +644,24 @@ def test_enc_wrapcol_limit(simd: int) -> None:
     encoded = pybase64.b64encode(vector, wrapcol=76)
     assert len(encoded) == 76
     assert (encoded + b"\n") == pybase64.encodebytes(vector)
+
+
+@param_encode_functions
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"", b""), (b"a", b"YQ"), (b"ab", b"YWI"), (b"abc", b"YWJj")],
+)
+@utils.param_simd
+def test_b64encode_padded(efn: Encode, vector: bytes, expected: bytes, simd: int) -> None:
+    utils.unused_args(simd)
+    assert efn(vector, padded=False) == expected
+
+
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"", b""), (b"a", b"YQ"), (b"ab", b"YWI"), (b"abc", b"YWJj")],
+)
+@utils.param_simd
+def test_urlsafe_b64encode_padded(vector: bytes, expected: bytes, simd: int) -> None:
+    utils.unused_args(simd)
+    assert pybase64.urlsafe_b64encode(vector, padded=False) == expected
