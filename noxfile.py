@@ -68,7 +68,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
 @nox.session(python=ALL_PYTHON)
 def test(session: nox.Session) -> None:
     """Run tests."""
-    _install_dep_group(session, "build", "test")
+    _install_dep_group(session, "build-system", "test")
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
@@ -83,7 +83,7 @@ def test(session: nox.Session) -> None:
 @nox.session(python=ALL_CPYTHONT)
 def test_parallel(session: nox.Session) -> None:
     """Run tests."""
-    _install_dep_group(session, "build", "test")
+    _install_dep_group(session, "build-system", "test")
     posargs = session.posargs
     if not posargs:
         posargs = ["--parallel-threads=auto", "--iterations=32"]
@@ -101,7 +101,7 @@ def test_parallel(session: nox.Session) -> None:
 @nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
-    _install_dep_group(session, "build", "coverage", only_binary=False)
+    _install_dep_group(session, "build-system", "coverage", only_binary=False)
     gcovr_config = (
         "-r=.",
         "-e=base64",
@@ -177,7 +177,7 @@ def coverage(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def benchmark(session: nox.Session) -> None:
     """Benchmark tests."""
-    _install_dep_group(session, "build", "benchmark")
+    _install_dep_group(session, "build-system", "benchmark")
     project_install: tuple[str, ...] = ("-e", ".")
     posargs = session.posargs.copy()
     if "--wheel" in posargs:
@@ -193,7 +193,7 @@ def benchmark(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def docs(session: nox.Session) -> None:
     """Build the docs."""
-    _install_dep_group(session, "build", "docs")
+    _install_dep_group(session, "build-system", "docs")
     session.install("--no-deps", "--no-build-isolation", ".")
     session.chdir("docs")
     session.run(
