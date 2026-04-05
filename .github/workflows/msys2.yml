@@ -55,5 +55,5 @@ jobs:
       run: |
         # virtual env seems to be broken
         # just allow breaking system packages, we're in CI
-        python -m pip install --break-system-packages -v --no-build-isolation .
+        python -m pip install --break-system-packages -v --no-deps --no-build-isolation .
         python -m pytest

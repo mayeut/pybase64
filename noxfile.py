@@ -18,16 +18,19 @@ ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 11 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_CPYTHONT + ALL_PYPY
 
 
-def _get_group_dependencies(group: str) -> tuple[str, ...]:
-    pyproject = nox.project.load_toml()
-    return nox.project.dependency_groups(pyproject, group)
+def _install_dep_group(session: nox.Session, *groups: str, only_binary: bool = True) -> None:
+    args = ["--no-deps", "--require-hashes"]
+    if only_binary:
+        args.append("--only-binary=:all:")
+    args.extend(f"--requirement=requirements/requirements-{group}.txt" for group in groups)
+    session.install(*args)
 
 
 @nox.session
 def lint(session: nox.Session) -> None:
     """Run linters on the codebase."""
-    session.install("pre-commit")
-    session.run("pre-commit", "run", "-a")
+    _install_dep_group(session, "lint")
+    session.run("prek", "run", "--all-files", *session.posargs)
 
 
 def update_env_macos(session: nox.Session, env: dict[str, str]) -> None:
@@ -62,24 +65,14 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python="3.12")
-def develop(session: nox.Session) -> None:
-    """Create venv for dev."""
-    session.install(*_get_group_dependencies("dev"))
-    # make extension mandatory by exporting CIBUILDWHEEL=1
-    env = {"CIBUILDWHEEL": "1"}
-    update_env_macos(session, env)
-    session.install("-e", ".", env=env)
-
-
 @nox.session(python=ALL_PYTHON)
 def test(session: nox.Session) -> None:
     """Run tests."""
-    session.install(*_get_group_dependencies("test"))
+    _install_dep_group(session, "setuptools", "test")
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install(".", env=env)
+    session.install("--no-deps", "--no-build-isolation", ".", env=env)
     session.run("pytest", *session.posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
@@ -90,14 +83,14 @@ def test(session: nox.Session) -> None:
 @nox.session(python=ALL_CPYTHONT)
 def test_parallel(session: nox.Session) -> None:
     """Run tests."""
+    _install_dep_group(session, "setuptools", "test")
     posargs = session.posargs
     if not posargs:
         posargs = ["--parallel-threads=auto", "--iterations=32"]
-    session.install(*_get_group_dependencies("test"))
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install(".", env=env)
+    session.install("--no-deps", "--no-build-isolation", ".", env=env)
     session.run("pytest", *posargs, env=env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
@@ -108,6 +101,7 @@ def test_parallel(session: nox.Session) -> None:
 @nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
+    _install_dep_group(session, "setuptools", "coverage", only_binary=False)
     gcovr_config = (
         "-r=.",
         "-e=base64",
@@ -124,7 +118,6 @@ def _coverage(session: nox.Session) -> None:
         "--cov-report=",
     )
     pytest_command = ("pytest", *coverage_args)
-    session.install(*_get_group_dependencies("coverage"))
     remove_extension(session, in_place=True)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
@@ -133,7 +126,7 @@ def _coverage(session: nox.Session) -> None:
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
-    session.install("-e", ".", env=env)
+    session.install("--no-deps", "--no-build-isolation", "-e", ".", env=env)
     if clean:
         session.run("coverage", "erase", env=env)
     session.run(*pytest_command, env=env)
@@ -184,6 +177,7 @@ def coverage(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def benchmark(session: nox.Session) -> None:
     """Benchmark tests."""
+    _install_dep_group(session, "setuptools", "benchmark")
     project_install: tuple[str, ...] = ("-e", ".")
     posargs = session.posargs.copy()
     if "--wheel" in posargs:
@@ -192,14 +186,15 @@ def benchmark(session: nox.Session) -> None:
         project_install = (posargs.pop(index),)
     env = {"CIBUILDWHEEL": "1"}
     update_env_macos(session, env)
-    session.install(*_get_group_dependencies("benchmark"), *project_install, env=env)
+    session.install("--no-deps", "--no-build-isolation", *project_install, env=env)
     session.run("pytest", "--codspeed", *posargs)
 
 
 @nox.session(python="3.12")
 def docs(session: nox.Session) -> None:
     """Build the docs."""
-    session.install(*_get_group_dependencies("docs"), ".")
+    _install_dep_group(session, "setuptools", "docs")
+    session.install("--no-deps", "--no-build-isolation", ".")
     session.chdir("docs")
     session.run(
         "python",
@@ -222,3 +217,28 @@ def docs(session: nox.Session) -> None:
 def sbom(session: nox.Session) -> None:
     """Embed SBOM file in wheels."""
     session.run("python", "tools/embed_sbom.py", *session.posargs)
+
+
+@nox.session(python="3.12")
+def update_requirements(session: nox.Session) -> None:
+    pyproject = nox.project.load_toml()
+    if session.venv_backend != "uv":
+        uv_requirement = pyproject["tool"]["uv"]["required-version"]
+        session.install(f"uv{uv_requirement}")
+    session.run(
+        "uv",
+        "lock",
+        "--no-build",
+        "--upgrade",
+    )
+    for group in pyproject["dependency-groups"]:
+        if group in {"dev", "nox"}:
+            continue
+        session.run(
+            "uv",
+            "export",
+            "--format=requirements.txt",
+            "--frozen",
+            f"--only-group={group}",
+            f"--output-file=requirements/requirements-{group}.txt",
+        )

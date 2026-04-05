@@ -24,7 +24,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
       - name: Set up pyenv
         run: |
           git clone https://github.com/pyenv/pyenv.git "$HOME/.pyenv"
@@ -34,10 +33,8 @@ jobs:
           echo "$PYENV_BIN" >> $GITHUB_PATH
           echo "$PYENV_SHIMS" >> $GITHUB_PATH
           echo "PYENV_ROOT=$PYENV_ROOT" >> $GITHUB_ENV
-
       - name: Check pyenv is working
         run: pyenv --version
-
       - name: Install python build dependencies
         run: |
           sudo apt-get update
@@ -57,23 +54,20 @@ jobs:
             tk-dev \
             uuid-dev \
             zlib1g-dev
-
       - name: Build Python with address sanitizer
         run: |
           CONFIGURE_OPTS="--with-address-sanitizer" pyenv install 3.14
           pyenv global 3.14
-
       - name: Install dependencies
         run: |
           set -exuo pipefail
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install --group test
-
+          python -m pip install --upgrade pip
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt -r requirements/requirements-test.txt
       - name: Run tests
         run: |
           set -exuo pipefail
           export ASAN_OPTIONS="detect_leaks=1:symbolize=1:allocator_may_return_null=1"
-          CFLAGS="-O0 -fsanitize=address -fno-omit-frame-pointer" CIBUILDWHEEL=1 python -m pip install -e .
+          CFLAGS="-O0 -fsanitize=address -fno-omit-frame-pointer" CIBUILDWHEEL=1 python -m pip install --no-deps --no-build-isolation -e .
           python -m pytest
 
   valgrind:
@@ -84,7 +78,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
       - name: Install dependencies
         run: |
           set -exuo pipefail
@@ -92,13 +85,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends valgrind python3.12-dbg python3.12-dev
           python3.12-dbg -mvenv ./venv-dbg
           ln -sf $(pwd)/venv-dbg/bin/python /usr/local/bin/python-pb64
-          python-pb64 -m pip install --upgrade pip setuptools wheel
-          python-pb64 -m pip install --group test
-
+          python-pb64 -m pip install --upgrade pip
+          python-pb64 -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt -r requirements/requirements-test.txt
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
-          CFLAGS="-O0 -g" CIBUILDWHEEL=1 python-pb64 -m pip install -e .
+          CFLAGS="-O0 -g" CIBUILDWHEEL=1 python-pb64 -m pip install --no-deps --no-build-isolation -e .
           PYTHONMALLOC=malloc valgrind --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=2 $(which python-pb64) -m pytest
 
   check_sanitizers:
