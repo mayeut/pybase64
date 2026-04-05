@@ -220,9 +220,12 @@ def sbom(session: nox.Session) -> None:
     session.run("python", "tools/embed_sbom.py", *session.posargs)
 
 
-@nox.session(python=False)
+@nox.session()
 def update_requirements(session: nox.Session) -> None:
     pyproject = nox.project.load_toml()
+    if session.venv_backend != "uv":
+        uv_requirement = pyproject["tool"]["uv"]["required-version"]
+        session.install(f"uv{uv_requirement}")
     session.run(
         "uv",
         "lock",

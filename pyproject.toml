@@ -60,10 +60,10 @@ test = [
     "pytest-run-parallel>=0.8.2 ; python_version >= '3.13'",
     "typing_extensions>=4.6",
 ]
-# we don't support benchmark for python<3.10
+# we don't support benchmark for python<3.12
 benchmark = [
     {include-group = "test"},
-    "pytest-codspeed>=4 ; python_version >= '3.10'",
+    "pytest-codspeed>=4",
 ]
 coverage = [
     {include-group = "test"},
@@ -73,8 +73,8 @@ coverage = [
 ]
 # we don't support docs for python<3.12
 docs = [
-    "sphinx>=8 ; python_version >= '3.12'",
-    "furo>=2025.12.19 ; python_version >= '3.12'",
+    "sphinx>=8",
+    "furo>=2025.12.19",
 ]
 lint = ["prek"]
 nox = ["nox>=2025.11.12"]
@@ -220,4 +220,9 @@ lint.flake8-tidy-imports.ban-relative-imports = "all"
 "typing.Sequence".msg = "Use collections.abc.Sequence instead."
 
 [tool.uv]
+required-version = ">=0.7.14"
 exclude-newer = "P7D"
+
+[tool.uv.dependency-groups]
+benchmark = { requires-python = ">=3.12" }
+docs = { requires-python = ">=3.12" }
