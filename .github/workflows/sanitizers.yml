@@ -62,7 +62,7 @@ jobs:
         run: |
           set -exuo pipefail
           python -m pip install --upgrade pip
-          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build/requirements-ci.txt -r requirements/test/requirements-ci.txt
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt -r requirements/test/requirements-ci.txt
       - name: Run tests
         run: |
           set -exuo pipefail
@@ -86,7 +86,7 @@ jobs:
           python3.12-dbg -mvenv ./venv-dbg
           ln -sf $(pwd)/venv-dbg/bin/python /usr/local/bin/python-pb64
           python-pb64 -m pip install --upgrade pip
-          python-pb64 -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build/requirements-ci.txt -r requirements/test/requirements-ci.txt
+          python-pb64 -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt -r requirements/test/requirements-ci.txt
       - name: Run valgrind tests
         run: |
           set -exuo pipefail
