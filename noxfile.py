@@ -95,7 +95,7 @@ def test_parallel(session: nox.Session) -> None:
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session)
-    session.run("pytest", *posargs, env=env)
+    session.run("pytest", *session.posargs, env=env)
 
 
 @nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11"])
