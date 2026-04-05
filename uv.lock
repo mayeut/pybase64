@@ -1016,6 +1016,9 @@ benchmark = [
     { name = "pytest-run-parallel", marker = "python_full_version >= '3.13'" },
     { name = "typing-extensions", marker = "python_full_version >= '3.12'" },
 ]
+build = [
+    { name = "setuptools" },
+]
 coverage = [
     { name = "coverage", extra = ["toml"], marker = "python_full_version >= '3.10'" },
     { name = "gcovr", marker = "python_full_version >= '3.10'" },
@@ -1052,9 +1055,6 @@ lint = [
 nox = [
     { name = "nox" },
 ]
-setuptools = [
-    { name = "setuptools" },
-]
 test = [
     { name = "packaging", version = "24.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'emscripten'" },
     { name = "packaging", version = "26.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'emscripten'" },
@@ -1075,6 +1075,7 @@ benchmark = [
     { name = "pytest-run-parallel", marker = "python_full_version >= '3.13'", specifier = ">=0.8.2" },
     { name = "typing-extensions", marker = "python_full_version >= '3.12'", specifier = ">=4.6" },
 ]
+build = [{ name = "setuptools", specifier = ">=77" }]
 coverage = [
     { name = "coverage", extras = ["toml"], marker = "python_full_version >= '3.10'", specifier = ">=7.10" },
     { name = "gcovr", marker = "python_full_version >= '3.10'", specifier = ">=8" },
@@ -1110,7 +1111,6 @@ docs = [
 ]
 lint = [{ name = "prek" }]
 nox = [{ name = "nox", specifier = ">=2025.11.12" }]
-setuptools = [{ name = "setuptools", specifier = ">=77" }]
 test = [
     { name = "packaging", marker = "sys_platform != 'emscripten'", specifier = ">=26.0" },
     { name = "packaging", marker = "sys_platform == 'emscripten'", specifier = "==24.2" },

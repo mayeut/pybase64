@@ -78,23 +78,23 @@ docs = [
 ]
 lint = ["prek"]
 nox = ["nox>=2025.11.12"]
-setuptools = ["setuptools>=77"]
+build = ["setuptools>=77"]
 dev = [
     {include-group = "coverage"},
     {include-group = "docs"},
     {include-group = "lint"},
     {include-group = "nox"},
-    {include-group = "setuptools"},
+    {include-group = "build"},
     {include-group = "test"},
 ]
 
 [tool.cibuildwheel]
-build-frontend = { name = "uv", args = ["--build-constraints", "requirements/requirements-setuptools.txt", "--require-hashes"] }
+build-frontend = { name = "uv", args = ["--build-constraints", "requirements/build/requirements-ci.txt", "--require-hashes"] }
 build-verbosity = 1
 enable = ["graalpy", "pypy", "pypy-eol"]
 repair-wheel-command = ["uv run --script tools/embed_sbom.py {dest_dir} {wheel}"]
 test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
-test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/requirements-test.txt"]
+test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/test/requirements-ci.txt"]
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
 xbuild-tools = ["cmake", "uv"]
@@ -122,13 +122,13 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux_{ppc64le,riscv64,s390x}"
 build-frontend = { name = "build", args = ["--no-isolation"] }
-before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
+before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build/requirements-ci.txt"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-ios*"
 build-frontend = { name = "build", args = ["--no-isolation"] }
-before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
-# iOS fails to install from requirements/requirements-test.txt because it falls back to --require-hashes
+before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build/requirements-ci.txt"
+# iOS fails to install from requirements/test/requirements-ci.txt because it falls back to --require-hashes
 # and can't install the wheel in the same install command as it's not hashed
 # Don't use hashed requirements for now
 test-groups = ["test"]
@@ -138,7 +138,7 @@ test-requires = []
 [[tool.cibuildwheel.overrides]]
 select = "*-android*"
 build-frontend = { name = "build[uv]", args = ["--no-isolation"] }
-before-build = "uv pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
+before-build = "uv pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build/requirements-ci.txt"
 
 [tool.coverage.run]
 branch = true

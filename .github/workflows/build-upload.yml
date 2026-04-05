@@ -150,11 +150,11 @@ jobs:
           python-version: "3.12"
           version: "0.11.3"
       - name: Build sdist
-        run: uv build --build-constraints requirements/requirements-setuptools.txt --require-hashes --sdist
+        run: uv build --build-constraints requirements/build/requirements-ci.txt --require-hashes --sdist
         env:
           SOURCE_DATE_EPOCH: "${{ needs.prebuild.outputs.SOURCE_DATE_EPOCH }}"
       - name: Install
-        run: uv venv && uv pip install --build-constraints requirements/requirements-setuptools.txt ./dist/pybase64*.tar.gz
+        run: uv venv && uv pip install --build-constraints requirements/build/requirements-ci.txt ./dist/pybase64*.tar.gz
       - name: Test
         run: uv run --frozen --only-group test pytest
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
