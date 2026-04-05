@@ -128,6 +128,9 @@ before-build = "python -m pip install --no-deps --only-binary=:all: --require-ha
 select = "*-ios*"
 build-frontend = { name = "build", args = ["--no-isolation"] }
 before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/requirements-setuptools.txt"
+# iOS fails to install from requirements/requirements-test.txt because it falls back to --require-hashes
+# and can't install the wheel in the same install command as it's not hashed
+# Don't use hashed requirements for now
 test-groups = ["test"]
 test-requires = []
 
