@@ -127,6 +127,7 @@ Future
 - Add ``padded`` and ``wrapcol`` parameters to ``b64encode``
 - Add ``padded`` parameter to ``urlsafe_b64encode``
 - Add ``padded`` parameter to ``b64decode`` & ``urlsafe_b64decode``
+- ``urlsafe_b64decode`` now defaults to ``padded=False`` to align with Python 3.15 behavior
 - Add ``ignorechars`` parameter to ``b64decode``
 - Handle excess padding with the same behavior as CPython 3.15
 - Reject non-ASCII strings in ``b64decode`` when ``validate=False``

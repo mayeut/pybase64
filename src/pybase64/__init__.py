@@ -117,7 +117,7 @@ def urlsafe_b64decode(s: str | Buffer, *, padded: bool = False) -> bytes:
 
     The result is returned as a :class:`bytes` object.
 
-    If padded is false, padding in input is not required.
+    If ``padded`` is ``False``, padding in the input is not required.
     Otherwise, a :exc:`binascii.Error` is raised if the input is incorrectly padded.
 
     Characters that are not in the URL-safe base-64 alphabet, and are not

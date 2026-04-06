@@ -103,7 +103,7 @@ def b64decode(  # noqa: C901
     If ``validate`` is ``True``, these non-alphabet characters in the input
     result in a :exc:`binascii.Error`.
 
-    If ``padded`` is false, padding in input is not required or, not allowed when
+    If ``padded`` is ``False``, padding in the input is not required or not allowed when
     ``validate`` is ``True`` and ``ignorechars`` does not contain the pad character
     ``'='``.
 
@@ -264,7 +264,7 @@ def b64decode_as_bytearray(
     If ``validate`` is ``True``, these non-alphabet characters in the input
     result in a :exc:`binascii.Error`.
 
-    If ``padded`` is false, padding in input is not required or, not allowed when
+    If ``padded`` is ``False``, padding in the input is not required or not allowed when
     ``validate`` is ``True`` and ``ignorechars`` does not contain the pad character
     ``'='``.
 
