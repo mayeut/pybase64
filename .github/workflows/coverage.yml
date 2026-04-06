@@ -43,7 +43,7 @@ jobs:
       - name: Install Intel SDE
         if: runner.arch == 'X64'
         run: |
-          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-lin.tar.xz
+          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
