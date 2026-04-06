@@ -138,8 +138,8 @@ def _coverage(session: nox.Session) -> None:
             cpu = "spr"
             sde: tuple[str, ...] = ("sde64", f"-{cpu}", "--")
             session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
-            for cpu, xcr0 in [("nhm", "0x3"), ("hsw", "0x7")]:
-                sde = ("sde64", "-spr", "-xsetbv", xcr0, "--")
+            for cpu, xcr0 in [("nhm", "3"), ("hsw", "7")]:
+                sde = ("sde64", "-spr", "-xsave_default", xcr0, "--")
                 pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
                 session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
             for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
@@ -172,6 +172,7 @@ def _coverage(session: nox.Session) -> None:
             "--txt",
             "--print-summary",
             f"--xml=coverage-native-{suffix}.xml",
+            f"--html-details=coverage-native-{suffix}/details.html",
         )
         for partial in HERE.glob("coverage-native-partial-*.json"):
             partial.unlink()
@@ -181,9 +182,13 @@ def _coverage(session: nox.Session) -> None:
 def coverage(session: nox.Session) -> None:
     """Coverage tests."""
     posargs_ = set(session.posargs)
+    machine = platform.machine().lower()
     assert len(posargs_ & {"--clean", "--report"}) == 0
     assert len(posargs_ - {"--with-sde"}) == 0
-    posargs = [*session.posargs, "--report"]
+    with_sde = []
+    if machine in {"arm64", "aarch64"} and "--with-sde" not in posargs_:
+        with_sde = ["--with-sde"]
+    posargs = [*session.posargs, *with_sde, "--report"]
     session.notify("_coverage-pypy3.11", ["--clean"])
     session.notify("_coverage-pypy3.10", [])
     session.notify("_coverage-3.15", [])
