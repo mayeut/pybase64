@@ -6,17 +6,26 @@ from base64 import b64encode as builtin_encode
 from base64 import encodebytes as builtin_encodebytes
 from binascii import Error as BinAsciiError
 
+from pybase64._unspecified import _Unspecified
+
 TYPE_CHECKING = False
 if TYPE_CHECKING:
-    from typing import Final
+    from typing import Final, Literal
 
     from pybase64._typing import Buffer
 
-_SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
-_ALTCHARS_WARNINGS: Final = sys.hexversion < 0x030F00A6  # start with 3.15.0a6
-_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # start with 3.15.0a8
+
+_SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 13)  # fast/correct validation in CPython 3.13+
+_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # in 3.15.0a8, move sys.version_info check
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 _EQUAL_ASCII: Final = 61  # '='
+_UNSPECIFIED: Final = _Unspecified.UNSPECIFIED
+
+if not _PYTHON_3_15_API:  # pragma: no cover
+    # we consider '=' part of the alphabet, it will be handled separately
+    _BASE64_ALPHABET = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+    # we do not keep '=' on purpose, it will be handled separately
+    _IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
 
 
 def _get_simd_name(flags: int) -> str:
@@ -28,8 +37,11 @@ def _get_simd_path() -> int:
     return 0
 
 
-def _get_bytes(s: str | Buffer) -> bytes | bytearray:
+def _get_bytes(s: str | Buffer, *, allow_str: bool = True) -> bytes | bytearray:
     if isinstance(s, str):
+        if not allow_str:
+            msg = "argument should be a bytes-like object"
+            raise TypeError(msg) from None
         try:
             return s.encode("ascii")
         except UnicodeEncodeError:
@@ -51,16 +63,21 @@ def _get_bytes(s: str | Buffer) -> bytes | bytearray:
         raise TypeError(msg) from None
 
 
-def _validate_altchars(altchars: bytes | bytearray) -> None:
+def _validate_altchars(altchars: bytes | bytearray) -> bytes | bytearray | None:
     if len(altchars) != 2:
         msg = "len(altchars) != 2"
         raise ValueError(msg) from None
+    if altchars == b"+/":
+        return None
+    return altchars
 
 
 def b64decode(  # noqa: C901
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
 ) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -71,7 +88,15 @@ def b64decode(  # noqa: C901
     string of length 2 which specifies the alternative alphabet used instead
     of the '+' and '/' characters.
 
-    If ``validate`` is ``False`` (the default), characters that are neither in
+    If ``ignorechars`` is specified, it should be a :term:`bytes-like object`
+    containing characters to ignore from the input when ``validate`` is ``True``.
+    If ``ignorechars`` contains the pad character ``'='``,  the pad characters
+    presented before the end of the encoded data and the excess pad characters
+    will be ignored.
+    The default value of ``validate`` is ``True`` if ``ignorechars`` is specified,
+    ``False`` otherwise.
+
+    If ``validate`` is ``False``, characters that are neither in
     the normal base-64 alphabet nor the alternative alphabet are discarded
     prior to the padding check.
     If ``validate`` is ``True``, these non-alphabet characters in the input
@@ -84,18 +109,82 @@ def b64decode(  # noqa: C901
     s = _get_bytes(s)
     has_bad_chars = False
     if altchars is not None:
-        altchars = _get_bytes(altchars)
-        _validate_altchars(altchars)
-        if _ALTCHARS_WARNINGS:
+        altchars = _validate_altchars(_get_bytes(altchars))
+
+    if validate is _UNSPECIFIED:
+        validate = ignorechars is not _UNSPECIFIED
+
+    if ignorechars is not _UNSPECIFIED and not validate:
+        msg = "validate must be True or unspecified when ignorechars is specified"
+        raise ValueError(msg)
+
+    if _PYTHON_3_15_API:  # pragma: no cover
+        kwargs: dict[str, bool | Buffer] = {"validate": validate}
+        if ignorechars is not _UNSPECIFIED:
+            kwargs["ignorechars"] = ignorechars
+        return builtin_decode(s, altchars, **kwargs)  # type: ignore[arg-type]
+
+    if ignorechars is not _UNSPECIFIED:
+        ignorechars_ = _get_bytes(ignorechars, allow_str=False)
+
+    if altchars is not None:
+        if ignorechars is _UNSPECIFIED:
             for b in b"+/":
                 if b not in altchars and b in s:
                     has_bad_chars = True
                     break
-    if _SLOW_VALIDATION and validate:
-        if len(s) % 4 != 0:
-            msg = "Incorrect padding"
-            raise BinAsciiError(msg)
-        result = builtin_decode(s, altchars, validate=False)
+            trans = bytes.maketrans(altchars, b"+/")
+            s = s.translate(trans)
+        else:
+            trans_in_add = set(b"+/") - set(altchars)
+            if len(trans_in_add) == 2:
+                # we don't want to use an unordered set for 2 elements
+                trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
+            else:
+                # 0 or 1 element in the set
+                trans = bytes.maketrans(
+                    altchars + bytes(trans_in_add),
+                    b"+/" + bytes(set(altchars) - set(b"+/")),
+                )
+            s = s.translate(trans)
+            ignorechars_ = ignorechars_.translate(trans)
+
+    if (not validate) or (ignorechars is not _UNSPECIFIED):
+        # we need to filter s before calling builtin_decode this might be quite slow
+        if not validate:
+            has_equal = True
+            ignorechars_ = _IGNORECHARS_VALIDATE_FALSE
+        else:
+            has_equal = 61 in ignorechars_
+            ignorechars_ = bytes(set(ignorechars_) - set(_BASE64_ALPHABET))
+        if ignorechars_:
+            s = s.translate(None, delete=ignorechars_)
+        if has_equal and s:
+            if s[-1] != 61:  # there's data at the end, strip all padding bytes
+                s = s.translate(None, delete=b"=")
+            else:
+                # get s without padding
+                last_equal = len(s) - 1
+                while (last_equal >= 0) and s[last_equal] == 61:
+                    last_equal -= 1
+                last_equal += 1
+                equal_count = len(s) - last_equal
+                s2 = s[:last_equal].translate(None, delete=b"=")
+                quad_pos = len(s2) % 4
+                if quad_pos in {0, 1} or (
+                    quad_pos == 2 and equal_count == 1
+                ):  # 0 is OK, 1 will fail
+                    s = s2
+                else:
+                    s = s2 + b"=" * (4 - quad_pos)
+
+    # we always do validation, start with a simple check
+    if len(s) % 4 != 0:
+        msg = "Incorrect padding"
+        raise BinAsciiError(msg)
+
+    if _SLOW_VALIDATION:
+        result = builtin_decode(s, validate=False)
 
         # check length of result vs length of input
         expected_len = 0
@@ -111,8 +200,8 @@ def b64decode(  # noqa: C901
             msg = "Non-base64 digit found"
             raise BinAsciiError(msg)
     else:
-        result = builtin_decode(s, altchars, validate=validate)
-    if _ALTCHARS_WARNINGS and has_bad_chars:
+        result = builtin_decode(s, validate=True)
+    if has_bad_chars:
         import warnings  # noqa: PLC0415 lazy import
 
         msg = f"invalid characters '+' or '/' in Base64 data with altchars={altchars!r}"
@@ -128,7 +217,9 @@ def b64decode(  # noqa: C901
 def b64decode_as_bytearray(
     s: str | Buffer,
     altchars: str | Buffer | None = None,
-    validate: bool = False,
+    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
+    *,
+    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
 ) -> bytearray:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -139,7 +230,15 @@ def b64decode_as_bytearray(
     string of length 2 which specifies the alternative alphabet used instead
     of the '+' and '/' characters.
 
-    If ``validate`` is ``False`` (the default), characters that are neither in
+    If ``ignorechars`` is specified, it should be a :term:`bytes-like object`
+    containing characters to ignore from the input when ``validate`` is ``True``.
+    If ``ignorechars`` contains the pad character ``'='``,  the pad characters
+    presented before the end of the encoded data and the excess pad characters
+    will be ignored.
+    The default value of ``validate`` is ``True`` if ``ignorechars`` is specified,
+    ``False`` otherwise.
+
+    If ``validate`` is ``False``, characters that are neither in
     the normal base-64 alphabet nor the alternative alphabet are discarded
     prior to the padding check.
     If ``validate`` is ``True``, these non-alphabet characters in the input
@@ -149,7 +248,7 @@ def b64decode_as_bytearray(
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
-    return bytearray(b64decode(s, altchars=altchars, validate=validate))
+    return bytearray(b64decode(s, altchars=altchars, validate=validate, ignorechars=ignorechars))
 
 
 def b64encode(
@@ -182,8 +281,7 @@ def b64encode(
         msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"
         raise BufferError(msg)
     if altchars is not None:
-        altchars = _get_bytes(altchars)
-        _validate_altchars(altchars)
+        altchars = _validate_altchars(_get_bytes(altchars))
     if wrapcol < 0:
         msg = "wrapcol must be >= 0"
         raise ValueError(msg)

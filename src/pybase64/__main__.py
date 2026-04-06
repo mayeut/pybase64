@@ -5,8 +5,6 @@ __lazy_modules__ = ["base64", "pathlib", "timeit"]
 import argparse
 import base64
 import sys
-from base64 import b64decode as b64decode_validate
-from base64 import encodebytes as b64encodebytes
 from pathlib import Path
 from timeit import default_timer as timer
 
@@ -15,23 +13,22 @@ import pybase64
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from types import ModuleType
     from typing import Any
-
-    from pybase64._typing import Buffer, Decode, Encode, EncodeBytes
 
 
 def bench_one(
     duration: float,
     data: bytes,
-    enc: Encode,
-    dec: Decode,
-    encbytes: EncodeBytes,
-    altchars: bytes | None = None,
-    validate: bool = False,
+    module: ModuleType,
+    altchars: bytes | None,
+    kwargs: dict[str, bool | bytes],
 ) -> None:
     duration = duration / 2.0
 
+    validate = kwargs["validate"]
     if not validate and altchars is None:
+        encbytes = module.encodebytes
         number = 0
         time = timer()
         while True:
@@ -46,14 +43,15 @@ def bench_one(
             iter_ -= 1
         time = timer() - time
         print(
-            "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
-                encbytes.__module__ + "." + encbytes.__name__ + ":",
+            "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
+                module.__name__ + "." + encbytes.__name__ + ":",
                 ((number * len(data)) / (1024.0 * 1024.0)) / time,
                 len(data),
                 len(encodedcontent),
             ),
         )
 
+    enc = module.b64encode
     number = 0
     time = timer()
     while True:
@@ -68,36 +66,40 @@ def bench_one(
         iter_ -= 1
     time = timer() - time
     print(
-        "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
-            enc.__module__ + "." + enc.__name__ + ":",
+        "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
+            module.__name__ + "." + enc.__name__ + ":",
             ((number * len(data)) / (1024.0 * 1024.0)) / time,
             len(data),
             len(encodedcontent),
         ),
     )
 
-    number = 0
-    time = timer()
-    while True:
-        decodedcontent = dec(encodedcontent, altchars=altchars, validate=validate)
-        number += 1
-        if timer() - time > duration:
-            break
-    iter_ = number
-    time = timer()
-    while iter_ > 0:
-        decodedcontent = dec(encodedcontent, altchars=altchars, validate=validate)
-        iter_ -= 1
-    time = timer() - time
-    print(
-        "{:<32s} {:9.3f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
-            dec.__module__ + "." + dec.__name__ + ":",
-            ((number * len(data)) / (1024.0 * 1024.0)) / time,
-            len(encodedcontent),
-            len(data),
-        ),
-    )
-    assert decodedcontent == data  # noqa: S101
+    dec = module.b64decode
+    if module is base64 and "ignorechars" in kwargs and sys.version_info < (3, 15):
+        print("{:<24s}       N/A".format(module.__name__ + "." + dec.__name__ + ":"))
+    else:
+        number = 0
+        time = timer()
+        while True:
+            decodedcontent = dec(encodedcontent, altchars=altchars, **kwargs)
+            number += 1
+            if timer() - time > duration:
+                break
+        iter_ = number
+        time = timer()
+        while iter_ > 0:
+            decodedcontent = dec(encodedcontent, altchars=altchars, **kwargs)
+            iter_ -= 1
+        time = timer() - time
+        print(
+            "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
+                module.__name__ + "." + dec.__name__ + ":",
+                ((number * len(data)) / (1024.0 * 1024.0)) / time,
+                len(encodedcontent),
+                len(data),
+            ),
+        )
+        assert decodedcontent == data  # noqa: S101
 
 
 def readall(file: str) -> bytes:
@@ -115,42 +117,34 @@ def writeall(file: str, data: bytes) -> None:
 
 def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     print(__package__ + " " + pybase64.get_version())
-    # move to sys.version_info[:2] < (3, 15) after 3.15.0b1
-    if sys.hexversion < 0x030F00A8:
-
-        def _b64encode(
-            s: Buffer,
-            altchars: Buffer | None = None,
-            *,
-            padded: bool = True,  # noqa: ARG001
-            wrapcol: int = 0,  # noqa: ARG001
-        ) -> bytes:
-            return base64.b64encode(s, altchars)
-    else:  # pragma: no cover
-        _b64encode = base64.b64encode  # type: ignore[assignment]
-
     data = readall(input)
     for altchars in [None, b"-_"]:
         for validate in [False, True]:
-            print(f"bench: altchars={altchars!r:s}, validate={validate!r:s}")
-            bench_one(
-                duration,
-                data,
-                pybase64.b64encode,
-                pybase64.b64decode,
-                pybase64.encodebytes,
-                altchars,
-                validate,
-            )
-            bench_one(
-                duration,
-                data,
-                _b64encode,
-                b64decode_validate,
-                b64encodebytes,
-                altchars,
-                validate,
-            )
+            for ignorechars in [None, b"", b"@"]:
+                kwargs: dict[str, bool | bytes] = {"validate": validate}
+                if ignorechars is not None:
+                    if not validate:
+                        continue
+                    kwargs["ignorechars"] = ignorechars
+                title = f"bench: altchars={altchars!r:s}"
+                if ignorechars is None:
+                    print(f"{title}, validate={validate!r:s}")
+                else:
+                    print(f"{title}, ignorechars={ignorechars!r:s}")
+                bench_one(
+                    duration,
+                    data,
+                    pybase64,
+                    altchars,
+                    kwargs,
+                )
+                bench_one(
+                    duration,
+                    data,
+                    base64,
+                    altchars,
+                    kwargs,
+                )
 
 
 def encode(*, input: str, altchars: bytes | None, output: str) -> None:  # noqa: A002
