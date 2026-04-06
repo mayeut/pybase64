@@ -97,12 +97,10 @@ uint32_t pybase64_get_simd_flags(void)
 			result |= PYBASE64_SSE42;
 		}
 
-		if (PB64_CHECK(ecx, PB64_OSXSAVE_BIT_LVL1_ECX)) { /* OSXSAVE (implies XSAVE/XRESTOR/XGETBV) */
-			if (ecx & PB64_AVX_BIT_LVL1_ECX) {
-				xcr0 = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
-				if (PB64_CHECK(xcr0, PB64_XCR0_AVX_SUPPORT_MASK)) { /* XMM/YMM saved by OS */
-					result |= PYBASE64_AVX;
-				}
+		if (PB64_CHECK(ecx, PB64_AVX_BIT_LVL1_ECX | PB64_OSXSAVE_BIT_LVL1_ECX)) { /* AVX & OSXSAVE (implies XSAVE/XRESTOR/XGETBV) */
+			xcr0 = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
+			if (PB64_CHECK(xcr0, PB64_XCR0_AVX_SUPPORT_MASK)) { /* XMM/YMM saved by OS */
+				result |= PYBASE64_AVX;
 			}
 		}
 	}
@@ -114,7 +112,7 @@ uint32_t pybase64_get_simd_flags(void)
 				result |= PYBASE64_AVX2;
 			}
 			if (PB64_CHECK(xcr0, PB64_XCR0_AVX512_SUPPORT_MASK)) {/* OpMask/ZMM/ZMM16-31 saved by OS */
-				if (PB64_CHECK(ebx, PB64_AVX512F_BIT_LVL7_EBX) && PB64_CHECK(ebx, PB64_AVX512VL_BIT_LVL7_EBX) && PB64_CHECK(ecx, PB64_AVX512VBMI_BIT_LVL7_ECX)) {
+				if (PB64_CHECK(ebx, PB64_AVX512F_BIT_LVL7_EBX | PB64_AVX512VL_BIT_LVL7_EBX) && PB64_CHECK(ecx, PB64_AVX512VBMI_BIT_LVL7_ECX)) {
 					result |= PYBASE64_AVX512VBMI;
 				}
 			}
