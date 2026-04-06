@@ -1,7 +1,7 @@
-#include "_pybase64_get_simd_flags.h"
 #define PY_SSIZE_T_CLEAN
 #define PY_CXX_CONST const
 #include <Python.h>
+#include "_pybase64_get_simd_flags.h"
 #include <config.h>
 #include <libbase64.h>
 #include <codecs.h>
