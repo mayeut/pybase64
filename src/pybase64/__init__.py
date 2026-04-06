@@ -109,7 +109,7 @@ def urlsafe_b64encode(s: Buffer, *, padded: bool = True) -> bytes:
     return b64encode(s, b"-_", padded=padded)
 
 
-def urlsafe_b64decode(s: str | Buffer) -> bytes:
+def urlsafe_b64decode(s: str | Buffer, *, padded: bool = False) -> bytes:
     """Decode bytes using the URL- and filesystem-safe Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` or ASCII string to
@@ -117,11 +117,12 @@ def urlsafe_b64decode(s: str | Buffer) -> bytes:
 
     The result is returned as a :class:`bytes` object.
 
-    A :exc:`binascii.Error` is raised if the input is incorrectly padded.
+    If ``padded`` is ``False``, padding in the input is not required.
+    Otherwise, a :exc:`binascii.Error` is raised if the input is incorrectly padded.
 
     Characters that are not in the URL-safe base-64 alphabet, and are not
     a plus '+' or slash '/', are discarded prior to the padding check.
 
     The alphabet uses '-' instead of '+' and '_' instead of '/'.
     """
-    return b64decode(s, b"-_")
+    return b64decode(s, b"-_", padded=padded)

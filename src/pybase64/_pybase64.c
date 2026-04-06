@@ -33,10 +33,12 @@
 #define PYBASE64_DECODE_SLOW_INCORRECT_PADDING 6
 #define PYBASE64_DECODE_SLOW_INVALID_LEN 7
 #define PYBASE64_DECODE_SLOW_INVALID_DATA 8
+#define PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED 9
 
 typedef struct pybase64_state {
     PyObject *binAsciiError;
     PyObject *ignoreCharsValidateFalse;
+    PyObject *ignoreCharsNoPadding;
     uint32_t active_simd_flag;
     uint32_t simd_flags;
     int libbase64_simd_flag;
@@ -411,7 +413,7 @@ static int next_valid_padding(uint8_t const** pSrc, size_t* pSrclen, Py_buffer c
     return ret;
 }
 
-static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* outlen, Py_buffer const* ignorechars)
+static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* outlen, Py_buffer const* ignorechars, int padded)
 {
     uint8_t* out_start = out;
     uint8_t carry;
@@ -499,6 +501,9 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
         for(;;)
         {
             if (srclen-- == 0) {
+                if (!padded) {
+                    goto END;
+                }
                 return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
             }
             uint8_t c = *src++;
@@ -508,6 +513,9 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
                     /* if the next valid byte is '=' => end or skip depending on '=' being in ignorechars */
                     uint8_t const* src_next = src;
                     size_t srclen_next = srclen;
+                    if (!padded && !check_ignore('=', ignorechars, ignorecache)) {
+                        return PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED;
+                    }
                     if (srclen == 0) {
                         return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
                     }
@@ -543,12 +551,18 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
         for(;;)
         {
             if (srclen-- == 0) {
+                if (!padded) {
+                    goto END;
+                }
                 return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
             }
             uint8_t c = *src++;
             uint8_t q;
             if ((q = base64_table_dec_8bit[c]) >= 254) {
                 if (q == 254) {  /* padding */
+                    if (!padded && !check_ignore('=', ignorechars, ignorecache)) {
+                        return PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED;
+                    }
                     if (check_excess_data(&src, &srclen, ignorechars, ignorecache)) {
                         if (check_ignore('=', ignorechars, ignorecache)) {
                             continue;
@@ -879,7 +893,7 @@ END:
 
 static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_bytearray)
 {
-    static const char *kwlist[] = { "", "altchars", "validate", "ignorechars", NULL };
+    static const char *kwlist[] = { "", "altchars", "validate", "padded", "ignorechars", NULL };
 
     int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
@@ -893,6 +907,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     PyObject* in_object;
     PyObject* validation_object = NULL;
     PyObject* ignorechars_object = NULL;
+    int padded = 1;
+    int fast_path;
     PyObject* out_object = NULL;
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer = NULL;
@@ -907,7 +923,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
     /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$O", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &ignorechars_object)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$pO", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &padded, &ignorechars_object)) {
         return NULL;
     }
 
@@ -929,10 +945,19 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
+    /* default to fast path when validation is true */
+    fast_path = validation;
+
     use_alphabet_for_ignore_chars = use_alphabet;
     if (!validation) {
         assert(ignorechars_object == NULL);
         ignorechars_object = state->ignoreCharsValidateFalse;
+        use_alphabet_for_ignore_chars = 0;
+    }
+
+    if ((ignorechars_object == NULL) && !padded) {
+        assert(validation);
+        ignorechars_object = state->ignoreCharsNoPadding;
         use_alphabet_for_ignore_chars = 0;
     }
 
@@ -944,19 +969,19 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         if (validation) {
             translate_fn = &translate;
         }
-        if (ignorechars_buffer.len == 0) {
+        if ((ignorechars_buffer.len == 0) && padded) {
             PyBuffer_Release(&ignorechars_buffer);
             Py_DECREF(ignorechars_object);
             ignorechars_object = NULL;
-            validation = 1;
+            fast_path = 1;
         }
         else {
-            validation = 0;
+            fast_path = 0;
         }
     }
 
     if (PyUnicode_Check(in_object)) {
-        if (validation && (PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
+        if (fast_path && (PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
             source = PyUnicode_1BYTE_DATA(in_object);
             source_len = PyUnicode_GET_LENGTH(in_object);
         }
@@ -992,7 +1017,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     }
 
 /* TRY: */
-    if (!validation && use_alphabet) {
+    if (!fast_path && use_alphabet) {
         PyObject* translate_object;
         char* translate_dst;
 
@@ -1067,13 +1092,13 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 #endif
     }
 
-    if (!validation) {
+    if (!fast_path) {
         int result;
 
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        result = decode_slow(source, source_len, dest, &out_len, &ignorechars_buffer);
+        result = decode_slow(source, source_len, dest, &out_len, &ignorechars_buffer, padded);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
@@ -1101,6 +1126,9 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
                 break;
             case PYBASE64_DECODE_SLOW_INVALID_DATA:
                 PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
+                break;
+            case PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED:
+                PyErr_SetString(state->binAsciiError, "Padding not allowed");
                 break;
             }
             goto EXCEPT;
@@ -1484,6 +1512,11 @@ static int _pybase64_exec(PyObject *m)
         return -1;
     }
 
+    state->ignoreCharsNoPadding = PyBytes_FromStringAndSize("", 0);
+    if (state->ignoreCharsNoPadding == NULL) {
+        return -1;
+    }
+
     state->simd_flags = pybase64_get_simd_flags();
     set_simd_path(state, state->simd_flags);
 
@@ -1496,6 +1529,7 @@ static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
     if (state) {
         Py_VISIT(state->binAsciiError);
         Py_VISIT(state->ignoreCharsValidateFalse);
+        Py_VISIT(state->ignoreCharsNoPadding);
     }
     return 0;
 }
@@ -1506,6 +1540,7 @@ static int _pybase64_clear(PyObject *m)
     if (state) {
         Py_CLEAR(state->binAsciiError);
         Py_CLEAR(state->ignoreCharsValidateFalse);
+        Py_CLEAR(state->ignoreCharsNoPadding);
     }
     return 0;
 }

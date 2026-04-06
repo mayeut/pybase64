@@ -21,6 +21,7 @@ class Decode(Protocol):
         altchars: str | Buffer | None = None,
         validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
         *,
+        padded: bool = True,
         ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
     ) -> bytes: ...
 

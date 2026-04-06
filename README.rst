@@ -124,17 +124,19 @@ Changelog
 Future
 ------
 - Speed-up translation on aarch64
+- Add ``padded`` and ``wrapcol`` parameters to ``b64encode``
+- Add ``padded`` parameter to ``urlsafe_b64encode``
+- Add ``padded`` parameter to ``b64decode`` & ``urlsafe_b64decode``
+- ``urlsafe_b64decode`` now defaults to ``padded=False`` to align with Python 3.15 behavior
+- Add ``ignorechars`` parameter to ``b64decode``
+- Handle excess padding with the same behavior as CPython 3.15
+- Reject non-ASCII strings in ``b64decode`` when ``validate=False``
+- Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
 - Use ``ValueError`` instead of ``AssertionError`` on altchars length validation
 - Add SBOM to PyPI wheels
 - Add initial support for Python 3.15
-- Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
-- Add ``padded`` and ``wrapcol`` parameters to ``b64encode``
-- Add ``padded`` parameter to ``urlsafe_b64encode``
-- Reject non-ASCII strings in ``b64decode`` when ``validate=False``
 - Drop python 3.8 support
 - Stop publishing python 3.13t wheels
-- Add ``ignorechars`` parameter to ``b64decode``
-- Handle excess padding with the same behavior as CPython 3.15
 
 1.4.3
 -----
