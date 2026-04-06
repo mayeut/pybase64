@@ -79,7 +79,7 @@ uint32_t pybase64_get_simd_flags(void)
 	/* get max level */
 	cpuid_(0U, 0U, &max_level, &ebx, &ecx, &edx);
 
-	if (max_level >= 1) {
+	if (max_level >= 1) {  /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
 		cpuid_(1U, 0U, &eax, &ebx, &ecx, &edx);
 		if (PB64_CHECK(edx, PB64_SSE2_BIT_LVL1_EDX)) {
 			result |= PYBASE64_SSE2;
@@ -111,8 +111,8 @@ uint32_t pybase64_get_simd_flags(void)
 			if (PB64_CHECK(ebx, PB64_AVX2_BIT_LVL7_EBX)) {
 				result |= PYBASE64_AVX2;
 			}
-			if (PB64_CHECK(xcr0, PB64_XCR0_AVX512_SUPPORT_MASK)) {/* OpMask/ZMM/ZMM16-31 saved by OS */
-				if (PB64_CHECK(ebx, PB64_AVX512F_BIT_LVL7_EBX | PB64_AVX512VL_BIT_LVL7_EBX) && PB64_CHECK(ecx, PB64_AVX512VBMI_BIT_LVL7_ECX)) {
+			if (PB64_CHECK(ebx, PB64_AVX512F_BIT_LVL7_EBX | PB64_AVX512VL_BIT_LVL7_EBX) && PB64_CHECK(ecx, PB64_AVX512VBMI_BIT_LVL7_ECX)) {
+				if (PB64_CHECK(xcr0, PB64_XCR0_AVX512_SUPPORT_MASK)) { /* OpMask/ZMM/ZMM16-31 saved by OS */
 					result |= PYBASE64_AVX512VBMI;
 				}
 			}
