@@ -1,0 +1,13 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "ignore-specific",
+      "pattern": [
+        {
+          "regexp": "\\(ERROR\\) Found marker for exclusion of branches without hits at",
+          "severity": "none"
+        }
+      ]
+    }
+  ]
+}
