@@ -1404,12 +1404,6 @@ static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
     if (flags & PYBASE64_SSSE3) {
         return PyUnicode_FromString("SSSE3");
     }
-    if (flags & PYBASE64_SSE3) {
-        return PyUnicode_FromString("SSE3");
-    }
-    if (flags & PYBASE64_SSE2) {
-        return PyUnicode_FromString("SSE2");
-    }
 
     assert(flags == PYBASE64_NONE);
     return PyUnicode_FromString("No SIMD");
