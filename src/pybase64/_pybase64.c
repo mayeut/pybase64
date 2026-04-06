@@ -643,9 +643,11 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
             return NULL; /* GCOVR_EXCL_LINE */
         }
         if (PyUnicode_KIND(out_object) != PyUnicode_1BYTE_KIND) {
+            /* GCOVR_EXCL_START */
             Py_DECREF(out_object);
             PyErr_SetString(PyExc_RuntimeError, "Not a PyUnicode_1BYTE_KIND object");
             return NULL;
+            /* GCOVR_EXCL_STOP */
         }
         dst = (char*)PyUnicode_DATA(out_object);
     }
@@ -1057,8 +1059,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
         in_object = translate_object;
         if (get_buffer(in_object, &buffer, 0) != 0) {
-            Py_DECREF(in_object);
-            return NULL;
+            Py_DECREF(in_object); /* GCOVR_EXCL_LINE */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
         source = buffer.buf;
         source_len = buffer.len;
@@ -1409,10 +1411,7 @@ static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
         return PyUnicode_FromString("SSE2");
     }
 
-    if (flags != 0) {
-        return PyUnicode_FromString("unknown");
-    }
-
+    assert(flags == PYBASE64_NONE);
     return PyUnicode_FromString("No SIMD");
 }
 
@@ -1463,7 +1462,7 @@ static PyObject* pybase64_import_BinAsciiError()
         return NULL; /* GCOVR_EXCL_LINE */
     }
     if (!PyObject_IsSubclass(binAsciiError, PyExc_Exception)) {
-        Py_DECREF(binAsciiError);
+        Py_DECREF(binAsciiError); /* GCOVR_EXCL_LINE */
         return NULL; /* GCOVR_EXCL_LINE */
     }
 
