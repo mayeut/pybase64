@@ -583,6 +583,7 @@ def test_flags(request: pytest.FixtureRequest) -> None:
         "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
         "skx": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
         "spr": 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
+        "neon": 65536,  # NEON
     }[cpu] == utils.runtime_flags
 
 

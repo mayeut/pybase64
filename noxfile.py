@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import sys
 from pathlib import Path
 
@@ -107,6 +108,7 @@ def _coverage(session: nox.Session) -> None:
         "-e=base64",
         "-e=.base64_build",
         "--gcov-exclude-directory=.base64_build",
+        "--gcov-delete",
     )
     with_sde = "--with-sde" in session.posargs
     clean = "--clean" in session.posargs
@@ -117,12 +119,13 @@ def _coverage(session: nox.Session) -> None:
         "--cov-append",
         "--cov-report=",
     )
+    machine = platform.machine().lower()
     pytest_command = ("pytest", *coverage_args)
     remove_extension(session, in_place=True)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
         "CIBUILDWHEEL": "1",
-        "CFLAGS": "-O0 -coverage -DNDEBUG",
+        "CFLAGS": "-O0 -coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
@@ -131,34 +134,43 @@ def _coverage(session: nox.Session) -> None:
         session.run("coverage", "erase", env=env)
     session.run(*pytest_command, env=env)
     if with_sde:
-        cpu = "spr"
-        sde = ("sde64", f"-{cpu}", "--")
-        session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
-        for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
+        if machine == "x86_64":
+            cpu = "spr"
             sde = ("sde64", f"-{cpu}", "--")
-            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
-            session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
-
+            session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
+            for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
+                sde = ("sde64", f"-{cpu}", "--")
+                pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
+                session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
+        elif machine in {"arm64", "aarch64"}:
+            pytest_addopt = ("--sde-cpu=neon", "-k=test_flags")
+            session.run(*pytest_command, *pytest_addopt, env=env, external=True)
+        else:
+            msg = f"unsupported machine {machine!r} for '--with-sde'"
+            session.error(msg)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session, in_place=True)
     session.run(*pytest_command, env=env)
-    session.run("gcovr", *gcovr_config, f"--json=coverage-native-{session.python}.json")
+    session.run("gcovr", *gcovr_config, f"--json=coverage-native-partial-{session.python}.json")
 
     # reports
     if report:
+        suffix = f"{sys.platform}-{machine}"
         threshold = 100.0 if "CI" in os.environ else 99.8
         session.run("coverage", "report", "--show-missing", f"--fail-under={threshold}")
-        session.run("coverage", "xml", "-ocoverage-python.xml")
+        session.run("coverage", "xml", f"-ocoverage-python-{suffix}.xml")
         session.run(
             "gcovr",
             *gcovr_config,
-            "--add-tracefile=coverage-native-*.json",
+            "--add-tracefile=coverage-native-partial-*.json",
             "--fail-under-line=89",
             "--txt",
             "--print-summary",
-            "--xml=coverage-native.xml",
+            f"--xml=coverage-native-{suffix}.xml",
         )
+        for partial in HERE.glob("coverage-native-partial-*.json"):
+            partial.unlink()
 
 
 @nox.session(venv_backend="none")
