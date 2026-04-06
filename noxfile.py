@@ -172,7 +172,6 @@ def _coverage(session: nox.Session) -> None:
             "--txt",
             "--print-summary",
             f"--xml=coverage-native-{suffix}.xml",
-            f"--html-details=coverage-native-{suffix}/details.html",
         )
         for partial in HERE.glob("coverage-native-partial-*.json"):
             partial.unlink()
