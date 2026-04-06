@@ -1479,7 +1479,7 @@ static int _pybase64_exec(PyObject *m)
     }
 
     assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
-    state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize(ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
+    state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize((const char*)ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
     if (state->ignoreCharsValidateFalse == NULL) {
         return -1;
     }

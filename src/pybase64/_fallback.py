@@ -40,7 +40,7 @@ def _get_simd_path() -> int:
 def _get_bytes(s: str | Buffer, *, allow_str: bool = True) -> bytes | bytearray:
     if isinstance(s, str):
         if not allow_str:
-            msg = "argument should be a bytes-like object "
+            msg = "argument should be a bytes-like object"
             raise TypeError(msg) from None
         try:
             return s.encode("ascii")
