@@ -156,7 +156,12 @@ def _coverage(session: nox.Session) -> None:
     env.pop("CIBUILDWHEEL")
     remove_extension(session, in_place=True)
     session.run(*pytest_command, env=env)
-    session.run("gcovr", *gcovr_config, f"--json=coverage-native-partial-{session.python}.json")
+    session.run(
+        "gcovr",
+        *gcovr_config,
+        f"--json=coverage-native-partial-{session.python}.json",
+        silent=True,
+    )
 
     # reports
     if report:
