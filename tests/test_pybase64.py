@@ -38,10 +38,11 @@ def b64decode_as_bytearray(
     altchars: str | Buffer | None = None,
     validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
     *,
+    padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
 ) -> bytes:
     """Helper returning bytes instead of bytearray for tests"""
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {"padded": padded}
     if not isinstance(validate, _Unspecified):
         kwargs["validate"] = validate
     if not isinstance(ignorechars, _Unspecified):
@@ -686,6 +687,48 @@ def test_b64encode_padded(efn: Encode, vector: bytes, expected: bytes, simd: int
     assert efn(vector, padded=False) == expected
 
 
+@param_decode_functions
+@pytest.mark.parametrize(
+    ("vector", "expected", "padded_exc"),
+    [
+        (b"", b"", False),
+        (b"YQ==", b"a", False),
+        (b"YQ", b"a", True),
+        (b"YWI=", b"ab", False),
+        (b"YWI", b"ab", True),
+        (b"YWJj", b"abc", False),
+        (b"=YWJj", b"abc", False),
+        (b"Y=WJj", b"abc", False),
+        (b"YW=Jj", b"abc", False),
+        (b"YWJ=j", b"abc", False),
+    ],
+)
+@utils.param_simd
+def test_b64decode_padded(
+    dfn: Decode,
+    vector: bytes,
+    expected: bytes,
+    padded_exc: bool,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)
+    if b"=" in vector:
+        with pytest.raises(BinAsciiError):
+            dfn(vector, padded=False, validate=True)
+        with pytest.raises(BinAsciiError):
+            dfn(vector, padded=False, ignorechars=b"")
+    else:
+        assert dfn(vector, padded=False, validate=True) == expected
+        assert dfn(vector, padded=False, ignorechars=b"") == expected
+    if padded_exc:
+        with pytest.raises(BinAsciiError):
+            dfn(vector, padded=True)
+    else:
+        assert dfn(vector, padded=True) == expected
+    assert dfn(vector, padded=False) == expected
+    assert dfn(vector, padded=False, ignorechars=b"=") == expected
+
+
 @pytest.mark.parametrize(
     ("vector", "expected"),
     [(b"", b""), (b"a", b"YQ"), (b"ab", b"YWI"), (b"abc", b"YWJj")],
@@ -694,6 +737,19 @@ def test_b64encode_padded(efn: Encode, vector: bytes, expected: bytes, simd: int
 def test_urlsafe_b64encode_padded(vector: bytes, expected: bytes, simd: int) -> None:
     utils.unused_args(simd)
     assert pybase64.urlsafe_b64encode(vector, padded=False) == expected
+
+
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"", b""), (b"YQ", b"a"), (b"YWI", b"ab"), (b"YWJj", b"abc")],
+)
+@utils.param_simd
+def test_urlsafe_b64decode_padded(vector: bytes, expected: bytes, simd: int) -> None:
+    utils.unused_args(simd)
+    if (len(vector) % 4) != 0:
+        with pytest.raises(BinAsciiError, match="Incorrect padding"):
+            pybase64.urlsafe_b64decode(vector, padded=True)
+    assert pybase64.urlsafe_b64decode(vector, padded=False) == expected
 
 
 @utils.param_simd
