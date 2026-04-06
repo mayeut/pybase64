@@ -98,10 +98,9 @@ uint32_t pybase64_get_simd_flags(void)
 		}
 
 		if (PB64_CHECK(ecx, PB64_OSXSAVE_BIT_LVL1_ECX)) { /* OSXSAVE (implies XSAVE/XRESTOR/XGETBV) */
-			xcr0 = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
-
-			if (PB64_CHECK(xcr0, PB64_XCR0_AVX_SUPPORT_MASK)) { /* XMM/YMM saved by OS */
-				if (ecx & PB64_AVX_BIT_LVL1_ECX) {
+			if (ecx & PB64_AVX_BIT_LVL1_ECX) {
+				xcr0 = _xgetbv(0U /* XFEATURE_ENABLED_MASK/XCR0 */);
+				if (PB64_CHECK(xcr0, PB64_XCR0_AVX_SUPPORT_MASK)) { /* XMM/YMM saved by OS */
 					result |= PYBASE64_AVX;
 				}
 			}
