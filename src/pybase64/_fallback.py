@@ -13,9 +13,10 @@ if TYPE_CHECKING:
     from pybase64._typing import Buffer
 
 _SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 11)  # fast validation with CPython 3.11+
-_ALTCHARS_WARNINGS: Final = sys.version_info[:2] < (3, 15)
-_HAS_WRAPCOL: Final = sys.version_info[:2] >= (3, 15)  # wrapcol support in builtin b64encode
+_ALTCHARS_WARNINGS: Final = sys.hexversion < 0x030F00A6  # start with 3.15.0a6
+_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # start with 3.15.0a8
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
+_EQUAL_ASCII: Final = 61  # '='
 
 
 def _get_simd_name(flags: int) -> str:
@@ -98,12 +99,12 @@ def b64decode(  # noqa: C901
 
         # check length of result vs length of input
         expected_len = 0
-        if len(s) > 0:
+        if s:
             padding = 0
             # len(s) % 4 != 0 implies len(s) >= 4 here
-            if s[-2] == 61:  # 61 == ord("=")
+            if s[-2] == _EQUAL_ASCII:
                 padding += 1
-            if s[-1] == 61:
+            if s[-1] == _EQUAL_ASCII:
                 padding += 1
             expected_len = 3 * (len(s) // 4) - padding
         if expected_len != len(result):
@@ -151,7 +152,13 @@ def b64decode_as_bytearray(
     return bytearray(b64decode(s, altchars=altchars, validate=validate))
 
 
-def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes:
+def b64encode(
+    s: Buffer,
+    altchars: str | Buffer | None = None,
+    *,
+    padded: bool = True,
+    wrapcol: int = 0,
+) -> bytes:
     r"""Encode bytes using the standard Base64 alphabet.
 
     Argument ``s`` is a :term:`bytes-like object` to encode.
@@ -159,6 +166,9 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     Optional ``altchars`` must be a byte string of length 2 which specifies
     an alternative alphabet for the '+' and '/' characters.  This allows an
     application to e.g. generate url or filesystem safe Base64 strings.
+
+    Optional ``padded`` specifies whether to pad the encoded data with the '='
+    character to a size multiple of 4.
 
     Optional ``wrapcol`` specifies after how many characters the output should
     be split with a newline character (``b'\n'``).  The value is rounded down
@@ -177,9 +187,15 @@ def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int =
     if wrapcol < 0:
         msg = "wrapcol must be >= 0"
         raise ValueError(msg)
-    if _HAS_WRAPCOL:
-        return builtin_encode(s, altchars, wrapcol=wrapcol)  # type: ignore[call-arg]
+    if _PYTHON_3_15_API:  # pragma: no cover
+        return builtin_encode(s, altchars, padded=padded, wrapcol=wrapcol)  # type: ignore[call-arg]
     encoded = builtin_encode(s, altchars)
+    if encoded and not padded:
+        # len is >= 4
+        if encoded[-2] == _EQUAL_ASCII:
+            encoded = encoded[:-2]
+        elif encoded[-1] == _EQUAL_ASCII:
+            encoded = encoded[:-1]
     if wrapcol == 0 or not encoded:
         return encoded
     effective_wrapcol = (wrapcol // 4) * 4 or 4
@@ -192,6 +208,7 @@ def b64encode_as_string(
     s: Buffer,
     altchars: str | Buffer | None = None,
     *,
+    padded: bool = True,
     wrapcol: int = 0,
 ) -> str:
     r"""Encode bytes using the standard Base64 alphabet.
@@ -202,6 +219,9 @@ def b64encode_as_string(
     an alternative alphabet for the '+' and '/' characters.  This allows an
     application to e.g. generate url or filesystem safe Base64 strings.
 
+    Optional ``padded`` specifies whether to pad the encoded data with the '='
+    character to a size multiple of 4.
+
     Optional ``wrapcol`` specifies after how many characters the output should
     be split with a newline character (``'\n'``).  The value is rounded down
     to the nearest multiple of 4.  If ``wrapcol`` is 0 (the default), no
@@ -209,7 +229,7 @@ def b64encode_as_string(
 
     The result is returned as a :class:`str` object.
     """
-    return b64encode(s, altchars, wrapcol=wrapcol).decode("ascii")
+    return b64encode(s, altchars, padded=padded, wrapcol=wrapcol).decode("ascii")
 
 
 def encodebytes(s: Buffer) -> bytes:

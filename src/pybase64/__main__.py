@@ -115,12 +115,19 @@ def writeall(file: str, data: bytes) -> None:
 
 def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     print(__package__ + " " + pybase64.get_version())
-    if sys.version_info < (3, 15):
+    # move to sys.version_info[:2] < (3, 15) after 3.15.0b1
+    if sys.hexversion < 0x030F00A8:
 
-        def _b64encode(s: Buffer, altchars: Buffer | None = None, *, wrapcol: int = 0) -> bytes:  # noqa: ARG001
+        def _b64encode(
+            s: Buffer,
+            altchars: Buffer | None = None,
+            *,
+            padded: bool = True,  # noqa: ARG001
+            wrapcol: int = 0,  # noqa: ARG001
+        ) -> bytes:
             return base64.b64encode(s, altchars)
-    else:
-        _b64encode = base64.b64encode
+    else:  # pragma: no cover
+        _b64encode = base64.b64encode  # type: ignore[assignment]
 
     data = readall(input)
     for altchars in [None, b"-_"]:

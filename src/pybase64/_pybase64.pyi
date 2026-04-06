@@ -15,11 +15,18 @@ def b64decode_as_bytearray(
     altchars: str | Buffer | None = None,
     validate: bool = False,
 ) -> bytearray: ...
-def b64encode(s: Buffer, altchars: str | Buffer | None = None, *, wrapcol: int = 0) -> bytes: ...
+def b64encode(
+    s: Buffer,
+    altchars: str | Buffer | None = None,
+    *,
+    padded: bool = True,
+    wrapcol: int = 0,
+) -> bytes: ...
 def b64encode_as_string(
     s: Buffer,
     altchars: str | Buffer | None = None,
     *,
+    padded: bool = True,
     wrapcol: int = 0,
 ) -> str: ...
 def encodebytes(s: Buffer) -> bytes: ...
