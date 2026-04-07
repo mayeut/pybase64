@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import sys
 from pathlib import Path
 
@@ -169,6 +170,10 @@ def _coverage(session: nox.Session) -> None:
         threshold = 100.0 if "CI" in os.environ else 99.8
         session.run("coverage", "report", "--show-missing", f"--fail-under={threshold}")
         session.run("coverage", "xml", f"-ocoverage-python-{suffix}.xml")
+        html_args = []
+        if "--html" in session.posargs:
+            Path("./htmlcov/native").mkdir(exist_ok=True, parents=True)
+            html_args = ["--html-details=./htmlcov/native/index.html"]
         session.run(
             "gcovr",
             *gcovr_config,
@@ -177,6 +182,7 @@ def _coverage(session: nox.Session) -> None:
             "--txt",
             "--print-summary",
             f"--xml=coverage-native-{suffix}.xml",
+            *html_args,
         )
         for partial in HERE.glob("coverage-native-partial-*.json"):
             partial.unlink()
@@ -188,11 +194,13 @@ def coverage(session: nox.Session) -> None:
     posargs_ = set(session.posargs)
     machine = platform.machine().lower()
     assert len(posargs_ & {"--clean", "--report"}) == 0
-    assert len(posargs_ - {"--with-sde"}) == 0
+    assert len(posargs_ - {"--with-sde", "--html"}) == 0
     with_sde = []
     if machine in {"arm64", "aarch64"} and "--with-sde" not in posargs_:
         with_sde = ["--with-sde"]
     posargs = [*session.posargs, *with_sde, "--report"]
+    if Path("build").is_dir():
+        shutil.rmtree("build")
     session.notify("_coverage-pypy3.11", ["--clean"])
     session.notify("_coverage-pypy3.10", [])
     session.notify("_coverage-3.15", [])

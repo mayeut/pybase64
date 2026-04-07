@@ -517,6 +517,9 @@ static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* 
                         return PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED;
                     }
                     if (srclen == 0) {
+                        if (!padded) {
+                            goto END;
+                        }
                         return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
                     }
                     if (next_valid_padding(&src_next, &srclen_next, ignorechars, ignorecache) == 254) {
@@ -1053,10 +1056,9 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
 #endif
 
-        if (source_use_buffer) {
-            PyBuffer_Release(&buffer);
-            Py_DECREF(in_object);
-        }
+        assert(source_use_buffer); /* we always use a buffer when fast_path == 0 */
+        PyBuffer_Release(&buffer);
+        Py_DECREF(in_object);
         in_object = translate_object;
         if (get_buffer(in_object, &buffer, 0) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             Py_DECREF(in_object); /* GCOVR_EXCL_LINE */
@@ -1221,7 +1223,7 @@ FINALLY:
         PyBuffer_Release(&ignorechars_buffer);
         Py_DECREF(ignorechars_object);
     }
-    if (has_bad_char && (out_object != NULL)) {
+    if (has_bad_char && (out_object != NULL)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/4 */
         static const char format_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=True will be an error in future versions";
         static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=False will be discarded in future versions";
         char const* format = validation ? format_validation : format_no_validation;
@@ -1557,6 +1559,10 @@ static PyMethodDef _pybase64_methods[] = {
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
+#ifdef Py_mod_abi
+PyABIInfo_VAR(abi_info);
+#endif
+
 static PyModuleDef_Slot _pybase64_slots[] = {
 #if PY_VERSION_HEX >= 0x030f0000
     {Py_mod_name, "pybase64._pybase64"},
@@ -1572,6 +1578,9 @@ static PyModuleDef_Slot _pybase64_slots[] = {
 #endif
 #ifdef Py_mod_gil
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
+#ifdef Py_mod_abi
+    {Py_mod_abi, &abi_info},
 #endif
     {0, NULL}
 };

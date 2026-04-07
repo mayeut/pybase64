@@ -519,11 +519,45 @@ def test_warning_data_dec(
     for vector in [vector_, vector_[:4]]:
         with pytest.warns(exception, match=match):
             dfn(vector, b"-_", validate=validate)
+        with pytest.warns(exception, match=match):
+            dfn(vector, b"+_", validate=validate)
+        with pytest.warns(exception, match=match):
+            dfn(vector, b"-+", validate=validate)
+        with pytest.warns(exception, match=match):
+            dfn(vector, b"/_", validate=validate)
+        with pytest.warns(exception, match=match):
+            dfn(vector, b"-/", validate=validate)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             with pytest.raises(exception, match=match):
                 dfn(vector, b"-_", validate=validate)
             dfn(vector, b"/+", validate=validate)
+
+
+@utils.param_simd
+@param_decode_functions
+def test_altchars_translation(
+    dfn: Decode,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    # src_slice in the C code is 16 * 1024 = 16384 bytes; the large vector tests
+    # that has_bad_char is accumulated (not overwritten) across chunks so that a
+    # '+' or '/' in the first chunk is not silently lost when later chunks are clean.
+    src_slice = 16 * 1024
+    vector_ = "+/" + "A" * (src_slice - 2) + "AAAA"
+    for vector in [vector_, vector_[:4]]:
+        with pytest.raises(BinAsciiError):
+            dfn(vector, b"-_", ignorechars=b"")
+        with pytest.raises(BinAsciiError):
+            dfn(vector, b"+_", ignorechars=b"")
+        with pytest.raises(BinAsciiError):
+            dfn(vector, b"-+", ignorechars=b"")
+        with pytest.raises(BinAsciiError):
+            dfn(vector, b"/_", ignorechars=b"")
+        with pytest.raises(BinAsciiError):
+            dfn(vector, b"-/", ignorechars=b"")
+        dfn(vector, b"/+", ignorechars=b"")
 
 
 params_invalid_data_enc_values = [
@@ -695,6 +729,7 @@ def test_b64encode_padded(efn: Encode, vector: bytes, expected: bytes, simd: int
         (b"", b"", False),
         (b"YQ==", b"a", False),
         (b"YQ", b"a", True),
+        (b"YQ=", b"a", True),
         (b"YWI=", b"ab", False),
         (b"YWI", b"ab", True),
         (b"YWJj", b"abc", False),
@@ -742,7 +777,7 @@ def test_urlsafe_b64encode_padded(vector: bytes, expected: bytes, simd: int) -> 
 
 @pytest.mark.parametrize(
     ("vector", "expected"),
-    [(b"", b""), (b"YQ", b"a"), (b"YWI", b"ab"), (b"YWJj", b"abc")],
+    [(b"", b""), (b"YQ", b"a"), (b"YQ=", b"a"), (b"YWI", b"ab"), (b"YWJj", b"abc")],
 )
 @utils.param_simd
 def test_urlsafe_b64decode_padded(vector: bytes, expected: bytes, simd: int) -> None:
@@ -897,3 +932,14 @@ def test_base64_dec_invalid_partial(
         assert pybase64.b64decode(data, ignorechars=ignorechars) == ignorechars_expected_result
     assert pybase64.b64decode(data, validate=False) == no_validation_expected_result
     assert pybase64.b64decode(data) == no_validation_expected_result
+
+
+def test_decode_edge_cases() -> None:
+    with pytest.raises(BinAsciiError):
+        pybase64.b64decode(b"YQ=)", validate=False)
+    with pytest.raises(BinAsciiError):
+        pybase64.b64decode(b"YQ=)", validate=True)
+    with pytest.raises(BinAsciiError):
+        pybase64.b64decode(b"YQ=)", padded=False, validate=True)
+    assert pybase64.b64decode(b"YQ=)", padded=False) == b"a"
+    assert pybase64.b64decode(b"YQ=)", padded=False, ignorechars=b")=") == b"a"
