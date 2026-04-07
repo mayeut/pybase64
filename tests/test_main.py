@@ -154,7 +154,7 @@ def test_decode(
 def test_subprocess() -> None:
     import subprocess  # noqa: PLC0415
 
-    process = subprocess.Popen(  # noqa: S603
+    process = subprocess.Popen(
         [sys.executable, "-m", "pybase64", "encode", "-"],
         bufsize=4096,
         stdin=subprocess.PIPE,
