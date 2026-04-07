@@ -1,7 +1,7 @@
-#include "_pybase64_get_simd_flags.h"
 #define PY_SSIZE_T_CLEAN
 #define PY_CXX_CONST const
 #include <Python.h>
+#include "_pybase64_get_simd_flags.h"
 #include <config.h>
 #include <libbase64.h>
 #include <codecs.h>
@@ -95,7 +95,7 @@ static int parse_alphabet(PyObject* alphabetObject, char* alphabet, int* useAlph
     if (PyUnicode_Check(alphabetObject)) {
         alphabetObject = PyUnicode_AsASCIIString(alphabetObject);
         if (alphabetObject == NULL) {
-            if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) {
+            if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
                 PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
             }
             return -1;
@@ -599,8 +599,8 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     char* dst_start;
     char* dst;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
 
     if (wrapcol < 0) {
@@ -612,15 +612,15 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         wrapcol = (wrapcol < 4) ? 4U : (((size_t)wrapcol / 4U) * 4U);
     }
 
-    if (buffer->len > (3 * (PY_SSIZE_T_MAX / 4))) {
-        return PyErr_NoMemory();
+    if (buffer->len > (3 * (PY_SSIZE_T_MAX / 4))) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
     }
 
     out_len = (size_t)(((buffer->len + 2) / 3) * 4);
     if (wrapcol > 0 && out_len > 0) {
         size_t newlines = (out_len - 1U) / (size_t)wrapcol;
-        if (newlines > ((size_t)PY_SSIZE_T_MAX - out_len)) {
-            return PyErr_NoMemory();
+        if (newlines > ((size_t)PY_SSIZE_T_MAX - out_len)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
         }
         out_len += newlines;
         if (newlines == 0) {
@@ -631,35 +631,37 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         flags &= ~PYBASE64_FLAGS_APPEND_NEW_LINE;
     }
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
-        if (out_len > ((size_t)PY_SSIZE_T_MAX - 1U)) {
-            return PyErr_NoMemory();
+        if (out_len > ((size_t)PY_SSIZE_T_MAX - 1U)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
         }
         out_len++;
     }
 
     if (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) {
         out_object = PyUnicode_New((Py_ssize_t)out_len, 127);
-        if (out_object == NULL) {
-            return NULL;
+        if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
-        if (PyUnicode_KIND(out_object) != PyUnicode_1BYTE_KIND) {
+        if (PyUnicode_KIND(out_object) != PyUnicode_1BYTE_KIND) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            /* GCOVR_EXCL_START */
             Py_DECREF(out_object);
             PyErr_SetString(PyExc_RuntimeError, "Not a PyUnicode_1BYTE_KIND object");
             return NULL;
+            /* GCOVR_EXCL_STOP */
         }
         dst = (char*)PyUnicode_DATA(out_object);
     }
     else {
 #if PY_VERSION_HEX >= 0x030f0000
         writer = PyBytesWriter_Create((Py_ssize_t)out_len);
-        if (writer == NULL) {
-            return NULL;
+        if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
         dst = PyBytesWriter_GetData(writer);
 #else
         out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-        if (out_object == NULL) {
-            return NULL;
+        if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
         dst = PyBytes_AS_STRING(out_object);
 #endif
@@ -771,9 +773,9 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
             Py_DECREF(out_object);
             out_object = temp_object;
 #else
-            if (PyUnicode_Resize(&out_object, dst - dst_start) != 0) {
-                Py_DECREF(out_object);
-                return NULL;
+            if (PyUnicode_Resize(&out_object, dst - dst_start) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+                Py_DECREF(out_object); /* GCOVR_EXCL_LINE */
+                return NULL; /* GCOVR_EXCL_LINE */
             }
 #endif
         }
@@ -856,14 +858,14 @@ static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, cha
     Py_buffer in_buffer = *buffer;
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer = PyBytesWriter_Create(in_buffer.len);
-    if (writer == NULL) {
-        goto END;
+    if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        goto END; /* GCOVR_EXCL_LINE */
     }
     translate_dst = PyBytesWriter_GetData(writer);
 #else
     tmp_result = PyBytes_FromStringAndSize(NULL, in_buffer.len);
-    if (tmp_result == NULL) {
-        goto END;
+    if (tmp_result == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        goto END; /* GCOVR_EXCL_LINE */
     }
     translate_dst = PyBytes_AS_STRING(tmp_result);
 #endif
@@ -873,12 +875,12 @@ static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, cha
 #if PY_VERSION_HEX >= 0x030f0000
     tmp_result = PyBytesWriter_Finish(writer);
     writer = NULL;
-    if (tmp_result == NULL) {
-        goto END;
+    if (tmp_result == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        goto END; /* GCOVR_EXCL_LINE */
     }
 #endif
-    if (get_buffer(tmp_result, buffer, 0) != 0) {
-       goto END;
+    if (get_buffer(tmp_result, buffer, 0) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+       goto END; /* GCOVR_EXCL_LINE */
     }
     result = tmp_result;
     tmp_result = NULL;
@@ -919,8 +921,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     void* dest;
     void (*translate_fn)(const char*, char*, size_t, const char*, int*) = &translate_deprecated;
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$pO", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &padded, &ignorechars_object)) {
@@ -932,8 +934,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     }
     else {
         validation = PyObject_IsTrue(validation_object);
-        if (validation < 0) {
-            return NULL;
+        if (validation < 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
         if ((ignorechars_object != NULL) && !validation ) {
             PyErr_SetString(PyExc_ValueError, "validate must be True or unspecified when ignorechars is specified");
@@ -988,7 +990,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         else {
             in_object = PyUnicode_AsASCIIString(in_object);
             if (in_object == NULL) {
-                if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) {
+                if (PyErr_ExceptionMatches(PyExc_UnicodeEncodeError)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
                     PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
                 }
                 if (ignorechars_object) {
@@ -1023,14 +1025,14 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
 #if PY_VERSION_HEX >= 0x030f0000
         writer = PyBytesWriter_Create(source_len);
-        if (writer == NULL) {
-            goto EXCEPT;
+        if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
         translate_dst = PyBytesWriter_GetData(writer);
 #else
         translate_object = PyBytes_FromStringAndSize(NULL, source_len);
-        if (translate_object == NULL) {
-            goto EXCEPT;
+        if (translate_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
         translate_dst = PyBytes_AS_STRING(translate_object);
 #endif
@@ -1046,8 +1048,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 #if PY_VERSION_HEX >= 0x030f0000
         translate_object = PyBytesWriter_Finish(writer);
         writer = NULL;
-        if (translate_object == NULL) {
-            goto EXCEPT;
+        if (translate_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
 #endif
 
@@ -1056,9 +1058,9 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             Py_DECREF(in_object);
         }
         in_object = translate_object;
-        if (get_buffer(in_object, &buffer, 0) != 0) {
-            Py_DECREF(in_object);
-            return NULL;
+        if (get_buffer(in_object, &buffer, 0) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            Py_DECREF(in_object); /* GCOVR_EXCL_LINE */
+            return NULL; /* GCOVR_EXCL_LINE */
         }
         source = buffer.buf;
         source_len = buffer.len;
@@ -1071,22 +1073,22 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     out_len = (size_t)((source_len / 4) * 3) + 3U;
     if (return_bytearray) {
         out_object = PyByteArray_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-        if (out_object == NULL) {
-            goto EXCEPT;
+        if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
         dest = PyByteArray_AS_STRING(out_object);
     }
     else {
 #if PY_VERSION_HEX >= 0x030f0000
         writer = PyBytesWriter_Create((Py_ssize_t)out_len);
-        if (writer == NULL) {
-            goto EXCEPT;
+        if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
         dest = PyBytesWriter_GetData(writer);
 #else
         out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
-        if (out_object == NULL) {
-            goto EXCEPT;
+        if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
         dest = PyBytes_AS_STRING(out_object);
 #endif
@@ -1104,7 +1106,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_END_ALLOW_THREADS
 
         if (result != PYBASE64_DECODE_SLOW_SUCCESS) {
-            switch(result)
+            switch(result) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/9 */
             {
             case PYBASE64_DECODE_SLOW_INCORRECT_PADDING:
                 PyErr_SetString(state->binAsciiError, "Incorrect padding");
@@ -1224,9 +1226,9 @@ FINALLY:
         static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=False will be discarded in future versions";
         char const* format = validation ? format_validation : format_no_validation;
         PyObject* category = validation ? PyExc_DeprecationWarning : PyExc_FutureWarning;
-        if (PyErr_WarnFormat(category, 2, format, in_alphabet) < 0) {
-            Py_XDECREF(out_object);
-            out_object = NULL;
+        if (PyErr_WarnFormat(category, 2, format, in_alphabet) < 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+            Py_XDECREF(out_object); /* GCOVR_EXCL_LINE */
+            out_object = NULL; /* GCOVR_EXCL_LINE */
         }
     }
     return out_object;
@@ -1261,8 +1263,8 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
 {
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     return PyLong_FromUnsignedLong(state->active_simd_flag);
 }
@@ -1270,8 +1272,8 @@ static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
 static PyObject* pybase64_get_simd_flags_runtime(PyObject* self, PyObject* arg)
 {
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     return PyLong_FromUnsignedLong(state->simd_flags);
 }
@@ -1369,8 +1371,8 @@ static void set_simd_path(pybase64_state* state, uint32_t flag)
 static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
 {
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) {
-        return NULL;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     set_simd_path(state, (uint32_t)PyLong_AsUnsignedLong(arg));
     Py_RETURN_NONE;
@@ -1402,17 +1404,8 @@ static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
     if (flags & PYBASE64_SSSE3) {
         return PyUnicode_FromString("SSSE3");
     }
-    if (flags & PYBASE64_SSE3) {
-        return PyUnicode_FromString("SSE3");
-    }
-    if (flags & PYBASE64_SSE2) {
-        return PyUnicode_FromString("SSE2");
-    }
 
-    if (flags != 0) {
-        return PyUnicode_FromString("unknown");
-    }
-
+    assert(flags == PYBASE64_NONE);
     return PyUnicode_FromString("No SIMD");
 }
 
@@ -1425,28 +1418,28 @@ static PyObject* pybase64_import(const char* from, const char* object)
     PyObject* importedObject;
 
     subModules = PyList_New(1);
-    if (subModules == NULL) {
-        return NULL;
+    if (subModules == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     moduleName = PyUnicode_FromString(from);
-    if (moduleName == NULL) {
-        Py_DECREF(subModules);
-        return NULL;
+    if (moduleName == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(subModules); /* GCOVR_EXCL_LINE */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     subModuleName = PyUnicode_FromString(object);
-    if (subModuleName == NULL) {
-        Py_DECREF(moduleName);
-        Py_DECREF(subModules);
-        return NULL;
+    if (subModuleName == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(moduleName); /* GCOVR_EXCL_LINE */
+        Py_DECREF(subModules); /* GCOVR_EXCL_LINE */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     Py_INCREF(subModuleName);
     PyList_SET_ITEM(subModules, 0, subModuleName);
     imports = PyImport_ImportModuleLevelObject(moduleName, NULL, NULL, subModules, 0);
     Py_DECREF(moduleName);
     Py_DECREF(subModules);
-    if (imports == NULL) {
-        Py_DECREF(subModuleName);
-        return NULL;
+    if (imports == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(subModuleName); /* GCOVR_EXCL_LINE */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
     importedObject = PyObject_GetAttr(imports, subModuleName);
     Py_DECREF(subModuleName);
@@ -1459,12 +1452,12 @@ static PyObject* pybase64_import_BinAsciiError()
     PyObject* binAsciiError;
 
     binAsciiError = pybase64_import("binascii", "Error");
-    if (binAsciiError == NULL) {
-        return NULL;
+    if (binAsciiError == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
-    if (!PyObject_IsSubclass(binAsciiError, PyExc_Exception)) {
-        Py_DECREF(binAsciiError);
-        return NULL;
+    if (!PyObject_IsSubclass(binAsciiError, PyExc_Exception)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(binAsciiError); /* GCOVR_EXCL_LINE */
+        return NULL; /* GCOVR_EXCL_LINE */
     }
 
     return binAsciiError;
@@ -1491,30 +1484,30 @@ static int _pybase64_exec(PyObject *m)
         240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
     };
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
-    if (state == NULL) {
-        return -1;
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     state->binAsciiError = pybase64_import_BinAsciiError();
-    if (state->binAsciiError == NULL) {
-        return -1;
+    if (state->binAsciiError == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     Py_INCREF(state->binAsciiError); /* PyModule_AddObject steals a reference */
-    if (PyModule_AddObject(m, "_BinAsciiError", state->binAsciiError) != 0) {
-        Py_DECREF(state->binAsciiError);
-        return -1;
+    if (PyModule_AddObject(m, "_BinAsciiError", state->binAsciiError) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(state->binAsciiError); /* GCOVR_EXCL_LINE */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
     state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize((const char*)ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
-    if (state->ignoreCharsValidateFalse == NULL) {
-        return -1;
+    if (state->ignoreCharsValidateFalse == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     state->ignoreCharsNoPadding = PyBytes_FromStringAndSize("", 0);
-    if (state->ignoreCharsNoPadding == NULL) {
-        return -1;
+    if (state->ignoreCharsNoPadding == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     state->simd_flags = pybase64_get_simd_flags();
@@ -1526,7 +1519,7 @@ static int _pybase64_exec(PyObject *m)
 static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
 {
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
-    if (state) {
+    if (state) {  /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         Py_VISIT(state->binAsciiError);
         Py_VISIT(state->ignoreCharsValidateFalse);
         Py_VISIT(state->ignoreCharsNoPadding);
@@ -1537,7 +1530,7 @@ static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
 static int _pybase64_clear(PyObject *m)
 {
     pybase64_state *state = (pybase64_state*)PyModule_GetState(m);
-    if (state) {
+    if (state) {  /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         Py_CLEAR(state->binAsciiError);
         Py_CLEAR(state->ignoreCharsValidateFalse);
         Py_CLEAR(state->ignoreCharsNoPadding);

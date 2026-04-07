@@ -575,14 +575,15 @@ def test_invalid_args_dec_0(dfn: Decode) -> None:
 def test_flags(request: pytest.FixtureRequest) -> None:
     cpu = request.config.getoption("--sde-cpu", skip=True)
     assert {
-        "p4p": 1 | 2,  # SSE3
-        "mrm": 1 | 2 | 4,  # SSSE3
-        "pnr": 1 | 2 | 4 | 8,  # SSE41
-        "nhm": 1 | 2 | 4 | 8 | 16,  # SSE42
-        "snb": 1 | 2 | 4 | 8 | 16 | 32,  # AVX
-        "hsw": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
-        "skx": 1 | 2 | 4 | 8 | 16 | 32 | 64,  # AVX2
-        "spr": 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
+        "p4p": 0,  # no simd
+        "mrm": 4,  # SSSE3
+        "pnr": 4 | 8,  # SSE41
+        "nhm": 4 | 8 | 16,  # SSE42
+        "snb": 4 | 8 | 16 | 32,  # AVX
+        "hsw": 4 | 8 | 16 | 32 | 64,  # AVX2
+        "skx": 4 | 8 | 16 | 32 | 64,  # AVX2
+        "spr": 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
+        "neon": 65536,  # NEON
     }[cpu] == utils.runtime_flags
 
 
