@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import importlib.util
 import re
 import sys
 import warnings
@@ -943,3 +945,19 @@ def test_decode_edge_cases() -> None:
         pybase64.b64decode(b"YQ=)", padded=False, validate=True)
     assert pybase64.b64decode(b"YQ=)", padded=False) == b"a"
     assert pybase64.b64decode(b"YQ=)", padded=False, ignorechars=b")=") == b"a"
+
+
+def test_invalid_binascii_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    spec = importlib.util.find_spec("pybase64._pybase64")
+    if spec is None:
+        assert not utils.has_extension
+    else:
+        assert spec.loader is not None
+        monkeypatch.setattr(binascii, "Error", None)
+        module = importlib.util.module_from_spec(spec)
+        with pytest.raises(TypeError):
+            spec.loader.exec_module(module)
+        monkeypatch.delattr(binascii, "Error")
+        module = importlib.util.module_from_spec(spec)
+        with pytest.raises(AttributeError):
+            spec.loader.exec_module(module)

@@ -1452,14 +1452,17 @@ static PyObject* pybase64_import(const char* from, const char* object)
 static PyObject* pybase64_import_BinAsciiError()
 {
     PyObject* binAsciiError;
+    int subclassResult;
 
     binAsciiError = pybase64_import("binascii", "Error");
-    if (binAsciiError == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return NULL; /* GCOVR_EXCL_LINE */
+    if (binAsciiError == NULL) {
+        return NULL;
     }
-    if (!PyObject_IsSubclass(binAsciiError, PyExc_Exception)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        Py_DECREF(binAsciiError); /* GCOVR_EXCL_LINE */
-        return NULL; /* GCOVR_EXCL_LINE */
+    subclassResult = PyObject_IsSubclass(binAsciiError, PyExc_Exception);
+    if (subclassResult != 1) {
+        Py_DECREF(binAsciiError);
+        PyErr_SetString(PyExc_TypeError, "binascii.Error is not a subclass of Exception");
+        return NULL;
     }
 
     return binAsciiError;
@@ -1490,17 +1493,6 @@ static int _pybase64_exec(PyObject *m)
         return -1; /* GCOVR_EXCL_LINE */
     }
 
-    state->binAsciiError = pybase64_import_BinAsciiError();
-    if (state->binAsciiError == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return -1; /* GCOVR_EXCL_LINE */
-    }
-
-    Py_INCREF(state->binAsciiError); /* PyModule_AddObject steals a reference */
-    if (PyModule_AddObject(m, "_BinAsciiError", state->binAsciiError) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        Py_DECREF(state->binAsciiError); /* GCOVR_EXCL_LINE */
-        return -1; /* GCOVR_EXCL_LINE */
-    }
-
     assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
     state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize((const char*)ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
     if (state->ignoreCharsValidateFalse == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
@@ -1509,6 +1501,17 @@ static int _pybase64_exec(PyObject *m)
 
     state->ignoreCharsNoPadding = PyBytes_FromStringAndSize("", 0);
     if (state->ignoreCharsNoPadding == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
+    }
+
+    state->binAsciiError = pybase64_import_BinAsciiError();
+    if (state->binAsciiError == NULL) {
+        return -1;
+    }
+
+    Py_INCREF(state->binAsciiError); /* PyModule_AddObject steals a reference */
+    if (PyModule_AddObject(m, "_BinAsciiError", state->binAsciiError) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        Py_DECREF(state->binAsciiError); /* GCOVR_EXCL_LINE */
         return -1; /* GCOVR_EXCL_LINE */
     }
 
