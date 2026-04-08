@@ -947,7 +947,12 @@ def test_decode_edge_cases() -> None:
     assert pybase64.b64decode(b"YQ=)", padded=False, ignorechars=b")=") == b"a"
 
 
-def test_invalid_binascii_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_invalid_binascii_error(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if request.config.getoption("--parallel-threads", default=1) != 1:
+        pytest.skip("'--parallel-threads' != 1")  # pragma: no cover
     spec = importlib.util.find_spec("pybase64._pybase64")
     if spec is None:
         assert not utils.has_extension
