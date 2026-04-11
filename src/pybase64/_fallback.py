@@ -21,7 +21,7 @@ _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 _EQUAL_ASCII: Final = 61  # '='
 _UNSPECIFIED: Final = _Unspecified.UNSPECIFIED
 
-if not _PYTHON_3_15_API:  # pragma: no cover
+if not _PYTHON_3_15_API:
     # we consider '=' part of the alphabet, it will be handled separately
     _BASE64_ALPHABET = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
     # we do not keep '=' on purpose, it will be handled separately
@@ -123,7 +123,7 @@ def b64decode(  # noqa: C901
         msg = "validate must be True or unspecified when ignorechars is specified"
         raise ValueError(msg)
 
-    if _PYTHON_3_15_API:  # pragma: no cover
+    if _PYTHON_3_15_API:
         kwargs: dict[str, bool | Buffer] = {"validate": validate, "padded": padded}
         if ignorechars is not _UNSPECIFIED:
             kwargs["ignorechars"] = ignorechars
@@ -311,7 +311,7 @@ def b64encode(
     if wrapcol < 0:
         msg = "wrapcol must be >= 0"
         raise ValueError(msg)
-    if _PYTHON_3_15_API:  # pragma: no cover
+    if _PYTHON_3_15_API:
         return builtin_encode(s, altchars, padded=padded, wrapcol=wrapcol)  # type: ignore[call-arg]
     encoded = builtin_encode(s, altchars)
     if encoded and not padded:
