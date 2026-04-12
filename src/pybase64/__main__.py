@@ -25,7 +25,13 @@ def bench_one(
     kwargs: dict[str, bool | bytes],
 ) -> None:
     duration = duration / 2.0
-
+    combination_unsupported = all(
+        [
+            module is base64,
+            "ignorechars" in kwargs or "padded" in kwargs,
+            sys.version_info < (3, 15),
+        ],
+    )
     validate = kwargs["validate"]
     if validate and altchars is None and "ignorechars" not in kwargs and "padded" not in kwargs:
         encbytes = module.encodebytes
@@ -53,34 +59,37 @@ def bench_one(
 
     if validate and "ignorechars" not in kwargs:
         enc = module.b64encode
-        number = 0
-        time = timer()
-        while True:
-            encodedcontent = enc(data, altchars=altchars)
-            number += 1
-            if timer() - time > duration:
-                break
-        iter_ = number
-        time = timer()
-        while iter_ > 0:
-            encodedcontent = enc(data, altchars=altchars)
-            iter_ -= 1
-        time = timer() - time
-        print(
-            "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
-                module.__name__ + "." + enc.__name__ + ":",
-                ((number * len(data)) / (1024.0 * 1024.0)) / time,
-                len(data),
-                len(encodedcontent),
-            ),
-        )
+        if combination_unsupported:
+            print("{:<24s}       N/A".format(module.__name__ + "." + enc.__name__ + ":"))
+        else:
+            number = 0
+            time = timer()
+            while True:
+                encodedcontent = enc(data, altchars=altchars)
+                number += 1
+                if timer() - time > duration:
+                    break
+            iter_ = number
+            time = timer()
+            while iter_ > 0:
+                encodedcontent = enc(data, altchars=altchars)
+                iter_ -= 1
+            time = timer() - time
+            print(
+                "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
+                    module.__name__ + "." + enc.__name__ + ":",
+                    ((number * len(data)) / (1024.0 * 1024.0)) / time,
+                    len(data),
+                    len(encodedcontent),
+                ),
+            )
 
     if kwargs.get("ignorechars") == b"\n" or not validate:
         encodedcontent = pybase64.b64encode(data, altchars=altchars, wrapcol=76)
     else:
         encodedcontent = pybase64.b64encode(data, altchars=altchars)
     dec = module.b64decode
-    if module is base64 and "ignorechars" in kwargs and sys.version_info < (3, 15):
+    if combination_unsupported:
         print("{:<24s}       N/A".format(module.__name__ + "." + dec.__name__ + ":"))
     else:
         number = 0
