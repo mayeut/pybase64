@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import re
 import sys
-from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
-
 
 import pytest
 
 import pybase64
 from pybase64.__main__ import main
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
 
 
 @pytest.fixture

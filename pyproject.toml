@@ -221,6 +221,7 @@ lint.flake8-tidy-imports.ban-relative-imports = "all"
 "typing.Callable".msg = "Use collections.abc.Callable instead."
 "typing.Iterator".msg = "Use collections.abc.Iterator instead."
 "typing.Sequence".msg = "Use collections.abc.Sequence instead."
+"typing.TYPE_CHECKING".msg = "Use TYPE_CHECKING=False instead."
 
 [tool.uv]
 required-version = ">=0.7.14"

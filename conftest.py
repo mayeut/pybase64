@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+TYPE_CHECKING = False
 if TYPE_CHECKING:
     import pytest
 

@@ -9,19 +9,20 @@ import warnings
 from base64 import encodebytes as b64encodebytes
 from binascii import Error as BinAsciiError
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
 import pybase64
 from pybase64._unspecified import _Unspecified
 
+from . import utils
+
+TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any, Literal
 
     from pybase64._typing import Buffer, Decode, Encode
-
-from . import utils
 
 
 def b64encode_as_string(
