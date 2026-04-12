@@ -27,7 +27,7 @@ def bench_one(
     duration = duration / 2.0
 
     validate = kwargs["validate"]
-    if not validate and altchars is None:
+    if validate and altchars is None and "ignorechars" not in kwargs and "padded" not in kwargs:
         encbytes = module.encodebytes
         number = 0
         time = timer()
@@ -51,29 +51,34 @@ def bench_one(
             ),
         )
 
-    enc = module.b64encode
-    number = 0
-    time = timer()
-    while True:
-        encodedcontent = enc(data, altchars=altchars)
-        number += 1
-        if timer() - time > duration:
-            break
-    iter_ = number
-    time = timer()
-    while iter_ > 0:
-        encodedcontent = enc(data, altchars=altchars)
-        iter_ -= 1
-    time = timer() - time
-    print(
-        "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
-            module.__name__ + "." + enc.__name__ + ":",
-            ((number * len(data)) / (1024.0 * 1024.0)) / time,
-            len(data),
-            len(encodedcontent),
-        ),
-    )
+    if validate and "ignorechars" not in kwargs:
+        enc = module.b64encode
+        number = 0
+        time = timer()
+        while True:
+            encodedcontent = enc(data, altchars=altchars)
+            number += 1
+            if timer() - time > duration:
+                break
+        iter_ = number
+        time = timer()
+        while iter_ > 0:
+            encodedcontent = enc(data, altchars=altchars)
+            iter_ -= 1
+        time = timer() - time
+        print(
+            "{:<24s} {:5.0f} MB/s ({:,d} bytes -> {:,d} bytes)".format(
+                module.__name__ + "." + enc.__name__ + ":",
+                ((number * len(data)) / (1024.0 * 1024.0)) / time,
+                len(data),
+                len(encodedcontent),
+            ),
+        )
 
+    if kwargs.get("ignorechars") == b"\n" or not validate:
+        encodedcontent = pybase64.b64encode(data, altchars=altchars, wrapcol=76)
+    else:
+        encodedcontent = pybase64.b64encode(data, altchars=altchars)
     dec = module.b64decode
     if module is base64 and "ignorechars" in kwargs and sys.version_info < (3, 15):
         print("{:<24s}       N/A".format(module.__name__ + "." + dec.__name__ + ":"))
@@ -119,32 +124,29 @@ def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     print(__package__ + " " + pybase64.get_version())
     data = readall(input)
     for altchars in [None, b"-_"]:
-        for validate in [False, True]:
-            for ignorechars in [None, b"", b"@"]:
-                kwargs: dict[str, bool | bytes] = {"validate": validate}
-                if ignorechars is not None:
-                    if not validate:
+        for validate in [True, False]:
+            for ignorechars in [None, b"", b"\n"]:
+                for padded in [True, False]:
+                    # skip redundant combinations
+                    if altchars is None and validate and padded and ignorechars == b"":
+                        # same as "altchars is None and validate and padded and ignorechars is None"
+                        # when altchars is not None, the alphabet translation differs
                         continue
-                    kwargs["ignorechars"] = ignorechars
-                title = f"bench: altchars={altchars!r:s}"
-                if ignorechars is None:
-                    print(f"{title}, validate={validate!r:s}")
-                else:
-                    print(f"{title}, ignorechars={ignorechars!r:s}")
-                bench_one(
-                    duration,
-                    data,
-                    pybase64,
-                    altchars,
-                    kwargs,
-                )
-                bench_one(
-                    duration,
-                    data,
-                    base64,
-                    altchars,
-                    kwargs,
-                )
+                    kwargs: dict[str, bool | bytes] = {"validate": validate}
+                    if ignorechars is not None:
+                        if not validate:
+                            continue
+                        kwargs["ignorechars"] = ignorechars
+                    if not padded:
+                        kwargs["padded"] = padded
+                    title = f"bench: altchars={altchars!r:s}"
+                    if ignorechars is None:
+                        title = f"{title}, validate={validate!r:s}"
+                    else:
+                        title = f"{title}, ignorechars={ignorechars!r:s}"
+                    print(f"{title}, padded={padded!r:s}")
+                    for module in [pybase64, base64]:
+                        bench_one(duration, data, module, altchars, kwargs)
 
 
 def encode(*, input: str, altchars: bytes | None, output: str) -> None:  # noqa: A002
