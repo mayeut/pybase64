@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 import pytest
 
 import pybase64
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Any
 
 has_extension = hasattr(pybase64, "_set_simd_path")
 assert has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
