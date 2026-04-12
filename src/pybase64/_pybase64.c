@@ -15,7 +15,7 @@
 #include <arm_neon.h>
 #endif
 
-#if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64) || BASE64_WITH_NEON64
 #define HAVE_FAST_UNALIGNED_ACCESS 1
 #else
 #define HAVE_FAST_UNALIGNED_ACCESS 0
