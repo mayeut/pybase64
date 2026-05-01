@@ -15,6 +15,7 @@ def b64decode(
     *,
     padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = ...,
+    canonical: bool = False,
 ) -> bytes: ...
 def b64decode_as_bytearray(
     s: str | Buffer,
@@ -23,6 +24,7 @@ def b64decode_as_bytearray(
     *,
     padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = ...,
+    canonical: bool = False,
 ) -> bytearray: ...
 def b64encode(
     s: Buffer,
