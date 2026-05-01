@@ -43,9 +43,10 @@ def b64decode_as_bytearray(
     *,
     padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+    canonical: bool = False,
 ) -> bytes:
     """Helper returning bytes instead of bytearray for tests"""
-    kwargs: dict[str, Any] = {"padded": padded}
+    kwargs: dict[str, Any] = {"padded": padded, "canonical": canonical}
     if not isinstance(validate, _Unspecified):
         kwargs["validate"] = validate
     if not isinstance(ignorechars, _Unspecified):
@@ -967,3 +968,86 @@ def test_invalid_binascii_error(
         module = importlib.util.module_from_spec(spec)
         with pytest.raises(AttributeError):
             spec.loader.exec_module(module)
+
+
+@param_decode_functions
+@utils.param_simd
+@pytest.mark.parametrize("altchars", [b"+/", b"-_"])
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"AA==", b"\x00"), (b"AAA=", b"\x00\x00"), (b"AAAA", b"\x00\x00\x00")],
+)
+def test_canonical_valid(
+    dfn: Decode,
+    simd: int,
+    altchars: bytes,
+    vector: bytes,
+    expected: bytes,
+) -> None:
+    utils.unused_args(simd)
+    assert dfn(vector, altchars=altchars, validate=True, canonical=True) == expected
+    assert dfn(vector, altchars=altchars, canonical=True) == expected
+
+
+@param_decode_functions
+@utils.param_simd
+@pytest.mark.parametrize("altchars", [b"+/", b"-_"])
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"AB==", b"\x00"), (b"AP==", b"\x00"), (b"AAB=", b"\x00\x00"), (b"AAD=", b"\x00\x00")],
+)
+def test_canonical_invalid(
+    dfn: Decode,
+    simd: int,
+    altchars: bytes,
+    vector: bytes,
+    expected: bytes,
+) -> None:
+    utils.unused_args(simd)
+    assert dfn(vector, altchars=altchars, validate=True) == expected
+    assert dfn(vector, altchars=altchars) == expected
+    with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        dfn(vector, altchars=altchars, validate=True, canonical=True)
+    with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        dfn(vector, altchars=altchars, canonical=True)
+
+
+@param_decode_functions
+@utils.param_simd
+@pytest.mark.parametrize("altchars", [b"+/", b"-_"])
+def test_canonical_check_all(
+    dfn: Decode,
+    simd: int,
+    altchars: bytes,
+) -> None:
+    utils.unused_args(simd)
+    # non-zero padding bits
+    for byte in altchars + b"0123456789BCDEFGHIJKLMNOPRSTUVWXYZabcdefhijklmnopqrstuvxyz":
+        vector = b"A" + bytes([byte]) + b"=="
+        expected = dfn(vector, altchars=altchars, validate=True)
+        assert dfn(vector, altchars=altchars) == expected
+        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+            dfn(vector, altchars=altchars, validate=True, canonical=True)
+        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+            dfn(vector, altchars=altchars, canonical=True)
+    for byte in altchars + b"1235679BCDFGHJKLNOPRSTVWXZabdefhijlmnpqrtuvxyz":
+        vector = b"AA" + bytes([byte]) + b"="
+        expected = dfn(vector, altchars=altchars, validate=True)
+        assert dfn(vector, altchars=altchars) == expected
+        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+            dfn(vector, altchars=altchars, validate=True, canonical=True)
+        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+            dfn(vector, altchars=altchars, canonical=True)
+    # zero padding bits
+    for byte in b"AQgw":
+        vector = b"A" + bytes([byte]) + b"=="
+        expected = dfn(vector, altchars=altchars, validate=True)
+        assert dfn(vector, altchars=altchars) == expected
+        assert dfn(vector, altchars=altchars, validate=True, canonical=True) == expected
+        assert dfn(vector, altchars=altchars, canonical=True) == expected
+    for byte in b"048AEIMQUYcgkosw":
+        vector = b"AA" + bytes([byte]) + b"="
+        expected = dfn(vector, altchars=altchars, validate=True)
+        assert dfn(vector, altchars=altchars) == expected
+        assert dfn(vector, altchars=altchars, validate=True, canonical=True) == expected
+        assert dfn(vector, altchars=altchars, canonical=True) == expected

@@ -23,6 +23,7 @@ class Decode(Protocol):
         *,
         padded: bool = True,
         ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
+        canonical: bool = False,
     ) -> bytes: ...
 
 
