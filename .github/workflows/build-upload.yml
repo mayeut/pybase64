@@ -100,7 +100,7 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           version: "0.11.3"
@@ -122,7 +122,7 @@ jobs:
           CIBW_ENABLE: "${{ startsWith(github.ref, 'refs/tags/v') && '' || 'cpython-prerelease'}}"
           CIBW_PLATFORM: "${{ matrix.platform }}"
           SOURCE_DATE_EPOCH: "${{ needs.prebuild.outputs.SOURCE_DATE_EPOCH }}"
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
@@ -141,7 +141,7 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           python-version: "3.12"
@@ -154,7 +154,7 @@ jobs:
         run: uv venv && uv pip install --build-constraints requirements/build-system/requirements-ci.txt ./dist/pybase64*.tar.gz
       - name: Test
         run: uv run --frozen --only-group test pytest
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
@@ -178,7 +178,7 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: false  # we always want to run the latest twine here, no artifacts are uploaded from this job
           python-version: "3.12"
@@ -219,7 +219,7 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Upload to Test PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           skip-existing: true
           repository-url: https://test.pypi.org/legacy/
@@ -242,6 +242,6 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           skip-existing: true
