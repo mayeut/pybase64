@@ -1562,19 +1562,29 @@ static PyMethodDef _pybase64_methods[] = {
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
-#ifdef Py_mod_abi
-PyABIInfo_VAR(abi_info);
-#endif
-
-static PyModuleDef_Slot _pybase64_slots[] = {
+/* Initialize this module. */
 #if PY_VERSION_HEX >= 0x030f0000
-    {Py_mod_name, "pybase64._pybase64"},
-    {Py_mod_state_size, (void*)sizeof(pybase64_state)},
-    {Py_mod_methods, _pybase64_methods},
-    {Py_mod_state_traverse, _pybase64_traverse},
-    {Py_mod_state_clear, _pybase64_clear},
-    {Py_mod_state_free, _pybase64_free},
-#endif
+PyABIInfo_VAR(abi_info);
+static PySlot _pybase64_slots[] = {
+    PySlot_STATIC_DATA(Py_mod_abi, &abi_info),
+    PySlot_STATIC_DATA(Py_mod_name, "pybase64._pybase64"),
+    PySlot_STATIC_DATA(Py_mod_methods, _pybase64_methods),
+    PySlot_FUNC(Py_mod_state_traverse, _pybase64_traverse),
+    PySlot_FUNC(Py_mod_state_clear, _pybase64_clear),
+    PySlot_FUNC(Py_mod_state_free, _pybase64_free),
+    PySlot_FUNC(Py_mod_exec, _pybase64_exec),
+    PySlot_SIZE(Py_mod_state_size, sizeof(pybase64_state)),
+    PySlot_UINT64(Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED),
+    PySlot_UINT64(Py_mod_gil, Py_MOD_GIL_NOT_USED),
+    PySlot_END
+};
+
+PyMODEXPORT_FUNC
+PyModExport__pybase64() {
+    return _pybase64_slots;
+}
+#else
+static PyModuleDef_Slot _pybase64_slots[] = {
     {Py_mod_exec, _pybase64_exec},
 #ifdef Py_mod_multiple_interpreters
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
@@ -1582,19 +1592,8 @@ static PyModuleDef_Slot _pybase64_slots[] = {
 #ifdef Py_mod_gil
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
-#ifdef Py_mod_abi
-    {Py_mod_abi, &abi_info},
-#endif
     {0, NULL}
 };
-
-/* Initialize this module. */
-#if PY_VERSION_HEX >= 0x030f0000
-PyMODEXPORT_FUNC
-PyModExport__pybase64() {
-    return _pybase64_slots;
-}
-#else
 static struct PyModuleDef _pybase64_module = {
         PyModuleDef_HEAD_INIT,
         "pybase64._pybase64",
