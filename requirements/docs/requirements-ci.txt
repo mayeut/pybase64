@@ -16,9 +16,9 @@ beautifulsoup4==4.14.3 ; python_full_version >= '3.12' \
     --hash=sha256:0918bfe44902e6ad8d57732ba310582e98da931428d231a5ecb9e7c703a735bb \
     --hash=sha256:6292b1c5186d356bba669ef9f7f051757099565ad9ada5dd630bd9de5fa7fb86
     # via furo
-certifi==2026.2.25 ; python_full_version >= '3.12' \
-    --hash=sha256:027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa \
-    --hash=sha256:e887ab5cee78ea814d3472169153c2d12cd43b14bd03329a39a9c6e2e80bfba7
+certifi==2026.4.22 ; python_full_version >= '3.12' \
+    --hash=sha256:3cb2210c8f88ba2318d29b0388d1023c8492ff72ecdde4ebdaddbb13a31b1c4a \
+    --hash=sha256:8d455352a37b71bf76a79caa83a3d6c25afee4a385d632127b6afb3963f1c580
     # via requests
 charset-normalizer==3.4.7 ; python_full_version >= '3.12' \
     --hash=sha256:007d05ec7321d12a40227aae9e2bc6dca73f3cb21058999a1df9e193555a9dcc \
@@ -147,9 +147,9 @@ docutils==0.22.4 ; python_full_version >= '3.12' \
 furo==2025.12.19 ; python_full_version >= '3.12' \
     --hash=sha256:188d1f942037d8b37cd3985b955839fea62baa1730087dc29d157677c857e2a7 \
     --hash=sha256:bb0ead5309f9500130665a26bee87693c41ce4dbdff864dbfb6b0dae4673d24f
-idna==3.12 ; python_full_version >= '3.12' \
-    --hash=sha256:60ffaa1858fac94c9c124728c24fcde8160f3fb4a7f79aa8cdd33a9d1af60a67 \
-    --hash=sha256:724e9952cc9e2bd7550ea784adb098d837ab5267ef67a1ab9cf7846bdbdd8254
+idna==3.15 ; python_full_version >= '3.12' \
+    --hash=sha256:048adeaf8c2d788c40fee287673ccaa74c24ffd8dcf09ffa555a2fbb59f10ac8 \
+    --hash=sha256:ca962446ea538f7092a95e057da437618e886f4d349216d2b1e294abfdb65fdc
     # via requests
 imagesize==2.0.0 ; python_full_version >= '3.12' \
     --hash=sha256:5667c5bbb57ab3f1fa4bc366f4fbc971db3d5ed011fd2715fd8001f782718d96 \
@@ -254,9 +254,9 @@ packaging==24.2 ; python_full_version >= '3.12' and sys_platform == 'emscripten'
     --hash=sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759 \
     --hash=sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f
     # via sphinx
-packaging==26.1 ; python_full_version >= '3.12' and sys_platform != 'emscripten' \
-    --hash=sha256:5d9c0669c6285e491e0ced2eee587eaf67b670d94a19e94e3984a481aba6802f \
-    --hash=sha256:f042152b681c4bfac5cae2742a55e103d27ab2ec0f3d88037136b6bfe7c9c5de
+packaging==26.2 ; python_full_version >= '3.12' and sys_platform != 'emscripten' \
+    --hash=sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e \
+    --hash=sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661
     # via sphinx
 pygments==2.20.0 ; python_full_version >= '3.12' \
     --hash=sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f \
@@ -265,9 +265,9 @@ pygments==2.20.0 ; python_full_version >= '3.12' \
     #   accessible-pygments
     #   furo
     #   sphinx
-requests==2.33.1 ; python_full_version >= '3.12' \
-    --hash=sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517 \
-    --hash=sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a
+requests==2.34.1 ; python_full_version >= '3.12' \
+    --hash=sha256:0fc5669f2b69704449fe1552360bd2a73a54512dfd03e65529157f1513322beb \
+    --hash=sha256:bf38a3ff993960d3dd819c08862c40b3c703306eb7c744fcd9f4ddbb95b548f0
     # via sphinx
 roman-numerals==4.1.0 ; python_full_version >= '3.12' \
     --hash=sha256:1af8b147eb1405d5839e78aeb93131690495fe9da5c91856cb33ad55a7f1e5b2 \
@@ -319,7 +319,7 @@ typing-extensions==4.15.0 ; python_full_version >= '3.12' \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
     # via beautifulsoup4
-urllib3==2.6.3 ; python_full_version >= '3.12' \
-    --hash=sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed \
-    --hash=sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4
+urllib3==2.7.0 ; python_full_version >= '3.12' \
+    --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \
+    --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
     # via requests
