@@ -79,6 +79,7 @@ def b64decode(  # noqa: C901
     *,
     padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
+    canonical: bool = False,
 ) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -107,6 +108,8 @@ def b64decode(  # noqa: C901
     ``validate`` is ``True`` and ``ignorechars`` does not contain the pad character
     ``'='``.
 
+    If ``canonical`` is ``True``, non-zero padding bits are rejected.
+
     The result is returned as a :class:`bytes` object.
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
@@ -124,7 +127,11 @@ def b64decode(  # noqa: C901
         raise ValueError(msg)
 
     if _PYTHON_3_15_API:
-        kwargs: dict[str, bool | Buffer] = {"validate": validate, "padded": padded}
+        kwargs: dict[str, bool | Buffer] = {
+            "validate": validate,
+            "padded": padded,
+            "canonical": canonical,
+        }
         if ignorechars is not _UNSPECIFIED:
             kwargs["ignorechars"] = ignorechars
         return builtin_decode(s, altchars, **kwargs)  # type: ignore[arg-type]
@@ -220,6 +227,16 @@ def b64decode(  # noqa: C901
             raise BinAsciiError(msg)
     else:
         result = builtin_decode(s, validate=True)
+    if result and canonical:
+        # check padding
+        padding_bits = False
+        if s[-2] == _EQUAL_ASCII:
+            padding_bits = s[-3] not in b"AQgw"
+        elif s[-1] == _EQUAL_ASCII:
+            padding_bits = s[-2] not in b"048AEIMQUYcgkosw"
+        if padding_bits:
+            msg = "Non-zero padding bits"
+            raise BinAsciiError(msg)
     if has_bad_chars:
         import warnings  # noqa: PLC0415 lazy import
 
@@ -240,6 +257,7 @@ def b64decode_as_bytearray(
     *,
     padded: bool = True,
     ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _UNSPECIFIED,
+    canonical: bool = False,
 ) -> bytearray:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -268,12 +286,21 @@ def b64decode_as_bytearray(
     ``validate`` is ``True`` and ``ignorechars`` does not contain the pad character
     ``'='``.
 
+    If ``canonical`` is ``True``, non-zero padding bits are rejected.
+
     The result is returned as a :class:`bytearray` object.
 
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
     return bytearray(
-        b64decode(s, altchars=altchars, validate=validate, padded=padded, ignorechars=ignorechars),
+        b64decode(
+            s,
+            altchars=altchars,
+            validate=validate,
+            padded=padded,
+            ignorechars=ignorechars,
+            canonical=canonical,
+        ),
     )
 
 
