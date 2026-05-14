@@ -1114,7 +1114,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         Py_END_ALLOW_THREADS
 
         if (result != PYBASE64_DECODE_SLOW_SUCCESS) {
-            switch(result) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/9 */
+            switch(result) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/10 */
             {
             case PYBASE64_DECODE_SLOW_INCORRECT_PADDING:
                 PyErr_SetString(state->binAsciiError, "Incorrect padding");
@@ -1189,7 +1189,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
         if (canonical && (len > 0)) {
             int fail = 0;
-            uint8_t const* pSrc = cache;
+            uint8_t const* pSrc = (uint8_t const*)cache;
             assert(len >= 4);
             if (pSrc[len - 1] == '=') {
                 uint8_t c = pSrc[len - 2];
