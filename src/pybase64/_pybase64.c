@@ -1654,10 +1654,15 @@ static struct PyModuleDef _pybase64_module = {
         _pybase64_clear,
         _pybase64_free
 };
+#endif
 
 PyMODINIT_FUNC
-PyInit__pybase64(void)
-{
+PyInit__pybase64(void) {
+#if PY_VERSION_HEX >= 0x030f0000
+    /* workaround for setuptools on Python 3.15+ */
+    /* https://github.com/pypa/distutils/issues/387 */
+    return NULL;
+#else
     return PyModuleDef_Init(&_pybase64_module);
-}
 #endif
+}
