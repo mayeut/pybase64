@@ -134,12 +134,6 @@ before-build = "python -m pip install --no-deps --only-binary=:all: --require-ha
 test-groups = ["test"]
 test-requires = []
 
-# remove after https://github.com/pypa/cibuildwheel/pull/2809
-[[tool.cibuildwheel.overrides]]
-select = "*-android*"
-build-frontend = { name = "build[uv]", args = ["--no-isolation"] }
-before-build = "uv pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
-
 [tool.coverage.run]
 branch = true
 patch = ["subprocess"]
