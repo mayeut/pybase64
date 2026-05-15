@@ -1661,7 +1661,7 @@ PyInit__pybase64(void) {
 #if PY_VERSION_HEX >= 0x030f0000
     /* workaround for setuptools on Python 3.15+ */
     /* https://github.com/pypa/distutils/issues/387 */
-    return NULL;
+    return NULL; /* GCOVR_EXCL_LINE */
 #else
     return PyModuleDef_Init(&_pybase64_module);
 #endif
