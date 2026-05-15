@@ -115,7 +115,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build wheels
-        uses: pypa/cibuildwheel@8d2b08b68458a16aeb24b64e68a09ab1c8e82084 # v3.4.1
+        uses: pypa/cibuildwheel@54327ab9d35de03b359ac25c97de9417d94639c0 # v4.0.0rc1
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -124,7 +124,7 @@ jobs:
           SOURCE_DATE_EPOCH: "${{ needs.prebuild.outputs.SOURCE_DATE_EPOCH }}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: "${{ (matrix.platform != 'pyodide') && 'pypi' || 'cibw' }}-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
+          name: "pypi-wheels ${{ matrix.build || matrix.platform }} ${{ matrix.archs }}"
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -185,21 +185,9 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '171' || '171' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '172' || '210' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           uvx twine check --strict dist/*
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          # unpacks all non PyPI artifacts into nodist/
-          pattern: cibw-*
-          path: nodist
-          merge-multiple: true
-      - run: |
-          set -x
-          WHEEL_COUNT=$(find nodist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '2' || '2' }}
-          test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
-          uvx twine check --strict nodist/*
 
   upload_test_pypi:
     name: Upload to Test PyPI
