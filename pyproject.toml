@@ -93,7 +93,7 @@ build-frontend = { name = "uv", args = ["--build-constraints", "requirements/bui
 build-verbosity = 1
 enable = ["graalpy", "pypy", "pypy-eol"]
 repair-wheel-command = ["uv run --script tools/embed_sbom.py {dest_dir} {wheel}"]
-test-skip = ["gp311-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
+test-skip = ["gp311*-win_amd64"]  # https://github.com/oracle/graalpython/issues/490
 test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/test/requirements-ci.txt"]
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
