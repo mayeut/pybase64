@@ -181,7 +181,6 @@ warn_unreachable = true
 module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils", "embed_sbom"]
 disallow_any_explicit = false
 
-
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "-p", "no:legacypath"]
