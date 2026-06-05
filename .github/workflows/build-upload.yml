@@ -115,7 +115,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build wheels
-        uses: pypa/cibuildwheel@54327ab9d35de03b359ac25c97de9417d94639c0 # v4.0.0rc1
+        uses: pypa/cibuildwheel@f6bd0477ccc60aa8a7a89b8c1eee6bbbd3fe0dbb # v4.0.0rc2
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -185,7 +185,7 @@ jobs:
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '172' || '210' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '172' || '215' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           uvx twine check --strict dist/*
 
