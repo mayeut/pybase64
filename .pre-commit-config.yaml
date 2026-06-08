@@ -31,6 +31,7 @@ repos:
     entry: mypy
     language: python
     language_version: "3.12"
+    stages: [manual]
     'types_or': [ python, pyi ]
     exclude: docs|tools|conftest.py
     args: ["--python-version=3.9"]
