@@ -32,7 +32,7 @@ def _install_dep_group(session: nox.Session, *groups: str, only_binary: bool = T
 def lint(session: nox.Session) -> None:
     """Run linters on the codebase."""
     _install_dep_group(session, "lint")
-    session.run("prek", "run", "--all-files", *session.posargs)
+    session.run("prek", "run", "--hook-stage=manual", "--all-files", *session.posargs)
 
 
 def update_env_macos(session: nox.Session, env: dict[str, str]) -> None:
