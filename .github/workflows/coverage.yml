@@ -32,10 +32,10 @@ jobs:
       - name: Install Intel SDE
         if: runner.arch == 'X64'
         run: |
-          curl -vfsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          # https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          curl -fsSLo ${HOME}/sde.tar.xz https://github.com/nihui/ncnn-assets/releases/download/toolchain/sde-external-10.8.0-2026-03-15-lin.tar.xz
           ls -al ${HOME}
-          sha256sum ${HOME}/sde.tar.xz
-          # echo "50b320cd226acef7a491f5b321fc1be3c3c7984f9e27a456e64894b5b0979dd3  ${HOME}/sde.tar.xz" | sha256sum -c -
+          echo "50b320cd226acef7a491f5b321fc1be3c3c7984f9e27a456e64894b5b0979dd3  ${HOME}/sde.tar.xz" | sha256sum -c -
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
