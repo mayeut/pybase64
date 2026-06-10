@@ -32,7 +32,10 @@ jobs:
       - name: Install Intel SDE
         if: runner.arch == 'X64'
         run: |
-          curl -fsSLo ${HOME}/sde.tar.xz https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          # https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          # https://github.com/nihui/ncnn-assets/releases/download/toolchain/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          curl -fsSLo ${HOME}/sde.tar.xz https://github.com/petarpetrovt/setup-sde/releases/download/binaries/sde-external-10.8.0-2026-03-15-lin.tar.xz
+          echo "50b320cd226acef7a491f5b321fc1be3c3c7984f9e27a456e64894b5b0979dd3  ${HOME}/sde.tar.xz" | sha256sum -c -
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
@@ -67,7 +70,7 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           use_oidc: true
 
