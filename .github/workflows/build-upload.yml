@@ -25,7 +25,7 @@ jobs:
     outputs:
       SOURCE_DATE_EPOCH: ${{ steps.SOURCE_DATE_EPOCH.outputs.SOURCE_DATE_EPOCH }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Set SOURCE_DATE_EPOCH output
@@ -95,18 +95,18 @@ jobs:
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           version: "0.11.3"
       - name: Set up QEMU
         if: runner.os == 'Linux' && runner.arch == 'X64'
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
       # https://github.blog/changelog/2024-04-02-github-actions-hardware-accelerated-android-virtualization-now-available/
       - name: Enable KVM for Android emulator
         if: matrix.platform == 'android' && runner.os == 'Linux' && runner.arch == 'X64'
@@ -115,7 +115,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build wheels
-        uses: pypa/cibuildwheel@f03ac7617d6cff873ccf24cc0d567ef5ba5a9e6d # v4.0.0
+        uses: pypa/cibuildwheel@294735312765b09d24a2fbec22660ce817587d55 # v4.1.0
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
@@ -136,12 +136,12 @@ jobs:
     env:
       CIBUILDWHEEL: 1  # make C extension mandatory
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           python-version: "3.12"
@@ -178,14 +178,14 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: false  # we always want to run the latest twine here, no artifacts are uploaded from this job
           python-version: "3.12"
       - run: |
           set -x
           WHEEL_COUNT=$(find dist -name '*.whl' | wc -l)
-          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '167' || '210' }}
+          EXPECTED_WHEEL_COUNT=${{ startsWith(github.ref, 'refs/tags/v') && '168' || '211' }}
           test ${WHEEL_COUNT} -eq ${EXPECTED_WHEEL_COUNT}
           uvx twine check --strict dist/*
 
