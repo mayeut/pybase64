@@ -53,7 +53,6 @@ jobs:
             libsqlite3-dev \
             libssl-dev \
             libzstd-dev \
-            lzma-dev \
             tk-dev \
             uuid-dev \
             zlib1g-dev
