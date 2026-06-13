@@ -149,7 +149,10 @@ def test_decode(
     sys.platform.startswith(("android", "emscripten", "ios")),
     reason="subprocess not supported",
 )
-def test_subprocess() -> None:
+def test_subprocess(request: pytest.FixtureRequest) -> None:
+    if request.config.getoption("--sde-cpu", default=None) is not None:
+        pytest.skip("--sde-cpu not supported")  # pragma: no cover
+
     import subprocess  # noqa: PLC0415
 
     process = subprocess.Popen(
