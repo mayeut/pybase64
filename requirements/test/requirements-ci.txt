@@ -35,13 +35,13 @@ pygments==2.20.0 \
 pytest==8.4.2 ; python_full_version < '3.10' \
     --hash=sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01 \
     --hash=sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79
-pytest==9.0.3 ; python_full_version >= '3.10' \
-    --hash=sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9 \
-    --hash=sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c
+pytest==9.1.1 ; python_full_version >= '3.10' \
+    --hash=sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313 \
+    --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
     # via pytest-run-parallel
-pytest-run-parallel==0.8.2 ; python_full_version >= '3.13' \
-    --hash=sha256:2a61aba89f56013859ca5c1efb660755bb6b0349ccfd1dbbef27a94b8c04fe4b \
-    --hash=sha256:ccc625bb79b3759a8c280a635a2332371af183020289c9215d04631b55ecfe3e
+pytest-run-parallel==0.9.1 ; python_full_version >= '3.13' \
+    --hash=sha256:623d1fc7f7a2bec5487addf791f559e7814de5b135c43434e1740fd63eff3c7f \
+    --hash=sha256:9972ad8e66340a83819abae9cb3cefd7b3ca7b69b884d19521137767c6a69b58
 tomli==2.4.1 ; python_full_version < '3.11' \
     --hash=sha256:01f520d4f53ef97964a240a035ec2a869fe1a37dde002b57ebc4417a27ccd853 \
     --hash=sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe \
@@ -91,7 +91,7 @@ tomli==2.4.1 ; python_full_version < '3.11' \
     --hash=sha256:ff18e6a727ee0ab0388507b89d1bc6a22b138d1e2fa56d1ad494586d61d2eae9 \
     --hash=sha256:ff2983983d34813c1aeb0fa89091e76c3a22889ee83ab27c5eeb45100560c049
     # via pytest
-typing-extensions==4.15.0 \
-    --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
-    --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
+typing-extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8 \
+    --hash=sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5
     # via exceptiongroup
