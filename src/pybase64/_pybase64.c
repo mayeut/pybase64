@@ -596,34 +596,6 @@ END:
     return PYBASE64_DECODE_SLOW_SUCCESS;
 }
 
-static void pybase64_stream_encode_final(struct base64_state* state, char* out, size_t* outlen, int nopadding)
-{
-	uint8_t *o = (uint8_t *)out;
-
-	if (state->bytes == 1) {
-		*o++ = base64_table_enc_6bit[state->carry];
-		if (nopadding) {
-			*outlen = 1;
-			return;
-		}
-		*o++ = '=';
-		*o++ = '=';
-		*outlen = 3;
-		return;
-	}
-	if (state->bytes == 2) {
-		*o++ = base64_table_enc_6bit[state->carry];
-		if (nopadding) {
-			*outlen = 1;
-			return;
-		}
-		*o++ = '=';
-		*outlen = 2;
-		return;
-	}
-	*outlen = 0;
-}
-
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
     size_t groups;
@@ -715,8 +687,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     /* not interacting with Python objects from here, release the GIL */
     Py_BEGIN_ALLOW_THREADS
 
-    int const nopadding = (flags & PYBASE64_FLAGS_NO_PADDING);
-    int const b64_flags = 0;
+    int const b64_flags = ((flags & PYBASE64_FLAGS_NO_PADDING) ? BASE64_NO_PADDING : 0);
     struct base64_state b64_state;
 
     base64_stream_encode_init(&b64_state, b64_flags);
@@ -748,7 +719,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
             }
             base64_stream_encode(&b64_state, src, len, dst, &out_len);
             remainder = out_len;
-            pybase64_stream_encode_final(&b64_state, dst + out_len, &out_len, nopadding);
+            base64_stream_encode_final(&b64_state, dst + out_len, &out_len);
             remainder += out_len;
             translate_inplace(dst, remainder, alphabet);
             dst += remainder;
@@ -766,7 +737,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
             }
             base64_stream_encode(&b64_state, src, len, dst, &out_len);
             dst += out_len;
-            pybase64_stream_encode_final(&b64_state, dst, &out_len, nopadding);
+            base64_stream_encode_final(&b64_state, dst, &out_len);
             dst += out_len;
         }
     }
@@ -791,7 +762,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         }
         base64_stream_encode(&b64_state, src, len, dst, &out_len);
         remainder = out_len;
-        pybase64_stream_encode_final(&b64_state, dst + out_len, &out_len, nopadding);
+        base64_stream_encode_final(&b64_state, dst + out_len, &out_len);
         remainder += out_len;
         translate_inplace(dst, remainder, alphabet);
         dst += remainder;
@@ -799,7 +770,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     else {
         base64_stream_encode(&b64_state, buffer->buf, buffer->len, dst, &out_len);
         dst += out_len;
-        pybase64_stream_encode_final(&b64_state, dst, &out_len, nopadding);
+        base64_stream_encode_final(&b64_state, dst, &out_len);
         dst += out_len;
     }
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
