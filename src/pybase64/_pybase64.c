@@ -4,8 +4,6 @@
 #include "_pybase64_get_simd_flags.h"
 #include <config.h>
 #include <libbase64.h>
-#include <codecs.h>
-#include <tables/tables.h>
 #include <string.h> /* memset */
 #include <assert.h>
 
@@ -15,31 +13,13 @@
 #include <arm_neon.h>
 #endif
 
-#if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64) || BASE64_WITH_NEON64
-#define HAVE_FAST_UNALIGNED_ACCESS 1
-#else
-#define HAVE_FAST_UNALIGNED_ACCESS 0
-#endif
-
 #define PYBASE64_FLAGS_ENCODE_AS_STRING (1U << 0)
 #define PYBASE64_FLAGS_APPEND_NEW_LINE  (1U << 1)
 #define PYBASE64_FLAGS_NO_PADDING       (1U << 2)
 
-#define PYBASE64_DECODE_SLOW_SUCCESS 0
-#define PYBASE64_DECODE_SLOW_EXCESS_DATA 2
-#define PYBASE64_DECODE_SLOW_LEADING_PADDING 3
-#define PYBASE64_DECODE_SLOW_DISCONTINUOUS_PADDING 4
-#define PYBASE64_DECODE_SLOW_EXCESS_PADDING 5
-#define PYBASE64_DECODE_SLOW_INCORRECT_PADDING 6
-#define PYBASE64_DECODE_SLOW_INVALID_LEN 7
-#define PYBASE64_DECODE_SLOW_INVALID_DATA 8
-#define PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED 9
-#define PYBASE64_DECODE_SLOW_PADDING_BITS_NOT_ALLOWED 10
-
 typedef struct pybase64_state {
     PyObject *binAsciiError;
     PyObject *ignoreCharsValidateFalse;
-    PyObject *ignoreCharsNoPadding;
     uint32_t active_simd_flag;
     uint32_t simd_flags;
 } pybase64_state;
@@ -370,232 +350,6 @@ static void translate_deprecated(const char* pSrc, char* pDst, size_t len, const
     *has_bad_char |= input_has_slash | input_has_plus;
 }
 
-static int check_ignore(uint8_t c, Py_buffer const* ignorechars, uint32_t* ignorecache)
-{
-    if (ignorecache[c >> 5] & (1U << (c & 31U))) {
-        return 1;
-    }
-    if (memchr(ignorechars->buf, c, ignorechars->len)) {
-        ignorecache[c >> 5] |= 1U << (c & 31U);
-        return 1;
-    }
-    return 0;
-}
-
-static int check_excess_data(const uint8_t** pSrc, size_t* pSrclen, Py_buffer const* ignorechars, uint32_t* ignorecache)
-{
-    uint8_t const* src = *pSrc;
-    size_t srclen = *pSrclen;
-    while (srclen && check_ignore(*src, ignorechars, ignorecache)) {
-        src++;
-        srclen--;
-    }
-    *pSrc = src;
-    *pSrclen = srclen;
-    return srclen > 0;
-}
-
-static int next_valid_padding(uint8_t const** pSrc, size_t* pSrclen, Py_buffer const* ignorechars, uint32_t* ignorecache)
-{
-    int ret = 255;
-    uint8_t const* src = *pSrc;
-    size_t srclen = *pSrclen;
-    while (srclen && (*src != '=') && check_ignore(*src, ignorechars, ignorecache)) {
-        src++;
-        srclen--;
-    }
-    if (srclen > 0) {
-        ret = base64_table_dec_8bit[*src++];
-        srclen--;
-    }
-    *pSrc = src;
-    *pSrclen = srclen;
-    return ret;
-}
-
-static int decode_slow(const uint8_t *src, size_t srclen, uint8_t* out, size_t* outlen, Py_buffer const* ignorechars, int padded, int canonical)
-{
-    uint8_t* out_start = out;
-    uint8_t carry = 0U;
-    uint32_t ignorecache[8];
-
-    memset(ignorecache, 0, sizeof(ignorecache));
-
-    while (srclen > 0U)
-    {
-        /* case bytes == 0 */
-        while (srclen > 4U)
-        {
-            union {
-                uint32_t asint;
-                uint8_t  aschar[4];
-            } x;
-
-            x.asint = base64_table_dec_32bit_d0[src[0]]
-                    | base64_table_dec_32bit_d1[src[1]]
-                    | base64_table_dec_32bit_d2[src[2]]
-                    | base64_table_dec_32bit_d3[src[3]];
-#if BASE64_LITTLE_ENDIAN
-            /* LUTs for little-endian set Most Significant Bit
-               in case of invalid character */
-            if (x.asint & 0x80000000U) break;
-#else
-            /* LUTs for big-endian set Least Significant Bit
-               in case of invalid character */
-            if (x.asint & 1U) break;
-#endif
-
-#if HAVE_FAST_UNALIGNED_ACCESS
-            /* This might segfault or be too slow on
-               some architectures, do this only if specified
-               with HAVE_FAST_UNALIGNED_ACCESS macro
-               We write one byte more than needed */
-            *(uint32_t*)out = x.asint;
-#else
-            /* Fallback, write bytes one by one */
-            out[0] = x.aschar[0];
-            out[1] = x.aschar[1];
-            out[2] = x.aschar[2];
-#endif
-            src += 4;
-            out += 3;
-            srclen -= 4;
-        }
-        /* case bytes == 0, remainder */
-        {
-            uint8_t c = *src++; srclen--;
-            uint8_t q;
-            if ((q = base64_table_dec_8bit[c]) >= 254) {
-                if (check_ignore(c, ignorechars, ignorecache)) {
-                    continue;
-                }
-                if (q == 254) {
-                    if((out - out_start) == 0) {
-                        return PYBASE64_DECODE_SLOW_LEADING_PADDING;
-                    }
-                    return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
-                }
-                return PYBASE64_DECODE_SLOW_INVALID_DATA;
-            }
-            carry = q << 2;
-        }
-        /* case bytes == 1 */
-        for(;;)
-        {
-            if (srclen-- == 0) {
-                return PYBASE64_DECODE_SLOW_INVALID_LEN;
-            }
-            uint8_t c = *src++;
-            uint8_t q;
-            if ((q = base64_table_dec_8bit[c]) >= 254) {
-                if (check_ignore(c, ignorechars, ignorecache)) {
-                    continue;
-                }
-                return PYBASE64_DECODE_SLOW_INVALID_DATA;
-            }
-            *out++ = carry | (q >> 4);
-            carry = q << 4;
-            break;
-        }
-        /* case bytes == 2 */
-        for(;;)
-        {
-            if (srclen-- == 0) {
-                if (!padded) {
-                    goto END;
-                }
-                return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
-            }
-            uint8_t c = *src++;
-            uint8_t q;
-            if ((q = base64_table_dec_8bit[c]) >= 254) {
-                if (q == 254) {  /* padding */
-                    /* if the next valid byte is '=' => end or skip depending on '=' being in ignorechars */
-                    uint8_t const* src_next = src;
-                    size_t srclen_next = srclen;
-                    if (!padded && !check_ignore('=', ignorechars, ignorecache)) {
-                        return PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED;
-                    }
-                    if (srclen == 0) {
-                        if (!padded) {
-                            goto END;
-                        }
-                        return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
-                    }
-                    if (next_valid_padding(&src_next, &srclen_next, ignorechars, ignorecache) == 254) {
-                        if (check_excess_data(&src_next, &srclen_next, ignorechars, ignorecache)) {
-                            if (check_ignore('=', ignorechars, ignorecache)) {
-                                /* restart at excess data */
-                                src = src_next;
-                                srclen = srclen_next;
-                                continue;
-                            }
-                            if (*src_next == '=') {
-                                return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
-                            }
-                            return PYBASE64_DECODE_SLOW_EXCESS_DATA;
-                        }
-                        goto END;
-                    }
-                    else if (!check_ignore('=', ignorechars, ignorecache)) {
-                        return PYBASE64_DECODE_SLOW_DISCONTINUOUS_PADDING;
-                    }
-                }
-                if (check_ignore(c, ignorechars, ignorecache)) {
-                    continue;
-                }
-                return PYBASE64_DECODE_SLOW_INVALID_DATA;
-            }
-            *out++ = carry | (q >> 2);
-            carry = q << 6;
-            break;
-        }
-        /* case bytes == 3 */
-        for(;;)
-        {
-            if (srclen-- == 0) {
-                if (!padded) {
-                    goto END;
-                }
-                return PYBASE64_DECODE_SLOW_INCORRECT_PADDING;
-            }
-            uint8_t c = *src++;
-            uint8_t q;
-            if ((q = base64_table_dec_8bit[c]) >= 254) {
-                if (q == 254) {  /* padding */
-                    if (!padded && !check_ignore('=', ignorechars, ignorecache)) {
-                        return PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED;
-                    }
-                    if (check_excess_data(&src, &srclen, ignorechars, ignorecache)) {
-                        if (check_ignore('=', ignorechars, ignorecache)) {
-                            continue;
-                        }
-                        if (*src == '=') {
-                            return PYBASE64_DECODE_SLOW_EXCESS_PADDING;
-                        }
-                        return PYBASE64_DECODE_SLOW_EXCESS_DATA;
-                    }
-                    srclen = 0U;
-                    break;
-                }
-                if (check_ignore(c, ignorechars, ignorecache)) {
-                    continue;
-                }
-                return PYBASE64_DECODE_SLOW_INVALID_DATA;
-            }
-            *out++ = carry | q;
-            carry = 0U;
-            break;
-        }
-    }
-END:
-    if (canonical && (carry != 0U)) {
-        return PYBASE64_DECODE_SLOW_PADDING_BITS_NOT_ALLOWED;
-    }
-    *outlen = out - out_start;
-    return PYBASE64_DECODE_SLOW_SUCCESS;
-}
-
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
     size_t groups;
@@ -891,6 +645,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 {
     static const char *kwlist[] = { "", "altchars", "validate", "padded", "ignorechars", "canonical", NULL };
 
+    struct base64_state b64_state;
     int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
     int has_bad_char = 0;
@@ -905,11 +660,14 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     PyObject* ignorechars_object = NULL;
     int canonical = 0;
     int padded = 1;
-    int fast_path;
+    int base64_flags = 0;
+    int result = 1;
     PyObject* out_object = NULL;
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer = NULL;
 #endif
+    const char* ignorechars = NULL;
+    size_t ignorecharslen = 0U;
     const void* source = NULL;
     Py_ssize_t source_len;
     int source_use_buffer = 0;
@@ -942,19 +700,10 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
-    /* default to fast path when validation is true */
-    fast_path = validation;
-
     use_alphabet_for_ignore_chars = use_alphabet;
     if (!validation) {
         assert(ignorechars_object == NULL);
         ignorechars_object = state->ignoreCharsValidateFalse;
-        use_alphabet_for_ignore_chars = 0;
-    }
-
-    if ((ignorechars_object == NULL) && !padded) {
-        assert(validation);
-        ignorechars_object = state->ignoreCharsNoPadding;
         use_alphabet_for_ignore_chars = 0;
     }
 
@@ -966,19 +715,18 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         if (validation) {
             translate_fn = &translate;
         }
-        if (ignorechars_buffer.len == 0) {
-            PyBuffer_Release(&ignorechars_buffer);
-            Py_DECREF(ignorechars_object);
-            ignorechars_object = NULL;
-            fast_path = 1;
-        }
-        else {
-            fast_path = 0;
-        }
+    }
+
+    if (!padded) {
+        base64_flags |= BASE64_NO_PADDING;
+    }
+    if (canonical) {
+        base64_flags |= BASE64_CANONICAL;
     }
 
     if (PyUnicode_Check(in_object)) {
-        if (fast_path && (PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
+        base64_flags |= BASE64_REJECT_NON_ASCII;
+        if ((PyUnicode_READY(in_object) == 0) && (PyUnicode_KIND(in_object) == PyUnicode_1BYTE_KIND)) {
             source = PyUnicode_1BYTE_DATA(in_object);
             source_len = PyUnicode_GET_LENGTH(in_object);
         }
@@ -1013,54 +761,12 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         source_use_buffer = 1;
     }
 
-/* TRY: */
-    if (!fast_path && use_alphabet) {
-        PyObject* translate_object;
-        char* translate_dst;
-
-#if PY_VERSION_HEX >= 0x030f0000
-        writer = PyBytesWriter_Create(source_len);
-        if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            goto EXCEPT; /* GCOVR_EXCL_LINE */
-        }
-        translate_dst = PyBytesWriter_GetData(writer);
-#else
-        translate_object = PyBytes_FromStringAndSize(NULL, source_len);
-        if (translate_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            goto EXCEPT; /* GCOVR_EXCL_LINE */
-        }
-        translate_dst = PyBytes_AS_STRING(translate_object);
-#endif
-
-        /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
-
-        translate_fn(source, translate_dst, source_len, alphabet, &has_bad_char);
-
-        /* restore the GIL */
-        Py_END_ALLOW_THREADS
-
-#if PY_VERSION_HEX >= 0x030f0000
-        translate_object = PyBytesWriter_Finish(writer);
-        writer = NULL;
-        if (translate_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            goto EXCEPT; /* GCOVR_EXCL_LINE */
-        }
-#endif
-
-        assert(source_use_buffer); /* we always use a buffer when fast_path == 0 */
-        PyBuffer_Release(&buffer);
-        Py_DECREF(in_object);
-        in_object = translate_object;
-        if (get_buffer(in_object, &buffer, 0) != 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            Py_DECREF(in_object); /* GCOVR_EXCL_LINE */
-            return NULL; /* GCOVR_EXCL_LINE */
-        }
-        source = buffer.buf;
-        source_len = buffer.len;
-        source_use_buffer = 1;
+    if (ignorechars_object) {
+        ignorechars = ignorechars_buffer.buf;
+        ignorecharslen = ignorechars_buffer.len;
     }
 
+/* TRY: */
     /* No overflow check needed, exact out_len recomputed at the end */
     /* out_len is ceildiv(len / 4) * 3  when len % 4 != 0*/
     /* else out_len is (ceildiv(len / 4) + 1) * 3 */
@@ -1088,72 +794,21 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 #endif
     }
 
-    if (!fast_path) {
-        int result;
+    /* not interacting with Python objects from here, release the GIL */
+    Py_BEGIN_ALLOW_THREADS
 
-        /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
+    base64_stream_decode_init(&b64_state, base64_flags, ignorechars, ignorecharslen);
 
-        result = decode_slow(source, source_len, dest, &out_len, &ignorechars_buffer, padded, canonical);
-
-        /* restore the GIL */
-        Py_END_ALLOW_THREADS
-
-        if (result != PYBASE64_DECODE_SLOW_SUCCESS) {
-            switch(result) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/10 */
-            {
-            case PYBASE64_DECODE_SLOW_INCORRECT_PADDING:
-                PyErr_SetString(state->binAsciiError, "Incorrect padding");
-                break;
-            case PYBASE64_DECODE_SLOW_EXCESS_DATA:
-                PyErr_SetString(state->binAsciiError, "Excess data after padding");
-                break;
-            case PYBASE64_DECODE_SLOW_LEADING_PADDING:
-                PyErr_SetString(state->binAsciiError, "Leading padding");
-                break;
-            case PYBASE64_DECODE_SLOW_DISCONTINUOUS_PADDING:
-                PyErr_SetString(state->binAsciiError, "Discontinuous padding");
-                break;
-            case PYBASE64_DECODE_SLOW_EXCESS_PADDING:
-                PyErr_SetString(state->binAsciiError, "Excess padding");
-                break;
-            case PYBASE64_DECODE_SLOW_INVALID_LEN:
-                PyErr_SetString(state->binAsciiError, "Invalid number of data characters");
-                break;
-            case PYBASE64_DECODE_SLOW_INVALID_DATA:
-                PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-                break;
-            case PYBASE64_DECODE_SLOW_PADDING_NOT_ALLOWED:
-                PyErr_SetString(state->binAsciiError, "Padding not allowed");
-                break;
-            case PYBASE64_DECODE_SLOW_PADDING_BITS_NOT_ALLOWED:
-                PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
-                break;
-            }
-            goto EXCEPT;
-        }
-    }
-    else if (use_alphabet) {
+    if (use_alphabet) {
         /* TODO, make this more efficient */
         const Py_ssize_t src_slice = 16 * 1024;
-        const size_t dst_slice = (src_slice / 4) * 3;
         char cache[16 * 1024];
         Py_ssize_t len = source_len;
         const char* src = source;
         char* dst = dest;
-        int result = 1;
-
-        /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
-
-        int const b64_flags = (canonical ? BASE64_CANONICAL : 0) |
-                              (padded ? 0 : BASE64_NO_PADDING);
-        struct base64_state b64_state;
-
-        base64_stream_decode_init(&b64_state, b64_flags);
 
         while (len > src_slice) {
-            size_t dst_len = dst_slice;
+            size_t dst_len;
 
             translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
             result = base64_stream_decode(&b64_state, cache, src_slice, dst, &dst_len);
@@ -1163,45 +818,61 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
             len -= src_slice;
             src += src_slice;
-            out_len -= dst_slice;
-            dst += dst_slice;
+            dst += dst_len;
         }
         if (result > 0) {
+            size_t dst_len;
             translate_fn(src, cache, len, alphabet, &has_bad_char);
-            result = base64_stream_decode(&b64_state, cache, len, dst, &out_len);
-            if (result > 0) {
-                result = base64_stream_decode_final(&b64_state);
-            }
+            result = base64_stream_decode(&b64_state, cache, len, dst, &dst_len);
+            dst += dst_len;
+            out_len = (dst - (char*)dest);
         }
-
-        /* restore the GIL */
-        Py_END_ALLOW_THREADS
-
-        if (result <= 0) {
-            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-            goto EXCEPT;
-        }
-        out_len += (dst - (char*)dest);
     }
     else {
-        int result;
-
-        /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
-
-        int const b64_flags = (canonical ? BASE64_CANONICAL : 0) |
-                              (padded ? 0 : BASE64_NO_PADDING);
-
-        result = base64_decode(source, source_len, dest, &out_len, b64_flags);
-
-        /* restore the GIL */
-        Py_END_ALLOW_THREADS
-
-        if (result <= 0) {
-            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-            goto EXCEPT;
-        }
+        result = base64_stream_decode(&b64_state, source, source_len, dest, &out_len);
     }
+
+    if (result > 0) {
+        result = base64_stream_decode_final(&b64_state);
+    }
+
+    /* restore the GIL */
+    Py_END_ALLOW_THREADS
+
+    if (result <= 0) {
+        switch(b64_state.error) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/10 */
+        {
+        case BASE64_DECODE_ERROR_INCORRECT_PADDING:
+            PyErr_SetString(state->binAsciiError, "Incorrect padding");
+            break;
+        case BASE64_DECODE_ERROR_EXCESS_DATA:
+            PyErr_SetString(state->binAsciiError, "Excess data after padding");
+            break;
+        case BASE64_DECODE_ERROR_LEADING_PADDING:
+            PyErr_SetString(state->binAsciiError, "Leading padding");
+            break;
+        case BASE64_DECODE_ERROR_DISCONTINUOUS_PADDING:
+            PyErr_SetString(state->binAsciiError, "Discontinuous padding");
+            break;
+        case BASE64_DECODE_ERROR_EXCESS_PADDING:
+            PyErr_SetString(state->binAsciiError, "Excess padding");
+            break;
+        case BASE64_DECODE_ERROR_INVALID_DATA:
+            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
+            break;
+        case BASE64_DECODE_ERROR_PADDING_NOT_ALLOWED:
+            PyErr_SetString(state->binAsciiError, "Padding not allowed");
+            break;
+        case BASE64_DECODE_ERROR_PADDING_BITS_NOT_ALLOWED:
+            PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
+            break;
+        case BASE64_DECODE_ERROR_NON_ASCII:
+            PyErr_SetString(PyExc_ValueError, "string argument should contain only ASCII characters");
+            break;
+        }
+        goto EXCEPT;
+    }
+
     if (return_bytearray) {
         PyByteArray_Resize(out_object, (Py_ssize_t)out_len);
     }
@@ -1522,11 +1193,6 @@ static int _pybase64_exec(PyObject *m)
         return -1; /* GCOVR_EXCL_LINE */
     }
 
-    state->ignoreCharsNoPadding = PyBytes_FromStringAndSize("", 0);
-    if (state->ignoreCharsNoPadding == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return -1; /* GCOVR_EXCL_LINE */
-    }
-
     state->binAsciiError = pybase64_import_BinAsciiError();
     if (state->binAsciiError == NULL) {
         return -1;
@@ -1550,7 +1216,6 @@ static int _pybase64_traverse(PyObject *m, visitproc visit, void *arg)
     if (state) {  /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         Py_VISIT(state->binAsciiError);
         Py_VISIT(state->ignoreCharsValidateFalse);
-        Py_VISIT(state->ignoreCharsNoPadding);
     }
     return 0;
 }
@@ -1561,7 +1226,6 @@ static int _pybase64_clear(PyObject *m)
     if (state) {  /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         Py_CLEAR(state->binAsciiError);
         Py_CLEAR(state->ignoreCharsValidateFalse);
-        Py_CLEAR(state->ignoreCharsNoPadding);
     }
     return 0;
 }
