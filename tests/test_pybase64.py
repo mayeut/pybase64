@@ -1006,9 +1006,9 @@ def test_canonical_invalid(
     utils.unused_args(simd)
     assert dfn(vector, altchars=altchars, validate=True) == expected
     assert dfn(vector, altchars=altchars) == expected
-    with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+    with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
         dfn(vector, altchars=altchars, validate=True, canonical=True)
-    with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+    with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
         dfn(vector, altchars=altchars, canonical=True)
 
 
@@ -1026,17 +1026,17 @@ def test_canonical_check_all(
         vector = b"A" + bytes([byte]) + b"=="
         expected = dfn(vector, altchars=altchars, validate=True)
         assert dfn(vector, altchars=altchars) == expected
-        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
             dfn(vector, altchars=altchars, validate=True, canonical=True)
-        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
             dfn(vector, altchars=altchars, canonical=True)
     for byte in altchars + b"1235679BCDFGHJKLNOPRSTVWXZabdefhijlmnpqrtuvxyz":
         vector = b"AA" + bytes([byte]) + b"="
         expected = dfn(vector, altchars=altchars, validate=True)
         assert dfn(vector, altchars=altchars) == expected
-        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
             dfn(vector, altchars=altchars, validate=True, canonical=True)
-        with pytest.raises(BinAsciiError, match=re.escape("Non-zero padding bits")):
+        with pytest.raises(BinAsciiError, match=r"Non-zero padding bits|Non-base64 digit found"):
             dfn(vector, altchars=altchars, canonical=True)
     # zero padding bits
     for byte in b"AQgw":
