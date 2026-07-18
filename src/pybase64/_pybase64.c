@@ -966,7 +966,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         if (validation) {
             translate_fn = &translate;
         }
-        if ((ignorechars_buffer.len == 0) && padded) {
+        if (ignorechars_buffer.len == 0) {
             PyBuffer_Release(&ignorechars_buffer);
             Py_DECREF(ignorechars_object);
             ignorechars_object = NULL;
@@ -1142,12 +1142,15 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         const char* src = source;
         char* dst = dest;
         int result = 1;
-        struct base64_state b64_state;
 
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        base64_stream_decode_init(&b64_state, 0);
+        int const b64_flags = (canonical ? BASE64_CANONICAL : 0) |
+                              (padded ? 0 : BASE64_NO_PADDING);
+        struct base64_state b64_state;
+
+        base64_stream_decode_init(&b64_state, b64_flags);
 
         while (len > src_slice) {
             size_t dst_len = dst_slice;
@@ -1166,8 +1169,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         if (result > 0) {
             translate_fn(src, cache, len, alphabet, &has_bad_char);
             result = base64_stream_decode(&b64_state, cache, len, dst, &out_len);
-            if (b64_state.bytes != 0) {
-                result = 0;
+            if (result > 0) {
+                result = base64_stream_decode_final(&b64_state);
             }
         }
 
@@ -1178,34 +1181,24 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
             PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
             goto EXCEPT;
         }
-        if (canonical && (b64_state.carry != 0)) {
-            PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
-            goto EXCEPT;
-        }
         out_len += (dst - (char*)dest);
     }
     else {
         int result;
-        struct base64_state b64_state;
 
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        base64_stream_decode_init(&b64_state, 0);
-        result = base64_stream_decode(&b64_state, source, source_len, dest, &out_len);
-        if (b64_state.bytes != 0) {
-            result = 0;
-        }
+        int const b64_flags = (canonical ? BASE64_CANONICAL : 0) |
+                              (padded ? 0 : BASE64_NO_PADDING);
+
+        result = base64_decode(source, source_len, dest, &out_len, b64_flags);
 
         /* restore the GIL */
         Py_END_ALLOW_THREADS
 
         if (result <= 0) {
             PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-            goto EXCEPT;
-        }
-        if (canonical && (b64_state.carry != 0)) {
-            PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
             goto EXCEPT;
         }
     }
