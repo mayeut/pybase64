@@ -93,60 +93,60 @@ Running Python 3.15.0rc3, Apple clang version 21.0.0 (clang-2100.3.34.2), macOS 
 
     pybase64 1.5.1 (C extension active - NEON)
     bench: altchars=None, validate=True, padded=True
-    pybase64.encodebytes:     6577 MB/s (135,696 bytes -> 183,309 bytes)
-    pybase64.b64encode:      17614 MB/s (135,696 bytes -> 180,928 bytes)
-    pybase64.b64decode:       8975 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.encodebytes:       2342 MB/s (135,696 bytes -> 183,309 bytes)
-    base64.b64encode:         2640 MB/s (135,696 bytes -> 180,928 bytes)
-    base64.b64decode:         2594 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.encodebytes:     6434 MB/s (135,696 bytes -> 183,309 bytes)
+    pybase64.b64encode:      17445 MB/s (135,696 bytes -> 180,928 bytes)
+    pybase64.b64decode:       8887 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.encodebytes:       2308 MB/s (135,696 bytes -> 183,309 bytes)
+    base64.b64encode:         2613 MB/s (135,696 bytes -> 180,928 bytes)
+    base64.b64decode:         2596 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=None, validate=True, padded=False
-    pybase64.b64encode:      17525 MB/s (135,696 bytes -> 180,928 bytes)
-    pybase64.b64decode:       2475 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64encode:         2665 MB/s (135,696 bytes -> 180,928 bytes)
-    base64.b64decode:         2604 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64encode:      16882 MB/s (135,696 bytes -> 180,928 bytes)
+    pybase64.b64decode:       8530 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64encode:         2563 MB/s (135,696 bytes -> 180,928 bytes)
+    base64.b64decode:         2578 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=None, ignorechars=b'', padded=False
-    pybase64.b64decode:       2491 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64decode:         2642 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64decode:       8836 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64decode:         2491 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=None, ignorechars=b'\n', padded=True
-    pybase64.b64decode:       2364 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         2083 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2235 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         2016 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=None, ignorechars=b'\n', padded=False
-    pybase64.b64decode:       2358 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         1945 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2237 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1919 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=None, validate=False, padded=True
-    pybase64.b64decode:       2365 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         2033 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2279 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1915 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=None, validate=False, padded=False
-    pybase64.b64decode:       2362 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         1965 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2286 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1917 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=b'-_', validate=True, padded=True
-    pybase64.b64encode:      10779 MB/s (135,696 bytes -> 180,928 bytes)
-    pybase64.b64decode:       6007 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64encode:         2659 MB/s (135,696 bytes -> 180,928 bytes)
-    base64.b64decode:         1195 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64encode:      10388 MB/s (135,696 bytes -> 180,928 bytes)
+    pybase64.b64decode:       5546 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64encode:         2572 MB/s (135,696 bytes -> 180,928 bytes)
+    base64.b64decode:         1168 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=b'-_', validate=True, padded=False
-    pybase64.b64encode:      10692 MB/s (135,696 bytes -> 180,928 bytes)
-    pybase64.b64decode:       2194 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64encode:         2658 MB/s (135,696 bytes -> 180,928 bytes)
-    base64.b64decode:         1196 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64encode:      10325 MB/s (135,696 bytes -> 180,928 bytes)
+    pybase64.b64decode:       5717 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64encode:         2554 MB/s (135,696 bytes -> 180,928 bytes)
+    base64.b64decode:         1155 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=b'-_', ignorechars=b'', padded=True
-    pybase64.b64decode:       5952 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64decode:         2631 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64decode:       5778 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64decode:         2537 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=b'-_', ignorechars=b'', padded=False
-    pybase64.b64decode:       2183 MB/s (180,928 bytes -> 135,696 bytes)
-    base64.b64decode:         2595 MB/s (180,928 bytes -> 135,696 bytes)
+    pybase64.b64decode:       5779 MB/s (180,928 bytes -> 135,696 bytes)
+    base64.b64decode:         2528 MB/s (180,928 bytes -> 135,696 bytes)
     bench: altchars=b'-_', ignorechars=b'\n', padded=True
-    pybase64.b64decode:       2054 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         2060 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2033 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         2025 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=b'-_', ignorechars=b'\n', padded=False
-    pybase64.b64decode:       2069 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         1937 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2030 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1912 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=b'-_', validate=False, padded=True
-    pybase64.b64decode:       2073 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         1055 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2018 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1010 MB/s (183,308 bytes -> 135,696 bytes)
     bench: altchars=b'-_', validate=False, padded=False
-    pybase64.b64decode:       2084 MB/s (183,308 bytes -> 135,696 bytes)
-    base64.b64decode:         1038 MB/s (183,308 bytes -> 135,696 bytes)
+    pybase64.b64decode:       2039 MB/s (183,308 bytes -> 135,696 bytes)
+    base64.b64decode:         1009 MB/s (183,308 bytes -> 135,696 bytes)
 
 .. end benchmark
 
