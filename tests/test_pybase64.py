@@ -387,17 +387,17 @@ def test_invalid_altchars_dec_validate(
 
 
 params_invalid_data_novalidate_values = [
-    [b"A@@@@FG", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
-    ["ABC€", None, ValueError, "ASCII"],
-    [3.0, None, TypeError, "bytes-like|buffer interface"],
-    [memoryview(b"ABCDEFGH")[::2], None, BufferError, "contiguous"],
-    ["a\x80aa", None, ValueError, "ASCII|Non-base64 digit found"],
-    [b"a\x80aa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
-    ["a\x80aaa", None, ValueError, "ASCII|Non-base64 digit found"],
-    [b"ab", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
-    [b"abc", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
-    [b"ab=", None, BinAsciiError, "Incorrect padding|Non-base64 digit found"],
-    [b"ab==c", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Excess data after"],
+    [b"A@@@@FG", None, BinAsciiError, r"Incorrect padding|Non-base64 digit found|Only base64 data"],
+    ["ABC€", None, ValueError, re.escape("only ASCII characters")],
+    [3.0, None, TypeError, r"bytes-like|buffer interface"],
+    [memoryview(b"ABCDEFGH")[::2], None, BufferError, re.escape("contiguous")],
+    ["a\x80aa", None, ValueError, re.escape("only ASCII characters")],
+    [b"a\x80aa", None, BinAsciiError, r"Incorrect padding|Non-base64 digit found|Only base64 data"],
+    ["a\x80aaa", None, ValueError, re.escape("only ASCII characters")],
+    [b"ab", None, BinAsciiError, re.escape("Incorrect padding")],
+    [b"abc", None, BinAsciiError, re.escape("Incorrect padding")],
+    [b"ab=", None, BinAsciiError, re.escape("Incorrect padding")],
+    [b"ab==c", None, BinAsciiError, r"Incorrect padding|Excess data after"],
 ]
 params_invalid_data_validate_values = [
     [b"\x00\x00\x00\x00", None, BinAsciiError, None],
@@ -407,7 +407,12 @@ params_invalid_data_validate_values = [
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcde@=", b"-_", BinAsciiError, None],
     [b"A@@@@FGHIJKLMNOPQRSTUVWXYZabcd@==", b"-_", BinAsciiError, None],
     [b"A@@@@FGH" * 10000, b"-_", BinAsciiError, None],
-    [b"a\x80aaa", None, BinAsciiError, "Incorrect padding|Non-base64 digit found|Only base64 data"],
+    [
+        b"a\x80aaa",
+        None,
+        BinAsciiError,
+        r"Incorrect padding|Non-base64 digit found|Only base64 data",
+    ],
 ]
 params_invalid_data_all = pytest.mark.parametrize(
     ("vector", "altchars", "exception", "match"),
@@ -787,7 +792,7 @@ def test_urlsafe_b64encode_padded(vector: bytes, expected: bytes, simd: int) -> 
 def test_urlsafe_b64decode_padded(vector: bytes, expected: bytes, simd: int) -> None:
     utils.unused_args(simd)
     if (len(vector) % 4) != 0:
-        with pytest.raises(BinAsciiError, match="Incorrect padding"):
+        with pytest.raises(BinAsciiError, match=re.escape("Incorrect padding")):
             pybase64.urlsafe_b64decode(vector, padded=True)
     assert pybase64.urlsafe_b64decode(vector, padded=False) == expected
 
@@ -815,7 +820,7 @@ def test_ignorechars_invalid(simd: int) -> None:
     msg = re.escape("validate must be True or unspecified when ignorechars is specified")
     with pytest.raises(ValueError, match=msg):
         pybase64.b64decode(b"", validate=False, ignorechars=b"")
-    with pytest.raises(ValueError, match="ASCII"):
+    with pytest.raises(ValueError, match=re.escape("only ASCII characters")):
         pybase64.b64decode("YW\x80Jj", ignorechars=b"\x80")
 
 
@@ -928,11 +933,11 @@ def test_base64_dec_invalid_partial(
         if ignorechars_no_equal == b"":
             with pytest.raises(BinAsciiError):
                 pybase64.b64decode(data, ignorechars=b"@")
-    if isinstance(ignorechars_expected_result, type) and not ignorechars_has_equal:
+    if isinstance(ignorechars_expected_result, type):
         assert ignorechars_expected_result is BinAsciiError
         with pytest.raises(BinAsciiError):
             pybase64.b64decode(data, ignorechars=ignorechars)
-    elif not ignorechars_has_equal:
+    else:
         assert pybase64.b64decode(data, ignorechars=ignorechars) == ignorechars_expected_result
     assert pybase64.b64decode(data, validate=False) == no_validation_expected_result
     assert pybase64.b64decode(data) == no_validation_expected_result
