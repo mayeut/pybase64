@@ -1051,3 +1051,19 @@ def test_canonical_check_all(
         assert dfn(vector, altchars=altchars) == expected
         assert dfn(vector, altchars=altchars, validate=True, canonical=True) == expected
         assert dfn(vector, altchars=altchars, canonical=True) == expected
+
+
+@param_decode_functions
+@utils.param_simd
+def test_altchars_chunk_limit(
+    dfn: Decode,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)
+    altchars = b"-_"
+    # valid padding at the end of the first slice
+    vector = b"A" * (16 * 1024 - 2) + b"==" + b"AAAA"
+    with pytest.raises(BinAsciiError, match=r"Non-base64 digit found|Excess data after padding"):
+        dfn(vector, altchars=altchars, validate=True)
+    with pytest.raises(BinAsciiError, match=r"Non-base64 digit found|Excess data after padding"):
+        dfn(vector, altchars=altchars, ignorechars=b"\n")
