@@ -1160,12 +1160,16 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        int const libbase64_simd_flag = state->libbase64_simd_flag;
+        int const b64_flags =  state->libbase64_simd_flag;
+        struct base64_state b64_state;
+
+        base64_stream_decode_init(&b64_state, b64_flags);
+
         while (len > src_slice) {
             size_t dst_len = dst_slice;
 
             translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
-            result = base64_decode(cache, src_slice, dst, &dst_len, libbase64_simd_flag);
+            result = base64_stream_decode(&b64_state, cache, src_slice, dst, &dst_len);
             if (result <= 0) {
                 break;
             }
@@ -1177,7 +1181,10 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
         if (result > 0) {
             translate_fn(src, cache, len, alphabet, &has_bad_char);
-            result = base64_decode(cache, len, dst, &out_len, libbase64_simd_flag);
+            result = base64_stream_decode(&b64_state, cache, len, dst, &out_len);
+            if (b64_state.bytes != 0) {
+                result = 0;
+            }
         }
 
         /* restore the GIL */
