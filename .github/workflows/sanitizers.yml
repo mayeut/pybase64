@@ -18,7 +18,7 @@ permissions:
 jobs:
   asan:
     name: ASan CPython ${{ matrix.python_version }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         python_version: ["3.14", "3.15.0b4"]
@@ -74,7 +74,7 @@ jobs:
 
   valgrind:
     name: Valgrind
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -84,8 +84,8 @@ jobs:
         run: |
           set -exuo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends valgrind python3.12-dbg python3.12-dev
-          python3.12-dbg -mvenv ./venv-dbg
+          sudo apt-get install -y --no-install-recommends valgrind python3.14-dbg python3.14-dev
+          python3.14-dbg -mvenv ./venv-dbg
           ln -sf $(pwd)/venv-dbg/bin/python /usr/local/bin/python-pb64
           python-pb64 -m pip install --upgrade pip
           python-pb64 -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt -r requirements/test/requirements-ci.txt
