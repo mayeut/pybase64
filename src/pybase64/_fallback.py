@@ -24,8 +24,10 @@ _UNSPECIFIED: Final = _Unspecified.UNSPECIFIED
 if not _PYTHON_3_15_API:
     # we consider '=' part of the alphabet, it will be handled separately
     _BASE64_ALPHABET = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-    # we do not keep '=' on purpose, it will be handled separately
-    _IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
+else:
+    _BASE64_ALPHABET = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+_IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
 
 
 def _get_simd_name(flags: int) -> str:
@@ -115,7 +117,6 @@ def b64decode(  # noqa: C901
     A :exc:`binascii.Error` is raised if ``s`` is incorrectly padded.
     """
     s = _get_bytes(s)
-    has_bad_chars = False
     if altchars is not None:
         altchars = _validate_altchars(_get_bytes(altchars))
 
@@ -134,31 +135,33 @@ def b64decode(  # noqa: C901
         }
         if ignorechars is not _UNSPECIFIED:
             kwargs["ignorechars"] = ignorechars
+        elif validate:
+            kwargs["ignorechars"] = b""
+        elif altchars is None:
+            kwargs["ignorechars"] = _IGNORECHARS_VALIDATE_FALSE
+        else:
+            # we might want to cache this
+            kwargs["ignorechars"] = bytes(
+                i for i in range(256) if i not in _BASE64_ALPHABET[:-2] + altchars
+            )
         return builtin_decode(s, altchars, **kwargs)  # type: ignore[arg-type]
 
     if ignorechars is not _UNSPECIFIED:
         ignorechars_ = _get_bytes(ignorechars, allow_str=False)
 
     if altchars is not None:
-        if ignorechars is _UNSPECIFIED:
-            for b in b"+/":
-                if b not in altchars and b in s:
-                    has_bad_chars = True
-                    break
-            trans = bytes.maketrans(altchars, b"+/")
-            s = s.translate(trans)
+        trans_in_add = set(b"+/") - set(altchars)
+        if len(trans_in_add) == 2:
+            # we don't want to use an unordered set for 2 elements
+            trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
         else:
-            trans_in_add = set(b"+/") - set(altchars)
-            if len(trans_in_add) == 2:
-                # we don't want to use an unordered set for 2 elements
-                trans = bytes.maketrans(altchars + b"+/", b"+/" + altchars)
-            else:
-                # 0 or 1 element in the set
-                trans = bytes.maketrans(
-                    altchars + bytes(trans_in_add),
-                    b"+/" + bytes(set(altchars) - set(b"+/")),
-                )
-            s = s.translate(trans)
+            # 0 or 1 element in the set
+            trans = bytes.maketrans(
+                altchars + bytes(trans_in_add),
+                b"+/" + bytes(set(altchars) - set(b"+/")),
+            )
+        s = s.translate(trans)
+        if ignorechars is not _UNSPECIFIED:
             ignorechars_ = ignorechars_.translate(trans)
 
     ignore_equal = not validate
@@ -237,16 +240,6 @@ def b64decode(  # noqa: C901
         if padding_bits:
             msg = "Non-zero padding bits"
             raise BinAsciiError(msg)
-    if has_bad_chars:
-        import warnings  # noqa: PLC0415 lazy import
-
-        msg = f"invalid characters '+' or '/' in Base64 data with altchars={altchars!r}"
-        if validate:
-            msg = f"{msg} and validate=True will be an error in future versions"
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        else:
-            msg = f"{msg} and validate=False will be discarded in future versions"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
     return result
 
 
