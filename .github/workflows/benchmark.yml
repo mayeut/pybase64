@@ -30,7 +30,7 @@ jobs:
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           persist-credentials: false
@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: nox -s benchmark --install-only -- --wheel wheelhouse/*.whl
       - name: Run benchmark
-        uses: CodSpeedHQ/action@a4a36bb07c0638b0b4ca52bf1f3dad1b4289e52f # v4.18.1
+        uses: CodSpeedHQ/action@f99becdce5e5d51fd556489ebef684f4ecfd6286 # v4.18.5
         with:
           mode: simulation
           run: nox -s benchmark --reuse-existing-virtualenvs --no-install -- -v
