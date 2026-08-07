@@ -261,7 +261,6 @@ def update_requirements(session: nox.Session) -> None:
     session.run(
         "uv",
         "lock",
-        "--no-build",
         "--upgrade",
     )
     for group in pyproject["dependency-groups"]:
