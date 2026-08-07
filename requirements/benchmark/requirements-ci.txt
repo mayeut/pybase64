@@ -20,9 +20,9 @@ packaging==24.2 ; python_full_version >= '3.12' and sys_platform == 'emscripten'
     --hash=sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759 \
     --hash=sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f
     # via pytest
-packaging==26.2 ; python_full_version >= '3.12' and sys_platform != 'emscripten' \
-    --hash=sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e \
-    --hash=sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661
+packaging==26.3 ; python_full_version >= '3.12' and sys_platform != 'emscripten' \
+    --hash=sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
     # via pytest
 pluggy==1.6.0 ; python_full_version >= '3.12' \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
@@ -70,9 +70,9 @@ pytest-codspeed==5.0.3 ; python_full_version >= '3.12' \
     --hash=sha256:f56d0339cd98d26f6e561987be25bdd2761a5d53d8f73493b1ebe02d0d451093 \
     --hash=sha256:f852bee785a7a124cb1720b1915670c6742af87747dc4d838f3ffdbd365ce9d9 \
     --hash=sha256:fe2ea83c924c2250675b75686c3ee456b8cf0208d83d552e182a195fdf467378
-pytest-run-parallel==0.9.1 ; python_full_version >= '3.13' \
-    --hash=sha256:623d1fc7f7a2bec5487addf791f559e7814de5b135c43434e1740fd63eff3c7f \
-    --hash=sha256:9972ad8e66340a83819abae9cb3cefd7b3ca7b69b884d19521137767c6a69b58
+pytest-run-parallel==0.10.0 ; python_full_version >= '3.13' \
+    --hash=sha256:25e5f9fb90fa15e4ee56537a2f4a3fca12ef0e9b524fa4a4d3ebb728b3161408 \
+    --hash=sha256:712e96f4dac3e7dc14eff747ffba4180030db11ff22fd62513d9cf81289a1681
 rich==15.0.0 ; python_full_version >= '3.12' \
     --hash=sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb \
     --hash=sha256:edd07a4824c6b40189fb7ac9bc4c52536e9780fbbfbddf6f1e2502c31b068c36
