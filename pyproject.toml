@@ -193,6 +193,7 @@ target-version = "py39"
 line-length = 100
 lint.select = ["ALL"]
 lint.ignore = [
+  "CPY001",
   "D104",  # TODO add doc
   "FBT001",
   "FBT002",
