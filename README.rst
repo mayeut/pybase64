@@ -169,7 +169,7 @@ Future
 - Deprecate accepting the ``+`` and ``/`` characters with an alternative alphabet when decoding
 - Use ``ValueError`` instead of ``AssertionError`` on altchars length validation
 - Add SBOM to PyPI wheels
-- Add initial support for Python 3.15
+- Publish python 3.15 wheels
 - Drop python 3.8 support
 - Stop publishing python 3.13t wheels
 

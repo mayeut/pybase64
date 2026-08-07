@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 _SLOW_VALIDATION: Final = sys.version_info[:2] < (3, 13)  # fast/correct validation in CPython 3.13+
-_PYTHON_3_15_API: Final = sys.hexversion >= 0x030F00A8  # in 3.15.0a8, move sys.version_info check
+_PYTHON_3_15_API: Final = sys.version_info[:2] >= (3, 15)
 _BYTES_TYPES: Final = (bytes, bytearray)  # Types acceptable as binary data
 _EQUAL_ASCII: Final = 61  # '='
 _UNSPECIFIED: Final = _Unspecified.UNSPECIFIED
