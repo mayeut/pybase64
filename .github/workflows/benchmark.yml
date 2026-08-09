@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: nox -s benchmark --install-only -- --wheel wheelhouse/*.whl
       - name: Run benchmark
-        uses: CodSpeedHQ/action@f99becdce5e5d51fd556489ebef684f4ecfd6286 # v4.18.5
+        uses: CodSpeedHQ/action@0ca9cbbf4623b599a6c3ed4fc8a922942705d9f1 # v5.0.2
         with:
           mode: simulation
           run: nox -s benchmark --reuse-existing-virtualenvs --no-install -- -v
