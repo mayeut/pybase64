@@ -100,10 +100,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
-          version: "0.11.30"
+          version: "latest-known"
       - name: Set up QEMU
         if: runner.os == 'Linux' && runner.arch == 'X64'
         uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
@@ -134,11 +134,11 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install a pinned version of uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }} # zizmor: ignore[cache-poisoning]
           python-version: "3.12"
-          version: "0.11.30"
+          version: "latest-known"
       - name: Build sdist
         run: uv build --build-constraints requirements/build-system/requirements-ci.txt --require-hashes --sdist
         env:
@@ -171,7 +171,7 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: false  # we always want to run the latest twine here, no artifacts are uploaded from this job
           python-version: "3.12"
