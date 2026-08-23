@@ -11,7 +11,7 @@ import nox
 HERE = Path(__file__).resolve().parent
 
 nox.needs_version = ">=2025.11.12"
-nox.options.default_venv_backend = "uv|virtualenv"
+nox.options.default_venv_backend = "uv"
 nox.options.sessions = ["lint", "test"]
 
 ALL_CPYTHON = [f"3.{minor}" for minor in range(9, 15 + 1)]
@@ -28,10 +28,18 @@ def _install_dep_group(session: nox.Session, *groups: str, only_binary: bool = T
     session.install(*args)
 
 
-@nox.session
+def _uv_sync(session: nox.Session, *groups: str, only_binary: bool = True) -> None:
+    args = ["uv", "sync", "--frozen"]
+    if only_binary:
+        args.append("--no-build")
+    args.extend(f"--only-group={group}" for group in groups)
+    session.run_install(*args, env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location})
+
+
+@nox.session()
 def lint(session: nox.Session) -> None:
     """Run linters on the codebase."""
-    _install_dep_group(session, "lint")
+    _uv_sync(session, "lint")
     session.run("prek", "run", "--hook-stage=manual", "--all-files", *session.posargs)
 
 
@@ -67,7 +75,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python=ALL_PYTHON)
+@nox.session(python=ALL_PYTHON, venv_backend="uv|virtualenv")
 def test(session: nox.Session) -> None:
     """Run tests."""
     _install_dep_group(session, "build-system", "test")
@@ -82,7 +90,7 @@ def test(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=ALL_CPYTHONT)
+@nox.session(python=ALL_CPYTHONT, venv_backend="uv|virtualenv")
 def test_parallel(session: nox.Session) -> None:
     """Run tests."""
     _install_dep_group(session, "build-system", "test")
@@ -103,7 +111,7 @@ def test_parallel(session: nox.Session) -> None:
 @nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
-    _install_dep_group(session, "build-system", "coverage", only_binary=False)
+    _uv_sync(session, "build-system", "coverage", only_binary=False)
     gcovr_config = (
         "-r=.",
         "-e=base64",
@@ -210,7 +218,7 @@ def coverage(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def benchmark(session: nox.Session) -> None:
     """Benchmark tests."""
-    _install_dep_group(session, "build-system", "benchmark")
+    _uv_sync(session, "build-system", "benchmark")
     project_install: tuple[str, ...] = ("-e", ".")
     posargs = session.posargs.copy()
     if "--wheel" in posargs:
@@ -223,10 +231,10 @@ def benchmark(session: nox.Session) -> None:
     session.run("pytest", "--codspeed", *posargs)
 
 
-@nox.session(python="3.12")
+@nox.session(python="3.14")
 def docs(session: nox.Session) -> None:
     """Build the docs."""
-    _install_dep_group(session, "build-system", "docs")
+    _uv_sync(session, "build-system", "docs")
     session.install("--no-deps", "--no-build-isolation", ".")
     session.chdir("docs")
     session.run(
@@ -252,20 +260,14 @@ def sbom(session: nox.Session) -> None:
     session.run("python", "tools/embed_sbom.py", *session.posargs)
 
 
-@nox.session(python="3.12")
+@nox.session(python="3.14")
 def update_requirements(session: nox.Session) -> None:
-    pyproject = nox.project.load_toml()
-    if session.venv_backend != "uv":
-        uv_requirement = pyproject["tool"]["uv"]["required-version"]
-        session.install(f"uv{uv_requirement}")
     session.run(
         "uv",
         "lock",
         "--upgrade",
     )
-    for group in pyproject["dependency-groups"]:
-        if group in {"dev", "nox"}:
-            continue
+    for group in ["build-system", "test"]:
         session.run(
             "uv",
             "export",
