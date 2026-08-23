@@ -39,11 +39,6 @@ jobs:
           mkdir ${HOME}/sde
           tar -C ${HOME}/sde --strip-components 1 -xf ${HOME}/sde.tar.xz
           echo "PATH=${HOME}/sde:${PATH}" >> $GITHUB_ENV
-      - name: Install libxml2-dev & libxslt1-dev
-        run: |
-          # as long as lxml does not provide 3.15 wheels
-          sudo apt-get update
-          sudo apt-get install -y libxml2-dev libxslt1-dev
       - name: Run coverage tests
         run: nox -s coverage -- --with-sde
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
