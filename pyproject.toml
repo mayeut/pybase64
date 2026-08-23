@@ -70,7 +70,6 @@ coverage = [
     {include-group = "test"},
     "coverage[toml]>=7.10",  # >= 7.10, we use tool.coverage.run.patch config
     "gcovr>=8",
-    "lxml>=7.0.0a3 ; python_version >= '3.15'",
     "pytest-cov>=7",  # needed for coverage>=7.10
 ]
 # we don't support docs for python<3.12
