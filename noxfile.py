@@ -108,7 +108,7 @@ def test_parallel(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11"])
+@nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11.15"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
     _uv_sync(session, "build-system", "coverage", only_binary=False)
@@ -209,7 +209,7 @@ def coverage(session: nox.Session) -> None:
     posargs = [*session.posargs, *with_sde, "--report"]
     if Path("build").is_dir():
         shutil.rmtree("build")
-    session.notify("_coverage-pypy3.11", ["--clean"])
+    session.notify("_coverage-pypy3.11.15", ["--clean"])
     session.notify("_coverage-pypy3.10", [])
     session.notify("_coverage-3.15", [])
     session.notify("_coverage-3.14", posargs)
