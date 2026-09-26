@@ -32,7 +32,7 @@ jobs:
         id: SOURCE_DATE_EPOCH
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_OUTPUT"
       - name: Setup uv & nox
-        uses: ./.github/actions/setup-uv-nox
+        uses: $/.github/actions/setup-uv-nox
       - run: nox -s lint
 
   build_wheels:
