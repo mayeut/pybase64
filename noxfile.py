@@ -16,7 +16,7 @@ nox.options.sessions = ["lint", "test"]
 
 ALL_CPYTHON = [f"3.{minor}" for minor in range(9, 15 + 1)]
 ALL_CPYTHONT = [f"3.{minor}t" for minor in range(13, 15 + 1)]
-ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 11 + 1)]
+ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 12 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_CPYTHONT + ALL_PYPY
 
 
