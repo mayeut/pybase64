@@ -59,8 +59,8 @@ static int get_buffer(PyObject* object, Py_buffer* buffer, int bytes_like)
 #if defined(PYPY_VERSION)
     /* PyPy does not respect PyBUF_C_CONTIGUOUS */
     if (!PyBuffer_IsContiguous(buffer, 'C')) {
-        PyBuffer_Release(buffer);
         PyErr_Format(PyExc_BufferError, "%R: underlying buffer is not C-contiguous", Py_TYPE(object));
+        PyBuffer_Release(buffer);
         return -1;
     }
 #endif
@@ -71,8 +71,8 @@ static int get_buffer(PyObject* object, Py_buffer* buffer, int bytes_like)
             return -1;
         }
         if (buffer->ndim != 1) {
-            PyBuffer_Release(buffer);
             PyErr_Format(PyExc_TypeError, "expected 1-D data, not %d-D data from %R", buffer->ndim, Py_TYPE(object));
+            PyBuffer_Release(buffer);
             return -1;
         }
     }
