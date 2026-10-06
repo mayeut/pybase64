@@ -17,10 +17,11 @@ permissions:
 
 jobs:
   asan:
-    name: ASan CPython ${{ matrix.python_version }}
-    runs-on: ubuntu-26.04
+    name: ASan CPython ${{ matrix.python_version }} ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
+        runner: ["ubuntu-26.04", "ubuntu-26.04-arm"]
         python_version: ["3.14", "3.15.0rc3"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
