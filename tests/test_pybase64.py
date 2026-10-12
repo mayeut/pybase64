@@ -539,6 +539,27 @@ def test_warning_data_dec(
 
 
 @utils.param_simd
+@param_validate
+@param_decode_functions
+def test_warning_data_dec_unpadded(
+    dfn: Decode,
+    validate: bool,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    exception, match = {
+        True: (DeprecationWarning, r"invalid character.*will be an error in future"),
+        False: (FutureWarning, r"invalid character.*will be discarded in future"),
+    }[validate]
+    src_slice = 16 * 1024
+    vector_ = "+/" + "A" * (src_slice - 2) + "AAAA"
+    for vector in [vector_, vector_[:4], vector_[:3]]:
+        expected = base64.b64decode(vector + "=" * (-len(vector) % 4))
+        with pytest.warns(exception, match=match):
+            assert dfn(vector, b"-_", validate=validate, padded=False) == expected
+
+
+@utils.param_simd
 @param_decode_functions
 def test_altchars_translation(
     dfn: Decode,

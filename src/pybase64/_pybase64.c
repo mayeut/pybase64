@@ -922,6 +922,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
     int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
+    int user_ignorechars;
     int has_bad_char = 0;
     char alphabet[2];
     int validation;
@@ -971,6 +972,8 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         return NULL;
     }
 
+    user_ignorechars = (ignorechars_object != NULL);
+
     /* default to fast path when validation is true */
     fast_path = validation;
 
@@ -992,7 +995,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         if (ignorechars_object == NULL) {
             return NULL;
         }
-        if (validation) {
+        if (validation && user_ignorechars) {
             translate_fn = &translate;
         }
         if ((ignorechars_buffer.len == 0) && padded) {
