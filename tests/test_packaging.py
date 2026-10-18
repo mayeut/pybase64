@@ -18,7 +18,7 @@ def test_version() -> None:
 
 def test_license() -> None:
     metadata = importlib.metadata.metadata("pybase64")
-    assert metadata["License-Expression"] == "BSD-2-Clause"
+    assert metadata["License-Expression"] == "BSD-2-Clause AND (Apache-2.0 OR MIT)"
 
 
 @pytest.mark.pypi_distribution

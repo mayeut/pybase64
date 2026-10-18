@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import base64
 import binascii
+import ctypes
 import importlib.util
+import platform
 import re
 import sys
 import warnings
@@ -660,19 +662,39 @@ def test_invalid_args_dec_0(dfn: Decode) -> None:
         dfn()  # type: ignore[call-arg]
 
 
-def test_flags(request: pytest.FixtureRequest) -> None:
+def test_cpu_detection(request: pytest.FixtureRequest) -> None:
     cpu = request.config.getoption("--sde-cpu", skip=True)
     assert {
-        "p4p": 0,  # no simd
-        "mrm": 4,  # SSSE3
-        "pnr": 4 | 8,  # SSE41
-        "nhm": 4 | 8 | 16,  # SSE42
-        "snb": 4 | 8 | 16 | 32,  # AVX
-        "hsw": 4 | 8 | 16 | 32 | 64,  # AVX2
-        "skx": 4 | 8 | 16 | 32 | 64,  # AVX2
-        "spr": 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
-        "neon": 65536,  # NEON
-    }[cpu] == utils.runtime_flags
+        "p4p": ("fallback",),  # no simd
+        "mrm": ("fallback",),  # SSSE3
+        "pnr": ("fallback",),  # SSE41
+        "nhm": ("westmere", "fallback"),  # SSE42
+        "snb": ("westmere", "fallback"),  # AVX
+        "hsw": ("haswell", "westmere", "fallback"),  # AVX2
+        "skx": ("haswell", "westmere", "fallback"),  # AVX2
+        "spr": ("icelake", "haswell", "westmere", "fallback"),  # AVX512VBMI
+        "neon": ("arm64",),  # NEON
+    }[cpu] == utils.simd_runtime_paths
+
+
+@pytest.mark.pypi_distribution
+def test_available_implementations() -> None:  # pragma: no cover
+    machine = platform.machine().lower()
+    machine = {
+        "amd64": "x86_64",
+        "arm64": "aarch64",
+    }.get(machine, machine)
+    if machine == "x86_64" and ctypes.sizeof(ctypes.c_void_p) == 4:
+        machine = "i686"
+    expected = {
+        "aarch64": ("arm64",),
+        "x86_64": ("icelake", "haswell", "westmere", "fallback"),
+        "ppc64le": ("ppc64",),
+    }.get(machine, ("fallback",))
+    if machine == "x86_64" and sys.platform.startswith("android"):
+        # no fallback on Android, the minimal system is westmere
+        expected = tuple(path for path in expected if path != "fallback")
+    assert expected == utils.simd_compile_paths
 
 
 @param_encode_functions

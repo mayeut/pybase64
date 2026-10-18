@@ -1,11 +1,16 @@
 #define PY_SSIZE_T_CLEAN
 #define PY_CXX_CONST const
 #include <Python.h>
-#include "_pybase64_get_simd_flags.h"
 #include <config.h>
 #include <libbase64.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <codecs.h>
 #include <tables/tables.h>
+#ifdef __cplusplus
+}
+#endif
 #include <string.h> /* memset */
 #include <assert.h>
 
@@ -14,6 +19,11 @@
 #elif BASE64_WITH_NEON64
 #include <arm_neon.h>
 #endif
+
+#include <simdutf.cpp>
+
+static auto const& implementations = simdutf::get_available_implementations();
+static simdutf::implementation const* const best_implementation = implementations.detect_best_supported();
 
 #if defined(Py_GIL_DISABLED) && !defined(Py_TARGET_ABI3T)
 #define PYBASE64_BEGIN_ALLOW_THREADS(Mi_size) {
@@ -50,8 +60,7 @@ typedef struct pybase64_state {
     PyObject *emptyStr;
     PyObject *ignoreCharsValidateFalse;
     PyObject *ignoreCharsNoPadding;
-    uint32_t active_simd_flag;
-    uint32_t simd_flags;
+    simdutf::implementation const* active_implementation;
 } pybase64_state;
 
 #if defined(PY_VERSION_HEX) && PY_VERSION_HEX >= 0x030d0000
@@ -657,44 +666,18 @@ END:
     return PYBASE64_DECODE_SLOW_SUCCESS;
 }
 
-static void pybase64_stream_encode_final(struct base64_state* state, char* out, size_t* outlen, int nopadding)
-{
-	uint8_t *o = (uint8_t *)out;
-
-	if (state->bytes == 1) {
-		*o++ = base64_table_enc_6bit[state->carry];
-		if (nopadding) {
-			*outlen = 1;
-			return;
-		}
-		*o++ = '=';
-		*o++ = '=';
-		*outlen = 3;
-		return;
-	}
-	if (state->bytes == 2) {
-		*o++ = base64_table_enc_6bit[state->carry];
-		if (nopadding) {
-			*outlen = 1;
-			return;
-		}
-		*o++ = '=';
-		*outlen = 2;
-		return;
-	}
-	*outlen = 0;
-}
-
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
-    size_t groups;
-    size_t groups_remainder;
-    size_t out_len;
     PyObject* out_object;
 #if PY_VERSION_HEX >= 0x030f0000
     PyBytesWriter* writer;
 #endif
     char* dst;
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
+    }
+    auto const implementation = state->active_implementation;
 
     if (wrapcol < 0) {
         PyErr_SetString(PyExc_ValueError, "wrapcol must be >= 0");
@@ -716,34 +699,14 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         wrapcol = (wrapcol < 4) ? 4U : (((size_t)wrapcol / 4U) * 4U);
     }
 
-    if (buffer->len > (3 * (PY_SSIZE_T_MAX / 4))) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
+    simdutf::base64_options options = (flags & PYBASE64_FLAGS_NO_PADDING) ? simdutf::base64_default_no_padding : simdutf::base64_default;
+    if (alphabet != nullptr && alphabet[0] == '-' && alphabet[1] == '_') {
+        alphabet = nullptr;
+        options = (flags & PYBASE64_FLAGS_NO_PADDING) ? simdutf::base64_url : simdutf::base64_url_with_padding;
     }
-
-    groups = (size_t)(buffer->len / 3);
-    groups_remainder = (size_t)buffer->len - groups * 3U;
-    out_len = groups * 4;
-    switch (groups_remainder)
-    {
-    case 1:
-        out_len += (flags & PYBASE64_FLAGS_NO_PADDING) ? 2U : 4U;
-        break;
-    case 2:
-        out_len += (flags & PYBASE64_FLAGS_NO_PADDING) ? 3U : 4U;
-        break;
-    default:
-        break;
-    }
-    if (wrapcol > 0) {
-        size_t newlines = (out_len - 1U) / (size_t)wrapcol;
-        if (newlines > ((size_t)PY_SSIZE_T_MAX - out_len)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
-        }
-        out_len += newlines;
-        if (newlines == 0) {
-            wrapcol = 0;
-        }
-    }
+    size_t out_len = (wrapcol > 0) ?
+        simdutf::base64_length_from_binary_with_lines(buffer->len, options, wrapcol) :
+        implementation->base64_length_from_binary(buffer->len, options);
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
         if (out_len > ((size_t)PY_SSIZE_T_MAX - 1U)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
@@ -771,7 +734,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             return NULL; /* GCOVR_EXCL_LINE */
         }
-        dst = PyBytesWriter_GetData(writer);
+        dst = static_cast<char*>(PyBytesWriter_GetData(writer));
 #else
         out_object = PyBytes_FromStringAndSize(NULL, (Py_ssize_t)out_len);
         if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
@@ -784,29 +747,22 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     /* not interacting with Python objects from here, release the GIL */
     PYBASE64_BEGIN_ALLOW_THREADS(buffer->len)
 
-    int const nopadding = (flags & PYBASE64_FLAGS_NO_PADDING);
-    int const b64_flags = 0;
-    struct base64_state b64_state;
-
-    base64_stream_encode_init(&b64_state, b64_flags);
-
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
         out_len--; /* only consider len without new line terminator */
     }
 
     if (wrapcol) {
-        const size_t dst_slice = (size_t)wrapcol + 1U;
-        const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
-        Py_ssize_t len = buffer->len;
-        const char* src = (const char*)buffer->buf;
-
         if (alphabet) {
-            size_t remainder;
+            /* TODO, make this more efficient */
+            const size_t dst_slice = (size_t)wrapcol + 1U;
+            const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
+            Py_ssize_t len = buffer->len;
+            const char* src = (const char*)buffer->buf;
 
             while (out_len > dst_slice) {
                 size_t dst_len = (size_t)wrapcol;
 
-                base64_stream_encode(&b64_state, src, src_slice, dst, &dst_len);
+                implementation->binary_to_base64(src, src_slice, dst, options);
                 translate_inplace(dst, dst_len, alphabet);
                 dst[dst_len] = '\n';
 
@@ -815,27 +771,12 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
                 out_len -= dst_slice;
                 dst += dst_slice;
             }
-            base64_stream_encode(&b64_state, src, len, dst, &out_len);
-            remainder = out_len;
-            pybase64_stream_encode_final(&b64_state, dst + out_len, &out_len, nopadding);
-            remainder += out_len;
-            translate_inplace(dst, remainder, alphabet);
-            dst += remainder;
+            implementation->binary_to_base64(src, len, dst, options);
+            translate_inplace(dst, out_len, alphabet);
+            dst += out_len;
         }
         else {
-            while (out_len > dst_slice) {
-                size_t dst_len = (size_t)wrapcol;
-                base64_stream_encode(&b64_state, src, src_slice, dst, &dst_len);
-                dst[dst_len] = '\n';
-
-                len -= src_slice;
-                src += src_slice;
-                out_len -= dst_slice;
-                dst += dst_slice;
-            }
-            base64_stream_encode(&b64_state, src, len, dst, &out_len);
-            dst += out_len;
-            pybase64_stream_encode_final(&b64_state, dst, &out_len, nopadding);
+            implementation->binary_to_base64_with_lines(static_cast<char const*>(buffer->buf), buffer->len, dst, wrapcol, options);
             dst += out_len;
         }
     }
@@ -845,12 +786,9 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         const Py_ssize_t src_slice = (Py_ssize_t)((dst_slice / 4U) * 3U);
         Py_ssize_t len = buffer->len;
         const char* src = (const char*)buffer->buf;
-        size_t remainder;
 
         while (out_len > dst_slice) {
-            size_t dst_len = dst_slice;
-
-            base64_stream_encode(&b64_state, src, src_slice, dst, &dst_len);
+            implementation->binary_to_base64(src, src_slice, dst, options);
             translate_inplace(dst, dst_slice, alphabet);
 
             len -= src_slice;
@@ -858,17 +796,12 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
             out_len -= dst_slice;
             dst += dst_slice;
         }
-        base64_stream_encode(&b64_state, src, len, dst, &out_len);
-        remainder = out_len;
-        pybase64_stream_encode_final(&b64_state, dst + out_len, &out_len, nopadding);
-        remainder += out_len;
-        translate_inplace(dst, remainder, alphabet);
-        dst += remainder;
+        implementation->binary_to_base64(src, len, dst, options);
+        translate_inplace(dst, out_len, alphabet);
+        dst += out_len;
     }
     else {
-        base64_stream_encode(&b64_state, buffer->buf, buffer->len, dst, &out_len);
-        dst += out_len;
-        pybase64_stream_encode_final(&b64_state, dst, &out_len, nopadding);
+        implementation->binary_to_base64(static_cast<char const*>(buffer->buf), buffer->len, dst, options);
         dst += out_len;
     }
     if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
@@ -999,7 +932,7 @@ static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, cha
     translate_dst = PyBytes_AS_STRING(tmp_result);
 #endif
 
-    translate(in_buffer.buf, translate_dst, in_buffer.len, alphabet, NULL);
+    translate(static_cast<char const*>(in_buffer.buf), static_cast<char*>(translate_dst), in_buffer.len, alphabet, NULL);
 
 #if PY_VERSION_HEX >= 0x030f0000
     tmp_result = PyBytesWriter_Finish(writer);
@@ -1020,6 +953,50 @@ END:
 #endif
     PyBuffer_Release(&in_buffer);
     return result;
+}
+
+static void validate_result(simdutf::result& result, char const* in, size_t in_length, int padded)
+{
+    if (result.is_err()) {
+        return;
+    }
+    /* check no characters skipped */
+    size_t remainder = in_length % 4;
+    if (padded) {
+        if (remainder) {
+            result.error = simdutf::error_code::INVALID_BASE64_CHARACTER;
+            return;
+        }
+        size_t padding = 0;
+        while (padding < in_length && in[in_length - 1 - padding] == '=') {
+            padding++;
+        }
+        if (result.count + padding != (in_length / 4) * 3) {
+            result.error = simdutf::error_code::INVALID_BASE64_CHARACTER;
+        }
+        return;
+    }
+    /* unpadded */
+    if ((in_length > 0) && (in[in_length - 1] == '=')) {
+        result.error = simdutf::error_code::INVALID_BASE64_CHARACTER;
+        return;
+    }
+    size_t expected_len = 0;
+    switch (remainder)
+    {
+    case 0:
+        expected_len = (in_length / 4) * 3;
+        break;
+    case 2:
+        expected_len = (in_length / 4) * 3 + 1;
+        break;
+    case 3:
+        expected_len = (in_length / 4) * 3 + 2;
+        break;
+    }
+    if (result.count != expected_len) {
+        result.error = simdutf::error_code::INVALID_BASE64_CHARACTER;
+    }
 }
 
 static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, char const* alphabet, PyObject* validation_object, PyObject* ignorechars_object, int padded, int canonical, int return_bytearray)
@@ -1045,6 +1022,7 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
+    auto const implementation = state->active_implementation;
 
     if (validation_object == NULL) {
         validation = (ignorechars_object != NULL);
@@ -1072,11 +1050,7 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
         use_alphabet_for_ignore_chars = 0;
     }
 
-    if ((ignorechars_object == NULL) && !padded) {
-        assert(validation);
-        ignorechars_object = state->ignoreCharsNoPadding;
-        use_alphabet_for_ignore_chars = 0;
-    }
+    simdutf::base64_options options = padded ? simdutf::base64_default : simdutf::base64_default_no_padding;
 
     if (ignorechars_object != NULL) {
         ignorechars_object = get_ignorechars_buffer(ignorechars_object, &ignorechars_buffer, use_alphabet_for_ignore_chars ? alphabet : NULL);
@@ -1085,8 +1059,12 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
         }
         if (validation && user_ignorechars) {
             translate_fn = &translate;
+            if ((ignorechars_buffer.len == 0) && (alphabet !=  NULL) && (alphabet[0] == '-') && (alphabet[1] == '_')) {
+                options = padded ? simdutf::base64_url_with_padding : simdutf::base64_url;
+                alphabet = NULL;
+            }
         }
-        if ((ignorechars_buffer.len == 0) && padded) {
+        if (ignorechars_buffer.len == 0)  {
             PyBuffer_Release(&ignorechars_buffer);
             Py_DECREF(ignorechars_object);
             ignorechars_object = NULL;
@@ -1143,7 +1121,7 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
         if (writer == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             goto EXCEPT; /* GCOVR_EXCL_LINE */
         }
-        translate_dst = PyBytesWriter_GetData(writer);
+        translate_dst = static_cast<char*>(PyBytesWriter_GetData(writer));
 #else
         translate_object = PyBytes_FromStringAndSize(NULL, source_len);
         if (translate_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
@@ -1155,7 +1133,7 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
         /* not interacting with Python objects from here, release the GIL */
         PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
-        translate_fn(source, translate_dst, source_len, alphabet, &has_bad_char);
+        translate_fn(static_cast<char const*>(source), translate_dst, source_len, alphabet, &has_bad_char);
 
         /* restore the GIL */
         PYBASE64_END_ALLOW_THREADS
@@ -1214,7 +1192,7 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
         /* not interacting with Python objects from here, release the GIL */
         PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
-        result = decode_slow(source, source_len, dest, &out_len, &ignorechars_buffer, padded, canonical);
+        result = decode_slow(static_cast<uint8_t const*>(source), source_len, static_cast<uint8_t*>(dest), &out_len, &ignorechars_buffer, padded, canonical);
 
         /* restore the GIL */
         PYBASE64_END_ALLOW_THREADS
@@ -1255,77 +1233,97 @@ static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, 
     }
     else if (alphabet != NULL) {
         /* TODO, make this more efficient */
-        const Py_ssize_t src_slice = 16 * 1024;
-        const size_t dst_slice = (src_slice / 4) * 3;
-        char cache[16 * 1024];
+        constexpr Py_ssize_t src_slice = 16 * 1024;
+        constexpr size_t dst_slice = (src_slice / 4) * 3;
+        char cache[src_slice];
         Py_ssize_t len = source_len;
-        const char* src = source;
-        char* dst = dest;
-        int result = 1;
-        struct base64_state b64_state;
+        const char* src = static_cast<char const*>(source);
+        char* dst = static_cast<char*>(dest);
+        simdutf::result result{};
 
         /* not interacting with Python objects from here, release the GIL */
         PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
-        base64_stream_decode_init(&b64_state, 0);
-
         while (len > src_slice) {
-            size_t dst_len = dst_slice;
-
             translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
-            result = base64_stream_decode(&b64_state, cache, src_slice, dst, &dst_len);
-            if (result <= 0) {
+            result = implementation->base64_to_binary(
+                cache,
+                src_slice,
+                dst,
+                simdutf::base64_default_no_padding,
+                simdutf::strict
+            );
+            if ((result.count != dst_slice) | result.is_err()) {
+                if (result.is_ok()) {
+                    result.error = simdutf::error_code::INVALID_BASE64_CHARACTER;
+                }
                 break;
             }
-
             len -= src_slice;
             src += src_slice;
             out_len -= dst_slice;
             dst += dst_slice;
         }
-        if (result > 0) {
+        if (result.is_ok()) {
             translate_fn(src, cache, len, alphabet, &has_bad_char);
-            result = base64_stream_decode(&b64_state, cache, len, dst, &out_len);
-            if (b64_state.bytes != 0) {
-                result = 0;
-            }
+            result = implementation->base64_to_binary(
+                cache,
+                len,
+                dst,
+                padded ? simdutf::base64_default : simdutf::base64_default_no_padding,
+                canonical ? simdutf::strict : simdutf::loose
+            );
+            validate_result(result, cache, len, padded);
+            out_len = result.count;
         }
 
         /* restore the GIL */
         PYBASE64_END_ALLOW_THREADS
 
-        if (result <= 0) {
-            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-            goto EXCEPT;
-        }
-        if (canonical && (b64_state.carry != 0)) {
-            PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
+        if (result.is_err()) {
+            switch (result.error)
+            {
+            case simdutf::error_code::BASE64_EXTRA_BITS:
+                PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
+                break;
+            default:
+                PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
+                break;
+            }
             goto EXCEPT;
         }
         out_len += (dst - (char*)dest);
     }
     else {
-        int result;
-        struct base64_state b64_state;
+        simdutf::result result;
+        char const* in = static_cast<char const*>(source);
 
         /* not interacting with Python objects from here, release the GIL */
         PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
-        base64_stream_decode_init(&b64_state, 0);
-        result = base64_stream_decode(&b64_state, source, source_len, dest, &out_len);
-        if (b64_state.bytes != 0) {
-            result = 0;
-        }
+        result = implementation->base64_to_binary(
+            in,
+            source_len,
+            static_cast<char*>(dest),
+            options,
+            canonical ? simdutf::strict : simdutf::loose
+        );
+        validate_result(result, in, source_len, padded);
+        out_len = result.count;
 
         /* restore the GIL */
         PYBASE64_END_ALLOW_THREADS
 
-        if (result <= 0) {
-            PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
-            goto EXCEPT;
-        }
-        if (canonical && (b64_state.carry != 0)) {
-            PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
+        if (result.is_err()) {
+            switch (result.error)
+            {
+            case simdutf::error_code::BASE64_EXTRA_BITS:
+                PyErr_SetString(state->binAsciiError, "Non-zero padding bits");
+                break;
+            default:
+                PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
+                break;
+            }
             goto EXCEPT;
         }
     }
@@ -1477,123 +1475,62 @@ static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
-    return PyLong_FromUnsignedLong(state->active_simd_flag);
+    auto const& name = state->active_implementation->name();
+    return PyUnicode_FromStringAndSize(name.data(), name.size());
 }
 
-static PyObject* pybase64_get_simd_flags_runtime(PyObject* self, PyObject* arg)
+static PyObject* pybase64_get_simd_paths_runtime(PyObject* self, PyObject* arg)
 {
-    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return NULL; /* GCOVR_EXCL_LINE */
+    PyObject* result = PyTuple_New(implementations.size());
+    if (result == NULL) {
+        return result;
     }
-    return PyLong_FromUnsignedLong(state->simd_flags);
+    Py_ssize_t pos = 0;
+    for (auto const& implementation: implementations) {
+        if (!implementation->supported_by_runtime_system()) {
+            continue;
+        }
+        auto const& name = implementation->name();
+        PyObject* name_object = PyUnicode_FromStringAndSize(name.data(), name.size());
+        if (name_object == NULL) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (PyTuple_SetItem(result, pos++, name_object) != 0) {
+            Py_DECREF(name_object);
+            Py_DECREF(result);
+            return NULL;
+        }
+    }
+    PyObject* old_result = result;
+    if (_PyTuple_Resize(&result, pos) != 0) {
+        Py_DECREF(old_result);
+        return NULL;
+    }
+    return result;
 }
 
-static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
+static PyObject* pybase64_get_simd_paths_compile(PyObject* self, PyObject* arg)
 {
-    uint32_t result = 0U;
-
-#if BASE64_WITH_NEON64 || BASE64_WITH_NEON32
-    result |= PYBASE64_NEON;
-#endif
-
-#if BASE64_WITH_AVX512
-    result |= PYBASE64_AVX512VBMI;
-#endif
-#if BASE64_WITH_AVX2
-    result |= PYBASE64_AVX2;
-#endif
-#if BASE64_WITH_AVX
-    result |= PYBASE64_AVX;
-#endif
-#if BASE64_WITH_SSE42
-    result |= PYBASE64_SSE42;
-#endif
-#if BASE64_WITH_SSE41
-    result |= PYBASE64_SSE41;
-#endif
-#if BASE64_WITH_SSSE3
-    result |= PYBASE64_SSSE3;
-#endif
-    return PyLong_FromUnsignedLong(result);
-}
-
-static void set_simd_path(pybase64_state* state, uint32_t flag)
-{
-#if PY_VERSION_HEX >= 0x030d0000
-    static PyMutex mutex = {0};
-#endif
-    static int b64_cpu_flags_mem = 0;
-    int b64_cpu_flags;
-
-    flag &= state->simd_flags; /* clean-up with allowed flags */
-
-#if PY_VERSION_HEX >= 0x030d0000
-    PyMutex_Lock(&mutex);
-#endif
-    if (0) {
+    PyObject* result = PyTuple_New(implementations.size());
+    if (result == NULL) {
+        return result;
     }
-#if BASE64_WITH_NEON64
-    else if (flag & PYBASE64_NEON) {
-        state->active_simd_flag = PYBASE64_NEON;
-        b64_cpu_flags = BASE64_FORCE_NEON64;
+    Py_ssize_t pos = 0;
+    for (auto const& implementation: implementations) {
+        auto const& name = implementation->name();
+        PyObject* name_object = PyUnicode_FromStringAndSize(name.data(), name.size());
+        if (name_object == NULL) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (PyTuple_SetItem(result, pos++, name_object) != 0) {
+            Py_DECREF(name_object);
+            Py_DECREF(result);
+            return NULL;
+        }
     }
-#endif
-#if BASE64_WITH_NEON32
-    else if (flag & PYBASE64_NEON) {
-        state->active_simd_flag = PYBASE64_NEON;
-        b64_cpu_flags = BASE64_FORCE_NEON32;
-    }
-#endif
-
-#if BASE64_WITH_AVX512
-    else if (flag & PYBASE64_AVX512VBMI) {
-        state->active_simd_flag = PYBASE64_AVX512VBMI;
-        b64_cpu_flags = BASE64_FORCE_AVX512;
-    }
-#endif
-#if BASE64_WITH_AVX2
-    else if (flag & PYBASE64_AVX2) {
-        state->active_simd_flag = PYBASE64_AVX2;
-        b64_cpu_flags = BASE64_FORCE_AVX2;
-    }
-#endif
-#if BASE64_WITH_AVX
-    else if (flag & PYBASE64_AVX) {
-        state->active_simd_flag = PYBASE64_AVX;
-        b64_cpu_flags = BASE64_FORCE_AVX;
-    }
-#endif
-#if BASE64_WITH_SSE42
-    else if (flag & PYBASE64_SSE42) {
-        state->active_simd_flag = PYBASE64_SSE42;
-        b64_cpu_flags = BASE64_FORCE_SSE42;
-    }
-#endif
-#if BASE64_WITH_SSE41
-    else if (flag & PYBASE64_SSE41) {
-        state->active_simd_flag = PYBASE64_SSE41;
-        b64_cpu_flags = BASE64_FORCE_SSE41;
-    }
-#endif
-#if BASE64_WITH_SSSE3
-    else if (flag & PYBASE64_SSSE3) {
-        state->active_simd_flag = PYBASE64_SSSE3;
-        b64_cpu_flags = BASE64_FORCE_SSSE3;
-    }
-#endif
-    else {
-        state->active_simd_flag = PYBASE64_NONE;
-        b64_cpu_flags = BASE64_FORCE_PLAIN;
-    }
-    if (b64_cpu_flags_mem != b64_cpu_flags) {
-        struct base64_state b64_state;
-        base64_stream_encode_init(&b64_state, b64_cpu_flags);
-        b64_cpu_flags_mem = b64_cpu_flags;
-    }
-#if PY_VERSION_HEX >= 0x030d0000
-    PyMutex_Unlock(&mutex);
-#endif
+    return result;
 }
 
 static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
@@ -1602,39 +1539,27 @@ static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
-    set_simd_path(state, (uint32_t)PyLong_AsUnsignedLong(arg));
+    Py_ssize_t size;
+    char const* data = PyUnicode_AsUTF8AndSize(arg, &size);
+    if (data == NULL) {
+        return NULL;
+    }
+    std::string_view name{data, static_cast<size_t>(size)};
+    simdutf::implementation const* const implementation = implementations[name];
+    if (implementation == NULL) {
+        return PyErr_Format(PyExc_LookupError, "can't find implementation %R", arg);
+    }
+#if PY_VERSION_HEX >= 0x030d0000
+    static PyMutex mutex = {0};
+    PyMutex_Lock(&mutex);
+#endif
+    if (implementation != state->active_implementation) {
+        state->active_implementation = implementation;
+    }
+#if PY_VERSION_HEX >= 0x030d0000
+    PyMutex_Unlock(&mutex);
+#endif
     Py_RETURN_NONE;
-}
-
-static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
-{
-    uint32_t flags = (uint32_t)PyLong_AsUnsignedLong(arg);
-
-    if (flags & PYBASE64_NEON) {
-        return PyUnicode_FromString("NEON");
-    }
-
-    if (flags & PYBASE64_AVX512VBMI) {
-        return PyUnicode_FromString("AVX512VBMI");
-    }
-    if (flags & PYBASE64_AVX2) {
-        return PyUnicode_FromString("AVX2");
-    }
-    if (flags & PYBASE64_AVX) {
-        return PyUnicode_FromString("AVX");
-    }
-    if (flags & PYBASE64_SSE42) {
-        return PyUnicode_FromString("SSE42");
-    }
-    if (flags & PYBASE64_SSE41) {
-        return PyUnicode_FromString("SSE41");
-    }
-    if (flags & PYBASE64_SSSE3) {
-        return PyUnicode_FromString("SSSE3");
-    }
-
-    assert(flags == PYBASE64_NONE);
-    return PyUnicode_FromString("No SIMD");
 }
 
 static PyObject* pybase64_import(const char* from, const char* object)
@@ -1719,6 +1644,8 @@ static int _pybase64_exec(PyObject *m)
         return -1; /* GCOVR_EXCL_LINE */
     }
 
+    state->active_implementation = best_implementation;
+
     assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
     state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize((const char*)ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
     if (state->ignoreCharsValidateFalse == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
@@ -1758,9 +1685,6 @@ static int _pybase64_exec(PyObject *m)
         Py_DECREF(state->binAsciiError); /* GCOVR_EXCL_LINE */
         return -1; /* GCOVR_EXCL_LINE */
     }
-
-    state->simd_flags = pybase64_get_simd_flags();
-    set_simd_path(state, state->simd_flags);
 
     return 0;
 }
@@ -1808,18 +1732,18 @@ static PyMethodDef _pybase64_methods[] = {
     { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
-    { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },
-    { "_get_simd_flags_runtime", (PyCFunction)pybase64_get_simd_flags_runtime, METH_NOARGS, NULL },
-    { "_get_simd_name", (PyCFunction)pybase64_get_simd_name, METH_O, NULL },
+    { "_get_simd_paths_compile", (PyCFunction)pybase64_get_simd_paths_compile, METH_NOARGS, NULL },
+    { "_get_simd_paths_runtime", (PyCFunction)pybase64_get_simd_paths_runtime, METH_NOARGS, NULL },
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 
 /* Initialize this module. */
 #if PY_VERSION_HEX >= 0x030f0000
 PyABIInfo_VAR(abi_info);
+static char const mod_name[] = "pybase64._pybase64";
 static PySlot _pybase64_slots[] = {
     PySlot_STATIC_DATA(Py_mod_abi, &abi_info),
-    PySlot_STATIC_DATA(Py_mod_name, "pybase64._pybase64"),
+    PySlot_STATIC_DATA(Py_mod_name, const_cast<char*>(mod_name)),
     PySlot_STATIC_DATA(Py_mod_methods, _pybase64_methods),
     PySlot_FUNC(Py_mod_state_traverse, _pybase64_traverse),
     PySlot_FUNC(Py_mod_state_clear, _pybase64_clear),
@@ -1837,7 +1761,7 @@ PyModExport__pybase64() {
 }
 #else
 static PyModuleDef_Slot _pybase64_slots[] = {
-    {Py_mod_exec, _pybase64_exec},
+    {Py_mod_exec, reinterpret_cast<void*>(&_pybase64_exec)},
 #ifdef Py_mod_multiple_interpreters
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
 #endif

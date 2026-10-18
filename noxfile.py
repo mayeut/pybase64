@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+__lazy_modules__ = ["difflib", "platform", "shutil"]
+
+import difflib
 import os
 import platform
 import shutil
@@ -120,14 +123,14 @@ def _run_sde_tests(
         session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
         for cpu, xcr0 in [("nhm", "3"), ("hsw", "7")]:
             sde = ("sde64", "-spr", "-xsave_default", xcr0, "--")
-            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
+            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_cpu_detection")
             session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
         for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
             sde = ("sde64", f"-{cpu}", "--")
-            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
+            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_cpu_detection")
             session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
     elif machine in {"arm64", "aarch64"}:
-        pytest_addopt = ("--sde-cpu=neon", "-k=test_flags")
+        pytest_addopt = ("--sde-cpu=neon", "-k=test_cpu_detection")
         session.run(*pytest_command, *pytest_addopt, env=env, external=True)
     else:
         msg = f"unsupported machine {machine!r} for '--with-sde'"
@@ -156,6 +159,7 @@ def _coverage(session: nox.Session) -> None:
     env = {
         "CIBUILDWHEEL": "1",
         "CFLAGS": "-coverage -DNDEBUG -Werror",
+        "CXXFLAGS": "-coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
@@ -298,6 +302,7 @@ def update_requirements(session: nox.Session) -> None:
 @nox.session(venv_backend="none", allow_parallel=False)
 def update_licence(session: nox.Session) -> None:
     file = HERE.joinpath("src", "pybase64", "_license.py")
+    prev = file.read_text()
     with file.open("w") as f:
         f.write('_license = """')
         f.write("pybase64\n")
@@ -307,6 +312,30 @@ def update_licence(session: nox.Session) -> None:
         f.write("libbase64\n")
         f.write("=" * 79 + "\n")
         f.write(HERE.joinpath("vendor", "base64", "LICENSE").read_text())
+        f.write("=" * 79 + "\n\n")
+        f.write("simdutf Apache-2.0 (or MIT below)\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("vendor", "simdutf", "LICENSE-APACHE").read_text())
+        f.write("=" * 79 + "\n\n")
+        f.write("simdutf MIT (or Apache-2.0 above)\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("vendor", "simdutf", "LICENSE-MIT").read_text())
         f.write("=" * 79)
         f.write('"""\n')
-    session.log(file.read_text())
+    diff = "\n".join(
+        difflib.unified_diff(
+            prev.splitlines(),
+            file.read_text().splitlines(),
+            fromfile=file.name,
+            tofile=file.name,
+            lineterm="",
+        ),
+    )
+    if diff:
+        session.log(f"\n{diff}")
+
+
+@nox.session(python="3.14", allow_parallel=False)
+def update_simdutf(session: nox.Session) -> None:
+    session.install_and_run_script("tools/update_simdutf.py")
+    session.notify("update_licence", [])

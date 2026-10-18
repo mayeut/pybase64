@@ -28,13 +28,8 @@ if not _PYTHON_3_15_API:
     _IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
 
 
-def _get_simd_name(flags: int) -> str:
-    assert flags == 0  # noqa: S101
-    return "fallback"
-
-
-def _get_simd_path() -> int:
-    return 0
+def _get_simd_path() -> str:
+    return "py"
 
 
 def _get_bytes(s: str | Buffer, *, allow_str: bool = True) -> bytes | bytearray:
