@@ -11,8 +11,8 @@ description = "Fast Base64 encoding/decoding"
 readme = "README.rst"
 requires-python = ">=3.9"
 keywords = ["base64"]
-license = "BSD-2-Clause"
-license-files = ["LICENSE", "base64/LICENSE"]
+license = "BSD-2-Clause AND (Apache-2.0 OR MIT)"
+license-files = ["LICENSE", "vendor/base64/LICENSE", "vendor/simdutf/simdutf-LICENSE-APACHE", "vendor/simdutf/simdutf-LICENSE-MIT"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     # Indicate who your project is intended for
@@ -108,6 +108,7 @@ test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/test/re
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
 xbuild-tools = ["cmake", "ninja", "uv"]
+config-settings = { "cmake.define.PYBASE64_NO_STDLIBXX" = "ON", "build.verbose" = "true", "logging.level" = "INFO" }
 
 [tool.cibuildwheel.android]
 repair-wheel-command = [
@@ -132,6 +133,11 @@ select = "*-manylinux*"
 environment = { AUDITWHEEL_PLAT="manylinux2014_${AUDITWHEEL_ARCH}" }
 
 [[tool.cibuildwheel.overrides]]
+select = "*-manylinux_armv7l"
+inherit.config-settings = "append"
+config-settings = { "cmake.define.PYBASE64_NO_STDLIBXX" = "OFF" }
+
+[[tool.cibuildwheel.overrides]]
 select = "*-manylinux_riscv64"
 environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 
@@ -139,6 +145,11 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 select = "*-musllinux_{ppc64le,riscv64,s390x}"
 build-frontend = { name = "build", args = ["--no-isolation"] }  # switch to "--dependency-constraints-txt" once 3.9 is dropped
 before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-{android,musllinux}_*"
+inherit.config-settings = "append"
+config-settings = { "cmake.define.PYBASE64_STATIC_LINK" = "ON" }
 
 [[tool.cibuildwheel.overrides]]
 select = "*-ios*"
@@ -155,6 +166,10 @@ select = "*-pyodide*"
 build-frontend = { name = "pyodide-build", args = ["--no-isolation"] }
 before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
 
+[[tool.cibuildwheel.overrides]]
+select = "*-win*"
+inherit.config-settings = "append"
+config-settings = { "cmake.define.PYBASE64_NO_STDLIBXX" = "OFF" }
 
 [tool.coverage.run]
 branch = true
@@ -199,7 +214,7 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils", "embed_sbom"]
+module = ["pybase64.__main__", "tests.test_pybase64", "tests.utils", "embed_sbom", "update_simdutf"]
 disallow_any_explicit = false
 
 [tool.pytest.ini_options]

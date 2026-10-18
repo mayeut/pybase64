@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+__lazy_modules__ = ["difflib", "platform", "shutil"]
+
+import difflib
 import os
 import platform
 import shutil
@@ -156,6 +159,7 @@ def _coverage(session: nox.Session) -> None:
     env = {
         "CIBUILDWHEEL": "1",
         "CFLAGS": "-coverage -DNDEBUG -Werror",
+        "CXXFLAGS": "-coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
@@ -182,7 +186,7 @@ def _coverage(session: nox.Session) -> None:
     session.run(
         "gcovr",
         "-r=.",
-        "-e=base64",
+        "-e=vendor",
         "-e=.coverage-build",
         "--gcov-delete",
         f"--json=coverage-native-partial-{session.python}.json",
@@ -298,6 +302,7 @@ def update_requirements(session: nox.Session) -> None:
 @nox.session(venv_backend="none", allow_parallel=False)
 def update_licence(session: nox.Session) -> None:
     file = HERE.joinpath("src", "pybase64", "_license.py")
+    prev = file.read_text()
     with file.open("w") as f:
         f.write('_license = """')
         f.write("pybase64\n")
@@ -306,7 +311,31 @@ def update_licence(session: nox.Session) -> None:
         f.write("=" * 79 + "\n\n")
         f.write("libbase64\n")
         f.write("=" * 79 + "\n")
-        f.write(HERE.joinpath("base64", "LICENSE").read_text())
+        f.write(HERE.joinpath("vendor", "base64", "LICENSE").read_text())
+        f.write("=" * 79 + "\n\n")
+        f.write("simdutf Apache-2.0 (or MIT below)\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("vendor", "simdutf", "simdutf-LICENSE-APACHE").read_text())
+        f.write("=" * 79 + "\n\n")
+        f.write("simdutf MIT (or Apache-2.0 above)\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("vendor", "simdutf", "simdutf-LICENSE-MIT").read_text())
         f.write("=" * 79)
         f.write('"""\n')
-    session.log(file.read_text())
+    diff = "\n".join(
+        difflib.unified_diff(
+            prev.splitlines(),
+            file.read_text().splitlines(),
+            fromfile=file.name,
+            tofile=file.name,
+            lineterm="",
+        ),
+    )
+    if diff:
+        session.log(f"\n{diff}")
+
+
+@nox.session(python="3.14", allow_parallel=False)
+def update_simdutf(session: nox.Session) -> None:
+    session.install_and_run_script("tools/update_simdutf.py")
+    session.notify("update_licence", [])

@@ -38,7 +38,6 @@ repos:
     additional_dependencies:
       - mypy==1.20.2
       - pytest<9
-      - types-setuptools
 
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: ad26ebfa797fcb9b8f83275937c1c1d6e126719c  # frozen: v2.4.1
@@ -50,7 +49,6 @@ repos:
     additional_dependencies:
       - nox
       - pytest
-      - types-setuptools
   - id: mypy
     name: mypy 3.14
     exclude: docs
@@ -58,7 +56,7 @@ repos:
     additional_dependencies:
       - nox
       - pytest
-      - types-setuptools
+      - types-requests
 
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
   rev: c92afdf2c6ca336aaa8f39e2bd8d48f62dbd8e1f  # frozen: v1.31.1

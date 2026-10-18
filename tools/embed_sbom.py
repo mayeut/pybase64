@@ -48,6 +48,21 @@ SBOM_TEMPLATE: Final[str] = """{
       "name": "base64",
       "purl": "pkg:github/aklomp/base64@{{base64_sha}}",
       "type": "library"
+    },
+    {
+      "bom-ref": "pkg:github/simdutf/simdutf@{{simdutf_tag}}",
+      "externalReferences": [
+        {"type": "license", "url": "https://github.com/simdutf/simdutf/blob/{{simdutf_tag}}/LICENSE-APACHE"},
+        {"type": "license", "url": "https://github.com/simdutf/simdutf/blob/{{simdutf_tag}}/LICENSE-MIT"},
+        {"type": "vcs", "url": "https://github.com/simdutf/simdutf"}
+      ],
+      "licenses": [
+        {"expression": "Apache-2.0 OR MIT"}
+      ],
+      "name": "simdutf",
+      "purl": "pkg:github/simdutf/simdutf@{{simdutf_tag}}",
+      "type": "library",
+      "version": "{{simdutf_tag}}"
     }
   ],
   "dependencies": [
@@ -55,9 +70,13 @@ SBOM_TEMPLATE: Final[str] = """{
       "ref": "pkg:github/aklomp/base64@{{base64_sha}}"
     },
     {
+      "ref": "pkg:github/simdutf/simdutf@{{simdutf_tag}}"
+    },
+    {
       "ref": "pkg:pypi/{{distribution}}@{{version}}?file_name={{file_name}}",
       "dependsOn": [
-        "pkg:github/aklomp/base64@{{base64_sha}}"
+        "pkg:github/aklomp/base64@{{base64_sha}}",
+        "pkg:github/simdutf/simdutf@{{simdutf_tag}}"
       ]
     }
   ]
@@ -241,11 +260,14 @@ def main() -> None:
         check=True,
         capture_output=True,
         text=True,
-        cwd=ROOT / "base64",
+        cwd=ROOT / "vendor" / "base64",
     ).stdout.strip()
-    sbom_template = SBOM_TEMPLATE.replace("{{base64_sha}}", base64_sha)
+    simdutf_tag = ROOT.joinpath("vendor", "simdutf", "tag").read_text().strip()
+    sbom_text = SBOM_TEMPLATE
+    for old, new in [("{{base64_sha}}", base64_sha), ("{{simdutf_tag}}", simdutf_tag)]:
+        sbom_text = sbom_text.replace(old, new)
     for file in files:
-        embed_sbom(sbom_template, file, dist_path)
+        embed_sbom(sbom_text, file, dist_path)
 
 
 if __name__ == "__main__":
