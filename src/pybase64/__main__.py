@@ -84,7 +84,7 @@ def bench_one(
                 ),
             )
 
-    if kwargs.get("ignorechars") == b"\n" or not validate:
+    if kwargs.get("ignorechars") == b" \t\f\r\n" or not validate:
         encodedcontent = pybase64.b64encode(data, altchars=altchars, wrapcol=76)
     else:
         encodedcontent = pybase64.b64encode(data, altchars=altchars)
@@ -134,7 +134,7 @@ def benchmark(*, duration: float, input: str) -> None:  # noqa: A002
     data = readall(input)
     for altchars in [None, b"-_"]:
         for validate in [True, False]:
-            for ignorechars in [None, b"", b"\n"]:
+            for ignorechars in [None, b"", b" \t\f\r\n"]:
                 for padded in [True, False]:
                     # skip redundant combinations
                     if altchars is None and validate and padded and ignorechars == b"":

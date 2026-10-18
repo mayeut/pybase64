@@ -28,13 +28,12 @@ if not _PYTHON_3_15_API:
     _IGNORECHARS_VALIDATE_FALSE: Final = bytes(i for i in range(256) if i not in _BASE64_ALPHABET)
 
 
-def _get_simd_name(flags: int) -> str:
-    assert flags == 0  # noqa: S101
-    return "fallback"
+def _get_simd_path() -> str:
+    return "py"
 
 
-def _get_simd_path() -> int:
-    return 0
+def _get_version_metadata() -> str:
+    return "C extension inactive"
 
 
 def _get_bytes(s: str | Buffer, *, allow_str: bool = True) -> bytes | bytearray:
@@ -456,3 +455,28 @@ def urlsafe_b64encode(s: Buffer, *, padded: bool = True) -> bytes:
     The result can still contain ``=`` if ``padded`` is true (default).
     """
     return b64encode(s, b"-_", padded=padded)
+
+
+def decodebytes(s: Buffer) -> bytes:
+    """Decode bytes encoded with the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` to decode.
+
+    The result is returned as a :class:`bytes` object.
+
+    A :exc:`binascii.Error` is raised if the input is incorrectly padded.
+
+    Characters that are not in the standard alphabet are discarded prior
+    to the padding check.
+    """
+    mv = memoryview(s)
+    if not mv.c_contiguous:
+        msg = f"{s.__class__.__name__!r:s}: underlying buffer is not C-contiguous"
+        raise BufferError(msg)
+    if mv.format not in {"B", "b", "c"}:
+        msg = f"expected single byte elements, not {mv.format!r} from {type(s)!r}"
+        raise TypeError(msg)
+    if mv.ndim != 1:
+        msg = f"expected 1-D data, not {mv.ndim}-D data from {type(s)!r}"
+        raise TypeError(msg)
+    return b64decode(s)

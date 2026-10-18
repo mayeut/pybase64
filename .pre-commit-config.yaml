@@ -33,7 +33,7 @@ repos:
     language_version: "3.12"
     stages: [manual]
     'types_or': [ python, pyi ]
-    exclude: docs|tools|noxfile.py
+    exclude: docs|tests|tools|noxfile.py
     args: ["--python-version=3.9"]
     additional_dependencies:
       - mypy==1.20.2
@@ -57,6 +57,7 @@ repos:
     additional_dependencies:
       - nox
       - pytest
+      - types-requests
 
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
   rev: c92afdf2c6ca336aaa8f39e2bd8d48f62dbd8e1f  # frozen: v1.31.1

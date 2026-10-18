@@ -7,15 +7,16 @@ from pybase64._version import _version
 
 try:
     from pybase64._pybase64 import (
-        _get_simd_flags_compile,  # noqa: F401
-        _get_simd_flags_runtime,  # noqa: F401
-        _get_simd_name,
         _get_simd_path,
+        _get_simd_paths_compile,  # noqa: F401
+        _get_simd_paths_runtime,  # noqa: F401
         _set_simd_path,  # noqa: F401
+        _get_version_metadata,
         b64decode,
         b64decode_as_bytearray,
         b64encode,
         b64encode_as_string,
+        decodebytes,
         encodebytes,
         standard_b64decode,
         standard_b64encode,
@@ -24,12 +25,13 @@ try:
     )
 except ImportError:
     from pybase64._fallback import (
-        _get_simd_name,
         _get_simd_path,
+        _get_version_metadata,
         b64decode,
         b64decode_as_bytearray,
         b64encode,
         b64encode_as_string,
+        decodebytes,
         encodebytes,
         standard_b64decode,
         standard_b64encode,
@@ -43,6 +45,7 @@ __all__ = (
     "b64decode_as_bytearray",
     "b64encode",
     "b64encode_as_string",
+    "decodebytes",
     "encodebytes",
     "standard_b64decode",
     "standard_b64encode",
@@ -67,7 +70,4 @@ def get_version() -> str:
     The result reports if the C extension is used or not.
     e.g. `1.0.0 (C extension active - AVX2)`
     """
-    simd_name = _get_simd_name(_get_simd_path())
-    if simd_name != "fallback":
-        return f"{__version__} (C extension active - {simd_name})"
-    return f"{__version__} (C extension inactive)"
+    return f"{__version__} ({_get_version_metadata()})"

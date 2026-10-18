@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import base64
 import binascii
+import ctypes
 import importlib.util
+import platform
 import re
 import sys
 import warnings
@@ -13,45 +15,25 @@ from enum import IntEnum
 import pytest
 
 import pybase64
-from pybase64._unspecified import _Unspecified
 
 from . import utils
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, Literal
+    from typing import Any
 
     from pybase64._typing import Buffer, Decode, Encode
 
 
-def b64encode_as_string(
-    s: Buffer,
-    altchars: str | Buffer | None = None,
-    *,
-    padded: bool = True,
-    wrapcol: int = 0,
-) -> bytes:
+def b64encode_as_string(*args: Any, **kwargs: Any) -> bytes:
     """Helper returning bytes instead of string for tests"""
-    return pybase64.b64encode_as_string(s, altchars, padded=padded, wrapcol=wrapcol).encode("ascii")
+    return pybase64.b64encode_as_string(*args, **kwargs).encode("ascii")
 
 
-def b64decode_as_bytearray(
-    s: str | Buffer,
-    altchars: str | Buffer | None = None,
-    validate: bool | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
-    *,
-    padded: bool = True,
-    ignorechars: Buffer | Literal[_Unspecified.UNSPECIFIED] = _Unspecified.UNSPECIFIED,
-    canonical: bool = False,
-) -> bytes:
+def b64decode_as_bytearray(*args: Any, **kwargs: Any) -> bytes:
     """Helper returning bytes instead of bytearray for tests"""
-    kwargs: dict[str, Any] = {"padded": padded, "canonical": canonical}
-    if not isinstance(validate, _Unspecified):
-        kwargs["validate"] = validate
-    if not isinstance(ignorechars, _Unspecified):
-        kwargs["ignorechars"] = ignorechars
-    return bytes(pybase64.b64decode_as_bytearray(s, altchars, **kwargs))
+    return bytes(pybase64.b64decode_as_bytearray(*args, **kwargs))
 
 
 param_encode_functions = pytest.mark.parametrize("efn", [pybase64.b64encode, b64encode_as_string])
@@ -210,6 +192,16 @@ def test_encbytes(vector_id: int, simd: int) -> None:
     test = pybase64.encodebytes(vector)
     base = b64encodebytes(vector)
     assert test == base
+
+
+@utils.param_simd
+@param_vector
+def test_decbytes(vector_id: int, simd: int) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    vector = test_vectors_bin[AltCharsId.STD][vector_id]
+    encoded = pybase64.encodebytes(vector)
+    decoded = pybase64.decodebytes(encoded)
+    assert decoded == vector
 
 
 @utils.param_simd
@@ -433,6 +425,25 @@ params_invalid_data_validate = pytest.mark.parametrize(
 
 @utils.param_simd
 @params_invalid_data_novalidate
+@pytest.mark.parametrize("function", ["standard_b64decode", "urlsafe_b64decode"])
+def test_invalid_data_dec_helper(
+    function: str,
+    vector: Any,
+    altchars: Buffer | None,
+    exception: type[BaseException],
+    match: str | None,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)  # simd is a parameter in order to control the order of tests
+    assert altchars is None
+    dfn = getattr(pybase64, function)
+    kwargs = {"padded": True} if function == "urlsafe_b64decode" else {}
+    with pytest.raises(exception, match=match):
+        dfn(vector, **kwargs)
+
+
+@utils.param_simd
+@params_invalid_data_novalidate
 @param_decode_functions
 def test_invalid_data_dec(
     dfn: Decode,
@@ -589,7 +600,7 @@ params_invalid_data_enc_values = [
     ["this is a test", TypeError],
     [memoryview(b"abcd")[::2], BufferError],
 ]
-params_invalid_data_encodebytes_values = [
+params_invalid_data_xxcodebytes_values = [
     *params_invalid_data_enc_values,
     [memoryview(b"abcd").cast("B", (2, 2)), TypeError],
     [memoryview(b"abcd").cast("I"), TypeError],
@@ -599,10 +610,10 @@ params_invalid_data_enc = pytest.mark.parametrize(
     params_invalid_data_enc_values,
     ids=[str(i) for i in range(len(params_invalid_data_enc_values))],
 )
-params_invalid_data_encodebytes = pytest.mark.parametrize(
+params_invalid_data_xxcodebytes = pytest.mark.parametrize(
     ("vector", "exception"),
-    params_invalid_data_encodebytes_values,
-    ids=[str(i) for i in range(len(params_invalid_data_encodebytes_values))],
+    params_invalid_data_xxcodebytes_values,
+    ids=[str(i) for i in range(len(params_invalid_data_xxcodebytes_values))],
 )
 
 
@@ -620,21 +631,29 @@ def test_invalid_data_helper(helper: str, vector: Any, exception: type[BaseExcep
         getattr(pybase64, helper)(vector)
 
 
-@params_invalid_data_encodebytes
-def test_invalid_data_encodebytes(vector: Any, exception: type[BaseException]) -> None:
+@params_invalid_data_xxcodebytes
+@pytest.mark.parametrize("function", ["encodebytes", "decodebytes"])
+def test_invalid_data_xxcodebytes(
+    function: str,
+    vector: Any,
+    exception: type[BaseException],
+) -> None:
+    fn = getattr(pybase64, function)
     with pytest.raises(exception):
-        pybase64.encodebytes(vector)
+        fn(s=vector)
 
 
-def test_invalid_args_encodebytes() -> None:
+@pytest.mark.parametrize("function", ["encodebytes", "decodebytes"])
+def test_invalid_args_xxcodebytes(function: str) -> None:
+    fn = getattr(pybase64, function)
     with pytest.raises(TypeError):
-        pybase64.encodebytes()  # type: ignore[call-arg]
+        fn()
     with pytest.raises(TypeError):
-        pybase64.encodebytes(b"", s=b"")  # type: ignore[misc]
+        fn(b"", s=b"")
     with pytest.raises(TypeError):
-        pybase64.encodebytes(b"", dummy=b"")  # type: ignore[call-arg]
+        fn(b"", dummy=b"")
     with pytest.raises(TypeError):
-        pybase64.encodebytes(b"", b"")  # type: ignore[call-arg]
+        fn(b"", b"")
 
 
 @param_encode_functions
@@ -642,37 +661,84 @@ def test_invalid_args_enc_0(efn: Encode) -> None:
     with pytest.raises(TypeError):
         efn()  # type: ignore[call-arg]
     with pytest.raises(TypeError):
+        efn(b"", s=b"")  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        efn(b"", b"", True)  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        efn(b"", dummy=b"")  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
         efn(s=b"", wrapcol="bad-type")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
-    "helper",
+    "function",
     ["standard_b64decode", "standard_b64encode", "urlsafe_b64decode", "urlsafe_b64encode"],
 )
-def test_invalid_args_helper(helper: str) -> None:
+def test_invalid_args_helper(function: str) -> None:
+    fn = getattr(pybase64, function)
     with pytest.raises(TypeError):
-        getattr(pybase64, helper)()
+        fn()
+    with pytest.raises(TypeError):
+        fn(b"", s=b"")
+    with pytest.raises(TypeError):
+        fn(b"", b"")
+    with pytest.raises(TypeError):
+        fn(b"", dummy=b"")
 
 
 @param_decode_functions
 def test_invalid_args_dec_0(dfn: Decode) -> None:
     with pytest.raises(TypeError):
         dfn()  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        dfn(b"", s=b"")  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        dfn(b"", b"", True, True)  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        dfn(b"", dummy=b"")  # type: ignore[call-arg]
 
 
-def test_flags(request: pytest.FixtureRequest) -> None:
+def test_cpu_detection(request: pytest.FixtureRequest) -> None:
     cpu = request.config.getoption("--sde-cpu", skip=True)
     assert {
-        "p4p": 0,  # no simd
-        "mrm": 4,  # SSSE3
-        "pnr": 4 | 8,  # SSE41
-        "nhm": 4 | 8 | 16,  # SSE42
-        "snb": 4 | 8 | 16 | 32,  # AVX
-        "hsw": 4 | 8 | 16 | 32 | 64,  # AVX2
-        "skx": 4 | 8 | 16 | 32 | 64,  # AVX2
-        "spr": 4 | 8 | 16 | 32 | 64 | 128,  # AVX512VBMI
-        "neon": 65536,  # NEON
-    }[cpu] == utils.runtime_flags
+        "p4p": ("fallback",),  # no simd
+        "mrm": ("fallback",),  # SSSE3
+        "pnr": ("fallback",),  # SSE41
+        "nhm": ("westmere", "fallback"),  # SSE42
+        "snb": ("westmere", "fallback"),  # AVX
+        "hsw": ("haswell", "westmere", "fallback"),  # AVX2
+        "skx": ("haswell", "westmere", "fallback"),  # AVX2
+        "spr": ("icelake", "haswell", "westmere", "fallback"),  # AVX512VBMI
+        "neon": ("arm64",),  # NEON
+    }[cpu] == utils.simd_runtime_paths
+
+
+@pytest.mark.skipif(not hasattr(pybase64, "_set_simd_path"), reason="C-extension only")
+def test_set_simd_path() -> None:
+    with pytest.raises(TypeError):
+        pybase64._set_simd_path(None)  # type: ignore[arg-type,attr-defined]
+    with pytest.raises(LookupError):
+        pybase64._set_simd_path("dummy-implementation")  # type: ignore[attr-defined]
+
+
+@pytest.mark.pypi_distribution
+def test_available_implementations() -> None:  # pragma: no cover
+    machine = platform.machine().lower()
+    machine = {
+        "amd64": "x86_64",
+        "arm64": "aarch64",
+    }.get(machine, machine)
+    if machine == "x86_64" and ctypes.sizeof(ctypes.c_void_p) == 4:
+        machine = "i686"
+    expected = {
+        "aarch64": ("arm64",),
+        "x86_64": ("icelake", "haswell", "westmere", "fallback"),
+        "ppc64le": ("ppc64",),
+    }.get(machine, ("fallback",))
+    if machine == "x86_64" and sys.platform.startswith("android"):
+        # no fallback on Android, the minimal system is westmere
+        expected = tuple(path for path in expected if path != "fallback")
+    assert expected == utils.simd_compile_paths
 
 
 @param_encode_functions
@@ -712,7 +778,7 @@ else:
 
 @utils.param_simd
 @param_vector
-@param_altchars_helper
+@param_altchars
 @pytest.mark.parametrize("wrapcol", [0, 1, 76, 77, 78, 79, 80])
 @param_encode_functions
 def test_enc_wrapcol(
@@ -807,6 +873,8 @@ def test_b64decode_padded(
             dfn(vector, padded=False, validate=True)
         with pytest.raises(BinAsciiError):
             dfn(vector, padded=False, ignorechars=b"")
+        with pytest.raises(BinAsciiError):
+            dfn(vector, padded=False, ignorechars=b"\n")
     else:
         assert dfn(vector, padded=False, validate=True) == expected
         assert dfn(vector, padded=False, ignorechars=b"") == expected
@@ -817,6 +885,37 @@ def test_b64decode_padded(
         assert dfn(vector, padded=True) == expected
     assert dfn(vector, padded=False) == expected
     assert dfn(vector, padded=False, ignorechars=b"=") == expected
+
+
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"", b""), (b"YQ", b"a"), (b"YQ=", b"a"), (b"YWI", b"ab"), (b"YWJj", b"abc")],
+)
+@param_decode_functions
+@utils.param_simd
+def test_b64decode_padded_url(vector: bytes, expected: bytes, dfn: Decode, simd: int) -> None:
+    utils.unused_args(simd)
+    altchars_ = altchars_lut[altchars_id.URL]
+    if (len(vector) % 4) != 0:
+        with pytest.raises(BinAsciiError, match="Incorrect padding"):
+            dfn(vector, altchars_, padded=True)
+    assert dfn(vector, altchars_, padded=False) == expected
+
+
+@pytest.mark.parametrize(
+    ("vector", "expected"),
+    [(b"", b""), (b"YQ", b"a"), (b"YQ=", b"a"), (b"YWI", b"ab"), (b"YWJj", b"abc")],
+)
+@pytest.mark.parametrize("function", ["decodebytes", "standard_b64decode"])
+@utils.param_simd
+def test_helper_expect_padding(vector: bytes, expected: bytes, function: str, simd: int) -> None:
+    utils.unused_args(simd)
+    dfn = getattr(pybase64, function)
+    if (len(vector) % 4) != 0:
+        with pytest.raises(BinAsciiError, match="Incorrect padding"):
+            dfn(vector)
+    else:
+        assert dfn(vector) == expected
 
 
 @pytest.mark.parametrize(
@@ -842,31 +941,33 @@ def test_urlsafe_b64decode_padded(vector: bytes, expected: bytes, simd: int) -> 
     assert pybase64.urlsafe_b64decode(vector, padded=False) == expected
 
 
+@param_decode_functions
 @utils.param_simd
-def test_ignorechars_altchars_limit(simd: int) -> None:
+def test_ignorechars_altchars_limit(dfn: Decode, simd: int) -> None:
     utils.unused_args(simd)
-    assert pybase64.b64decode(b"/----", altchars=b"-+", ignorechars=b"/") == b"\xfb\xef\xbe"
-    assert pybase64.b64decode(b"/----", altchars=b"+-", ignorechars=b"/") == b"\xff\xff\xff"
-    assert pybase64.b64decode(b"+----", altchars=b"-/", ignorechars=b"+") == b"\xfb\xef\xbe"
-    assert pybase64.b64decode(b"+----", altchars=b"/-", ignorechars=b"+") == b"\xff\xff\xff"
-    assert pybase64.b64decode(b"+/+/", altchars=b"/+", ignorechars=b"") == b"\xff\xef\xfe"
-    assert pybase64.b64decode(b"/+/+", altchars=b"+/", ignorechars=b"") == b"\xff\xef\xfe"
+    assert dfn(b"/----", altchars=b"-+", ignorechars=b"/") == b"\xfb\xef\xbe"
+    assert dfn(b"/----", altchars=b"+-", ignorechars=b"/") == b"\xff\xff\xff"
+    assert dfn(b"+----", altchars=b"-/", ignorechars=b"+") == b"\xfb\xef\xbe"
+    assert dfn(b"+----", altchars=b"/-", ignorechars=b"+") == b"\xff\xff\xff"
+    assert dfn(b"+/+/", altchars=b"/+", ignorechars=b"") == b"\xff\xef\xfe"
+    assert dfn(b"/+/+", altchars=b"+/", ignorechars=b"") == b"\xff\xef\xfe"
 
 
+@param_decode_functions
 @utils.param_simd
-def test_ignorechars_invalid(simd: int) -> None:
+def test_ignorechars_invalid(dfn: Decode, simd: int) -> None:
     utils.unused_args(simd)
     with pytest.raises(TypeError):
-        pybase64.b64decode(b"", ignorechars="")  # type: ignore[arg-type]
+        dfn(b"", ignorechars="")  # type: ignore[arg-type]
     with pytest.raises(TypeError):
-        pybase64.b64decode(b"", ignorechars=[])  # type: ignore[arg-type]
+        dfn(b"", ignorechars=[])  # type: ignore[arg-type]
     with pytest.raises(TypeError):
-        pybase64.b64decode(b"", ignorechars=None)  # type: ignore[arg-type]
+        dfn(b"", ignorechars=None)  # type: ignore[arg-type]
     msg = re.escape("validate must be True or unspecified when ignorechars is specified")
     with pytest.raises(ValueError, match=msg):
-        pybase64.b64decode(b"", validate=False, ignorechars=b"")
+        dfn(b"", validate=False, ignorechars=b"")
     with pytest.raises(ValueError, match="ASCII"):
-        pybase64.b64decode("YW\x80Jj", ignorechars=b"\x80")
+        dfn("YW\x80Jj", ignorechars=b"\x80")
 
 
 @param_decode_functions
@@ -955,48 +1056,51 @@ def test_ignorechars(dfn: Decode, simd: int) -> None:
         (b"abc@=", b":", b"i\xb7", BinAsciiError),
     ],
 )
+@param_decode_functions
 @utils.param_simd
 def test_base64_dec_invalid_partial(
     data: bytes,
     ignorechars: bytes,
     no_validation_expected_result: bytes,
     ignorechars_expected_result: bytes | type | None,
+    dfn: Decode,
     simd: int,
 ) -> None:
     utils.unused_args(simd)
     if ignorechars_expected_result is None:
         ignorechars_expected_result = no_validation_expected_result
     with pytest.raises(BinAsciiError):
-        pybase64.b64decode(data, validate=True)
+        dfn(data, validate=True)
     with pytest.raises(BinAsciiError):
-        pybase64.b64decode(data, validate=True, ignorechars=b"")
+        dfn(data, validate=True, ignorechars=b"")
     ignorechars_no_equal = bytes(set(ignorechars) - set(b"="))
     ignorechars_has_equal = len(ignorechars_no_equal) != len(ignorechars)
     if ignorechars_has_equal:
         with pytest.raises(BinAsciiError):
-            pybase64.b64decode(data, ignorechars=ignorechars_no_equal)
+            dfn(data, ignorechars=ignorechars_no_equal)
         if ignorechars_no_equal == b"":
             with pytest.raises(BinAsciiError):
-                pybase64.b64decode(data, ignorechars=b"@")
+                dfn(data, ignorechars=b"@")
     if isinstance(ignorechars_expected_result, type) and not ignorechars_has_equal:
         assert ignorechars_expected_result is BinAsciiError
         with pytest.raises(BinAsciiError):
-            pybase64.b64decode(data, ignorechars=ignorechars)
+            dfn(data, ignorechars=ignorechars)
     elif not ignorechars_has_equal:
-        assert pybase64.b64decode(data, ignorechars=ignorechars) == ignorechars_expected_result
-    assert pybase64.b64decode(data, validate=False) == no_validation_expected_result
-    assert pybase64.b64decode(data) == no_validation_expected_result
+        assert dfn(data, ignorechars=ignorechars) == ignorechars_expected_result
+    assert dfn(data, validate=False) == no_validation_expected_result
+    assert dfn(data) == no_validation_expected_result
 
 
-def test_decode_edge_cases() -> None:
+@param_decode_functions
+def test_decode_edge_cases(dfn: Decode) -> None:
     with pytest.raises(BinAsciiError):
-        pybase64.b64decode(b"YQ=)", validate=False)
+        dfn(b"YQ=)", validate=False)
     with pytest.raises(BinAsciiError):
-        pybase64.b64decode(b"YQ=)", validate=True)
+        dfn(b"YQ=)", validate=True)
     with pytest.raises(BinAsciiError):
-        pybase64.b64decode(b"YQ=)", padded=False, validate=True)
-    assert pybase64.b64decode(b"YQ=)", padded=False) == b"a"
-    assert pybase64.b64decode(b"YQ=)", padded=False, ignorechars=b")=") == b"a"
+        dfn(b"YQ=)", padded=False, validate=True)
+    assert dfn(b"YQ=)", padded=False) == b"a"
+    assert dfn(b"YQ=)", padded=False, ignorechars=b")=") == b"a"
 
 
 def test_invalid_binascii_error(
@@ -1117,3 +1221,45 @@ def test_altchars_chunk_limit(
         dfn(vector, altchars=altchars, validate=True)
     with pytest.raises(BinAsciiError, match=r"Non-base64 digit found|Excess data after padding"):
         dfn(vector, altchars=altchars, ignorechars=b"\n")
+
+
+@param_decode_functions
+@pytest.mark.parametrize("padded", [True, False])
+@pytest.mark.parametrize("empty", [True, False])
+@pytest.mark.parametrize("validate", [True, False])
+@pytest.mark.parametrize("skip_chars", [1, 2, 3, 4])
+@utils.param_simd
+def test_simdutf_validation_noskip(
+    dfn: Decode,
+    padded: bool,
+    empty: bool,
+    validate: bool,
+    skip_chars: int,
+    simd: int,
+) -> None:
+    utils.unused_args(simd)
+    vector = bytearray(b"" if empty else b"AAAA")
+    vector.extend(b"\n" * skip_chars)
+    if validate:
+        match = r"Non-base64 digit found|Only base64 data is allowed|Incorrect padding|Invalid len"
+        with pytest.raises(BinAsciiError, match=match):
+            dfn(vector, validate=True, padded=padded)
+    else:
+        assert dfn(vector, validate=False, padded=padded) == b"" if empty else b"\x00\x00\x00"
+
+
+@param_decode_functions
+@utils.param_simd
+def test_simdutf_validation_noskip_padding(dfn: Decode, simd: int) -> None:
+    utils.unused_args(simd)
+    vector = b"===="
+    with pytest.raises(
+        BinAsciiError,
+        match=r"Non-base64 digit found|Only base64 data is allowed|Leading padding not allowed",
+    ):
+        dfn(vector, validate=True)
+
+
+def test_swap_buffer() -> None:
+    assert pybase64.b64decode(bytearray(b"AAA!A"), b"-_") == b"\x00\x00\x00"
+    assert pybase64.b64decode(b"AAAA", b"-_", ignorechars=bytearray(b"\n")) == b"\x00\x00\x00"
