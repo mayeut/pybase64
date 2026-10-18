@@ -23,6 +23,11 @@ IS_64BIT = sys.maxsize > 2**32
 IS_WINDOWS = sys.platform.startswith("win32")
 IS_MACOS = sys.platform.startswith("darwin")
 
+# Only the base64 functions of simdutf are compiled. Enable more features here
+# as the module grows (they default to 1 in the amalgamation).
+SIMDUTF_DISABLED_FEATURES = ["DETECT_ENCODING", "ASCII", "LATIN1", "UTF8", "UTF16", "UTF32"]
+SIMDUTF_DEFINES = [(f"SIMDUTF_FEATURE_{name}", "0") for name in SIMDUTF_DISABLED_FEATURES]
+
 log = logging.getLogger("pybase64-setup")
 
 # Generate license text
@@ -34,7 +39,7 @@ with HERE.joinpath("src", "pybase64", "_license.py").open("w") as f:
     f.write("=" * 79 + "\n\n")
     f.write("libbase64\n")
     f.write("=" * 79 + "\n")
-    f.write(HERE.joinpath("base64", "LICENSE").read_text())
+    f.write(HERE.joinpath("vendor", "base64", "LICENSE").read_text())
     f.write("=" * 74)
     f.write('""" \\\n')
     f.write('    + "====="\n')
@@ -42,13 +47,14 @@ with HERE.joinpath("src", "pybase64", "_license.py").open("w") as f:
 pybase64_ext = Extension(
     "pybase64._pybase64",
     [
-        "src/pybase64/_pybase64.c",
-        "src/pybase64/_pybase64_get_simd_flags.c",
+        "src/pybase64/_pybase64.cpp",
+        "src/pybase64/_pybase64_get_simd_flags.cpp",
     ],
-    include_dirs=["base64/include/", "base64/lib/", ".base64_build"],
+    language="c++",
+    include_dirs=["vendor/simdutf", "vendor/base64/include", "vendor/base64/lib", ".base64_build"],
     library_dirs=[".base64_build"],
     libraries=["base64"],
-    define_macros=[("BASE64_STATIC_DEFINE", "1")],
+    define_macros=[("BASE64_STATIC_DEFINE", "1"), *SIMDUTF_DEFINES],
     optional=OPTIONAL_EXTENSION,
 )
 
@@ -148,7 +154,7 @@ def cmake(*args: str) -> None:
 @contextmanager
 def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
     base64_built = False
-    source_dir = HERE / "base64"
+    source_dir = HERE / "vendor" / "base64"
     build_dir = HERE / ".base64_build"
     build_type = "Release"
     config_options = [
@@ -184,6 +190,15 @@ def base64_build(plat_name: str | None) -> Generator[bool, None, None]:
 
 
 class BuildExt(build_ext):
+    def build_extensions(self):
+        msvc = self.compiler.compiler_type == "msvc"
+        # -g0 drops the debug information that Python's default flags request
+        # on Linux, which would otherwise make up most of the binary.
+        args = ["/std:c++17", "/EHsc", "/utf-8"] if msvc else ["-std=c++17", "-g0"]
+        for e in self.extensions:
+            e.extra_compile_args = args
+        super().build_extensions()
+
     def finalize_options(self) -> None:
         if "-coverage" in os.environ.get("CFLAGS", "").split():
             plat_name = getattr(self, "plat_name", None) or sysconfig.get_platform()

@@ -241,7 +241,7 @@ def main() -> None:
         check=True,
         capture_output=True,
         text=True,
-        cwd=ROOT / "base64",
+        cwd=ROOT / "vendor" / "base64",
     ).stdout.strip()
     sbom_template = SBOM_TEMPLATE.replace("{{base64_sha}}", base64_sha)
     for file in files:
