@@ -55,8 +55,7 @@ pybase64 = ["py.typed", "_pybase64.pyi"]
 
 [dependency-groups]
 test = [
-    "packaging==24.2; sys_platform == 'emscripten'",
-    "packaging>=26.0; sys_platform != 'emscripten'",
+    "packaging>=26.0",
     "pytest>=8",
     "pytest-run-parallel>=0.8.2 ; python_version >= '3.13'",
     "typing_extensions>=4.6",
