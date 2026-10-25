@@ -225,3 +225,4 @@ required-version = ">=0.7.14"
 benchmark = { requires-python = ">=3.12" }
 coverage = { requires-python = ">=3.10" }
 docs = { requires-python = ">=3.12" }
+nox = { requires-python = ">=3.11" }
