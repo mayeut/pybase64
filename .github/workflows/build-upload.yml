@@ -42,6 +42,7 @@ jobs:
       contents: read
     runs-on: "${{ matrix.runs-on }}${{ startsWith(matrix.archs, 'aarch64') && '-arm' || '' }}"
     strategy:
+      fail-fast: false
       matrix:
         platform: ["linux"]
         archs: ["x86_64, i686", "aarch64, armv7l", "ppc64le", "s390x", "riscv64"]
