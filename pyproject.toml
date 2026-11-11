@@ -102,7 +102,7 @@ xbuild-tools = ["cmake", "uv"]
 [tool.cibuildwheel.android]
 repair-wheel-command = [
     "auditwheel repair --patcher=none -w {dest_dir} {wheel}",
-    "python3.14 tools/embed_sbom.py {dest_dir}",
+    "uv run --script tools/embed_sbom.py {dest_dir} {wheel}",
 ]
 
 [tool.cibuildwheel.linux]
