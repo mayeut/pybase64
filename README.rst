@@ -154,8 +154,9 @@ Running Python 3.15.0rc3, Apple clang version 21.0.0 (clang-2100.3.34.2), macOS 
 
 Changelog
 =========
-future
-------
+1.5.2
+-----
+- Fix deprecated altchars handling when decoding with ``padded=False``
 - Publish PyPy 3.12 wheels
 - PyPy 3.11 wheels moved from ``pp311-pypy311_pp73`` to ``pp311-pypy311_pp80``
 - Publish GraalPy 3.13 wheels
