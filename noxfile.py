@@ -108,6 +108,32 @@ def test_parallel(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
+def _run_sde_tests(
+    session: nox.Session,
+    pytest_command: tuple[str, ...],
+    machine: str,
+    env: dict[str, str],
+) -> None:
+    if machine == "x86_64":
+        cpu = "spr"
+        sde: tuple[str, ...] = ("sde64", f"-{cpu}", "--")
+        session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
+        for cpu, xcr0 in [("nhm", "3"), ("hsw", "7")]:
+            sde = ("sde64", "-spr", "-xsave_default", xcr0, "--")
+            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
+            session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
+        for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
+            sde = ("sde64", f"-{cpu}", "--")
+            pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
+            session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
+    elif machine in {"arm64", "aarch64"}:
+        pytest_addopt = ("--sde-cpu=neon", "-k=test_flags")
+        session.run(*pytest_command, *pytest_addopt, env=env, external=True)
+    else:
+        msg = f"unsupported machine {machine!r} for '--with-sde'"
+        session.error(msg)
+
+
 @nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11.15"])
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
@@ -122,39 +148,32 @@ def _coverage(session: nox.Session) -> None:
         "--cov-report=",
     )
     machine = platform.machine().lower()
+    native_build_dir = Path(".coverage-build")
+    if clean and native_build_dir.exists():
+        shutil.rmtree(native_build_dir)
     pytest_command = ("pytest", *coverage_args)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
         "CIBUILDWHEEL": "1",
-        "COVERAGE": "1",
-        "CFLAGS": "-O0 -coverage -DNDEBUG -Werror",
+        "CFLAGS": "--coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
     remove_extension(session, in_place=True)
-    session.install("--no-deps", "--no-build-isolation", "-e", ".", env=env)
+    session.install(
+        "--no-deps",
+        "--no-build-isolation",
+        f"-Cbuild-dir={native_build_dir}/{{wheel_tag}}",
+        "-Ccmake.build-type=Debug",
+        "-e",
+        ".",
+        env=env,
+    )
     if clean:
         session.run("coverage", "erase", env=env)
     session.run(*pytest_command, env=env)
     if with_sde:
-        if machine == "x86_64":
-            cpu = "spr"
-            sde: tuple[str, ...] = ("sde64", f"-{cpu}", "--")
-            session.run(*sde, *pytest_command, f"--sde-cpu={cpu}", env=env, external=True)
-            for cpu, xcr0 in [("nhm", "3"), ("hsw", "7")]:
-                sde = ("sde64", "-spr", "-xsave_default", xcr0, "--")
-                pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
-                session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
-            for cpu in ["p4p", "mrm", "pnr", "nhm", "snb", "hsw", "skx"]:
-                sde = ("sde64", f"-{cpu}", "--")
-                pytest_addopt = (f"--sde-cpu={cpu}", "-k=test_flags")
-                session.run(*sde, *pytest_command, *pytest_addopt, env=env, external=True)
-        elif machine in {"arm64", "aarch64"}:
-            pytest_addopt = ("--sde-cpu=neon", "-k=test_flags")
-            session.run(*pytest_command, *pytest_addopt, env=env, external=True)
-        else:
-            msg = f"unsupported machine {machine!r} for '--with-sde'"
-            session.error(msg)
+        _run_sde_tests(session, pytest_command, machine, env)
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session, in_place=True)
