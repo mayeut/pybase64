@@ -1,6 +1,3 @@
-# Genertaed files
-src/pybase64/_license.py
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -42,6 +39,7 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.coverage-build/
 .coverage
 .coverage.*
 .cache
@@ -95,3 +93,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# IDE
+.idea
+
+# OS
+.DS_Store

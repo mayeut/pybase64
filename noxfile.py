@@ -112,13 +112,6 @@ def test_parallel(session: nox.Session) -> None:
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
     _uv_sync(session, "build-system", "coverage", only_binary=False)
-    gcovr_config = (
-        "-r=.",
-        "-e=base64",
-        "-e=.base64_build",
-        "--gcov-exclude-directory=.base64_build",
-        "--gcov-delete",
-    )
     with_sde = "--with-sde" in session.posargs
     clean = "--clean" in session.posargs
     report = "--report" in session.posargs
@@ -130,14 +123,15 @@ def _coverage(session: nox.Session) -> None:
     )
     machine = platform.machine().lower()
     pytest_command = ("pytest", *coverage_args)
-    remove_extension(session, in_place=True)
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
         "CIBUILDWHEEL": "1",
+        "COVERAGE": "1",
         "CFLAGS": "-O0 -coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
+    remove_extension(session, in_place=True)
     session.install("--no-deps", "--no-build-isolation", "-e", ".", env=env)
     if clean:
         session.run("coverage", "erase", env=env)
@@ -164,10 +158,14 @@ def _coverage(session: nox.Session) -> None:
     # run without extension as well
     env.pop("CIBUILDWHEEL")
     remove_extension(session, in_place=True)
+    session.install("--no-deps", "--no-build-isolation", "-Cwheel.cmake=false", "-e", ".", env=env)
     session.run(*pytest_command, env=env)
     session.run(
         "gcovr",
-        *gcovr_config,
+        "-r=.",
+        "-e=base64",
+        "-e=.coverage-build",
+        "--gcov-delete",
         f"--json=coverage-native-partial-{session.python}.json",
         silent=True,
     )
@@ -184,7 +182,7 @@ def _coverage(session: nox.Session) -> None:
             html_args = ["--html-details=./htmlcov/native/index.html"]
         session.run(
             "gcovr",
-            *gcovr_config,
+            "-r=.",
             "--add-tracefile=coverage-native-partial-*.json",
             "--fail-under-line=89",
             "--txt",
@@ -276,3 +274,20 @@ def update_requirements(session: nox.Session) -> None:
             f"--only-group={group}",
             f"--output-file=requirements/{group}/requirements-ci.txt",
         )
+
+
+@nox.session(venv_backend="none")
+def update_licence(session: nox.Session) -> None:
+    file = HERE.joinpath("src", "pybase64", "_license.py")
+    with file.open("w") as f:
+        f.write('_license = """')
+        f.write("pybase64\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("LICENSE").read_text())
+        f.write("=" * 79 + "\n\n")
+        f.write("libbase64\n")
+        f.write("=" * 79 + "\n")
+        f.write(HERE.joinpath("base64", "LICENSE").read_text())
+        f.write("=" * 79)
+        f.write('"""\n')
+    session.log(file.read_text())

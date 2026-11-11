@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=1"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybase64"
@@ -41,17 +41,32 @@ Documentation = "https://pybase64.readthedocs.io/en/stable"
 Source = "https://github.com/mayeut/pybase64"
 Issues = "https://github.com/mayeut/pybase64/issues"
 
-[tool.setuptools.dynamic]
-version = {attr = "pybase64._version._version"}
+[tool.scikit-build]
+cmake.version = "CMakeLists.txt"
+minimum-version = "build-system.requires"
+sdist.exclude = [".github", ".git"]
+wheel.exclude = ["*.c", "*.h"]
+wheel.reproducible = true
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[[tool.scikit-build.overrides]]
+if.failed = true
+if.not.env.CIBUILDWHEEL = true
+wheel.cmake = false
 
-[tool.setuptools]
-include-package-data = false
+[[tool.scikit-build.overrides]]
+if.env.CIBUILDWHEEL = true
+if.env.COVERAGE = true
+build-dir = ".coverage-build/{wheel_tag}"
 
-[tool.setuptools.package-data]
-pybase64 = ["py.typed", "_pybase64.pyi"]
+[[tool.scikit-build.overrides]]
+if.platform-system = "^android"
+cmake.version = ">=4.4"
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "src/pybase64/_version.py"
+regex = '(?i)^_version = "(?P<value>.+?)"'
 
 [dependency-groups]
 test = [
@@ -78,7 +93,7 @@ docs = [
 ]
 lint = ["prek"]
 nox = ["nox>=2025.11.12"]
-build-system = ["setuptools>=77"]
+build-system = ["scikit-build-core>=1", "ninja", "cmake"]
 dev = [
     {include-group = "coverage"},
     {include-group = "docs"},
@@ -97,7 +112,7 @@ test-skip = ["gp3*-win_amd64"]  # https://github.com/oracle/graalpython/issues/4
 test-requires = ["--no-deps", "--only-binary=:all:", "-r", "requirements/test/requirements-ci.txt"]
 test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
-xbuild-tools = ["cmake", "uv"]
+xbuild-tools = ["cmake", "ninja", "uv"]
 
 [tool.cibuildwheel.android]
 repair-wheel-command = [
@@ -127,18 +142,24 @@ environment = { AUDITWHEEL_PLAT="manylinux_2_31_${AUDITWHEEL_ARCH}" }
 
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux_{ppc64le,riscv64,s390x}"
-build-frontend = { name = "build", args = ["--no-isolation"] }
+build-frontend = { name = "build", args = ["--no-isolation"] }  # switch to "--dependency-constraints-txt" once 3.9 is dropped
 before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-ios*"
 build-frontend = { name = "build", args = ["--no-isolation"] }
-before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
+before-build = "python -m pip install --platform=macosx_15_0_$(uname -m) --target=$(python -c 'import _cross_venv; print(_cross_venv.SITE_PACKAGE_PATH)') --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
 # iOS fails to install from requirements/test/requirements-ci.txt because it falls back to --require-hashes
 # and can't install the wheel in the same install command as it's not hashed
 # Don't use hashed requirements for now
 test-groups = ["test"]
 test-requires = []
+
+[[tool.cibuildwheel.overrides]]
+select = "*-pyodide*"
+build-frontend = { name = "pyodide-build", args = ["--no-isolation"] }
+before-build = "python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements/build-system/requirements-ci.txt"
+
 
 [tool.coverage.run]
 branch = true
@@ -158,7 +179,6 @@ files = [
   "src/**/*.py",
   "test/**/*.py",
   "noxfile.py",
-  "setup.py",
 ]
 warn_unused_configs = true
 show_error_codes = true
@@ -209,7 +229,6 @@ lint.flake8-tidy-imports.ban-relative-imports = "all"
 [tool.ruff.lint.per-file-ignores]
 "src/pybase64/__main__.py" = ["C901", "D", "T201"]
 "!src/**.py" = ["D"]
-"setup.py" = ["TRY400"]  # TODO
 "docs/**.py" = ["ANN", "DTZ011", "ERA001", "INP001", "PTH"]
 "tests/**.py" = ["ANN401", "PERF", "S101", "SLF001", "TID252"]
 "noxfile.py" = ["FIX002", "S101", "TD"]

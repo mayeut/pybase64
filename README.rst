@@ -154,6 +154,10 @@ Running Python 3.15.0rc3, Apple clang version 21.0.0 (clang-2100.3.34.2), macOS 
 
 Changelog
 =========
+future
+------
+- Move to scikit-build-core build backend
+
 1.5.2
 -----
 - Fix deprecated altchars handling when decoding with ``padded=False``
