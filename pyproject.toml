@@ -57,6 +57,7 @@ wheel.cmake = false
 if.env.CIBUILDWHEEL = true
 if.env.COVERAGE = true
 build-dir = ".coverage-build/{wheel_tag}"
+cmake.build-type = "Debug"
 
 [[tool.scikit-build.overrides]]
 if.platform-system = "^android"
