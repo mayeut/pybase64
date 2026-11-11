@@ -99,9 +99,15 @@ test-sources = ["conftest.py", "pyproject.toml", "tests"]
 test-command = "python -m pytest --pypi-distribution"
 xbuild-tools = ["cmake", "uv"]
 
+[tool.cibuildwheel.android]
+repair-wheel-command = [
+    "auditwheel repair --patcher=none -w {dest_dir} {wheel}",
+    "python3.14 tools/embed_sbom.py {dest_dir}",
+]
+
 [tool.cibuildwheel.linux]
 repair-wheel-command = [
-    "auditwheel repair -w {dest_dir} {wheel}",
+    "auditwheel repair --patcher=none -w {dest_dir} {wheel}",
     "python3.14 tools/embed_sbom.py {dest_dir}",
 ]
 
