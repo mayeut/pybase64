@@ -155,7 +155,7 @@ def _coverage(session: nox.Session) -> None:
     # make extension mandatory by exporting CIBUILDWHEEL=1
     env = {
         "CIBUILDWHEEL": "1",
-        "CFLAGS": "--coverage -DNDEBUG -Werror",
+        "CFLAGS": "-coverage -DNDEBUG -Werror",
         "LDFLAGS": "-coverage",
     }
     update_env_macos(session, env)
