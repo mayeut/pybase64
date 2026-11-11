@@ -20,10 +20,9 @@ jobs:
     name: Test with MSYS2 ${{ matrix.sys }}
     runs-on: windows-2025
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - { sys: msys, toolchain: "gcc" }
-          - { sys: mingw64, env: mingw-w64-x86_64- }
           - { sys: ucrt64, env: mingw-w64-ucrt-x86_64- }
           - { sys: clang64, env: mingw-w64-clang-x86_64- }
     steps:
@@ -40,12 +39,12 @@ jobs:
           make
           ${{matrix.env}}cmake
           ${{matrix.env}}ninja
-          ${{matrix.env}}${{matrix.toolchain || 'toolchain' }}
+          ${{matrix.env}}toolchain
           ${{matrix.env}}python
           ${{matrix.env}}python-pip
           ${{matrix.env}}python-pytest
           ${{matrix.env}}python-pygments
-          ${{matrix.env}}python-setuptools
+          ${{matrix.env}}python-scikit-build-core
           ${{matrix.env}}python-typing_extensions
     - name: "Run tests"
       shell: msys2 {0}

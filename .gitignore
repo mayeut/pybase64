@@ -1,29 +1,16 @@
-# Genertaed files
-src/pybase64/_license.py
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
 # C extensions
-.base64_build/
 *.so
 
 # Distribution / packaging
 .Python
 env/
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 wheelhouse/
 *.egg-info/
 .installed.cfg
@@ -42,6 +29,7 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.coverage-build/
 .coverage
 .coverage.*
 .cache
@@ -95,3 +83,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# IDE
+.idea
+
+# OS
+.DS_Store
