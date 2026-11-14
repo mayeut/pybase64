@@ -18,7 +18,7 @@ if has_extension:
     simd_runtime_paths = pybase64._get_simd_paths_runtime()  # type: ignore[attr-defined]
     simd_compile_paths = pybase64._get_simd_paths_compile()  # type: ignore[attr-defined]
 else:
-    simd_runtime_paths = simd_compile_paths = (pybase64._get_simd_path(),)
+    simd_runtime_paths = simd_compile_paths = (pybase64._get_simd_path(),)  # type: ignore[attr-defined]
 
 param_simd = pytest.mark.parametrize(
     "simd",

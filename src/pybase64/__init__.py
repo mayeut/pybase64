@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
 try:
     from pybase64._pybase64 import (
+        _get_simd_path,
         _get_simd_paths_compile,  # noqa: F401
         _get_simd_paths_runtime,  # noqa: F401
-        _get_simd_path,
         _set_simd_path,  # noqa: F401
         b64decode,
         b64decode_as_bytearray,
