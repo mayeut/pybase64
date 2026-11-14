@@ -1,7 +1,6 @@
 #define PY_SSIZE_T_CLEAN
 #define PY_CXX_CONST const
 #include <Python.h>
-#include "_pybase64_get_simd_flags.h"
 #include <config.h>
 #include <libbase64.h>
 #ifdef __cplusplus
@@ -22,6 +21,9 @@ extern "C" {
 #endif
 
 #include <simdutf.cpp>
+
+static auto const& implementations = simdutf::get_available_implementations();
+static auto const best_implementation = implementations.detect_best_supported();
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64) || BASE64_WITH_NEON64
 #define HAVE_FAST_UNALIGNED_ACCESS 1
@@ -48,8 +50,7 @@ typedef struct pybase64_state {
     PyObject *binAsciiError;
     PyObject *ignoreCharsValidateFalse;
     PyObject *ignoreCharsNoPadding;
-    uint32_t active_simd_flag;
-    uint32_t simd_flags;
+    simdutf::implementation const* active_implementation;
 } pybase64_state;
 
 #if defined(PY_VERSION_HEX) && PY_VERSION_HEX >= 0x030d0000
@@ -1304,123 +1305,62 @@ static PyObject* pybase64_get_simd_path(PyObject* self, PyObject* arg)
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
-    return PyLong_FromUnsignedLong(state->active_simd_flag);
+    auto const& name = state->active_implementation->name();
+    return PyUnicode_FromStringAndSize(name.data(), name.size());
 }
 
-static PyObject* pybase64_get_simd_flags_runtime(PyObject* self, PyObject* arg)
+static PyObject* pybase64_get_simd_paths_runtime(PyObject* self, PyObject* arg)
 {
-    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return NULL; /* GCOVR_EXCL_LINE */
+    PyObject* result = PyTuple_New(implementations.size());
+    if (result == NULL) {
+        return result;
     }
-    return PyLong_FromUnsignedLong(state->simd_flags);
+    Py_ssize_t pos = 0;
+    for (auto const& implementation: implementations) {
+        if (!implementation->supported_by_runtime_system()) {
+            continue;
+        }
+        auto const& name = implementation->name();
+        PyObject* name_object = PyUnicode_FromStringAndSize(name.data(), name.size());
+        if (name_object == NULL) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (PyTuple_SetItem(result, pos++, name_object) != 0) {
+            Py_DECREF(name_object);
+            Py_DECREF(result);
+            return NULL;
+        }
+    }
+    PyObject* old_result = result;
+    if (_PyTuple_Resize(&result, pos) != 0) {
+        Py_DECREF(old_result);
+        return NULL;
+    }
+    return result;
 }
 
-static PyObject* pybase64_get_simd_flags_compile(PyObject* self, PyObject* arg)
+static PyObject* pybase64_get_simd_paths_compile(PyObject* self, PyObject* arg)
 {
-    uint32_t result = 0U;
-
-#if BASE64_WITH_NEON64 || BASE64_WITH_NEON32
-    result |= PYBASE64_NEON;
-#endif
-
-#if BASE64_WITH_AVX512
-    result |= PYBASE64_AVX512VBMI;
-#endif
-#if BASE64_WITH_AVX2
-    result |= PYBASE64_AVX2;
-#endif
-#if BASE64_WITH_AVX
-    result |= PYBASE64_AVX;
-#endif
-#if BASE64_WITH_SSE42
-    result |= PYBASE64_SSE42;
-#endif
-#if BASE64_WITH_SSE41
-    result |= PYBASE64_SSE41;
-#endif
-#if BASE64_WITH_SSSE3
-    result |= PYBASE64_SSSE3;
-#endif
-    return PyLong_FromUnsignedLong(result);
-}
-
-static void set_simd_path(pybase64_state* state, uint32_t flag)
-{
-#if PY_VERSION_HEX >= 0x030d0000
-    static PyMutex mutex = {0};
-#endif
-    static int b64_cpu_flags_mem = 0;
-    int b64_cpu_flags;
-
-    flag &= state->simd_flags; /* clean-up with allowed flags */
-
-#if PY_VERSION_HEX >= 0x030d0000
-    PyMutex_Lock(&mutex);
-#endif
-    if (0) {
+    PyObject* result = PyTuple_New(implementations.size());
+    if (result == NULL) {
+        return result;
     }
-#if BASE64_WITH_NEON64
-    else if (flag & PYBASE64_NEON) {
-        state->active_simd_flag = PYBASE64_NEON;
-        b64_cpu_flags = BASE64_FORCE_NEON64;
+    Py_ssize_t pos = 0;
+    for (auto const& implementation: implementations) {
+        auto const& name = implementation->name();
+        PyObject* name_object = PyUnicode_FromStringAndSize(name.data(), name.size());
+        if (name_object == NULL) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (PyTuple_SetItem(result, pos++, name_object) != 0) {
+            Py_DECREF(name_object);
+            Py_DECREF(result);
+            return NULL;
+        }
     }
-#endif
-#if BASE64_WITH_NEON32
-    else if (flag & PYBASE64_NEON) {
-        state->active_simd_flag = PYBASE64_NEON;
-        b64_cpu_flags = BASE64_FORCE_NEON32;
-    }
-#endif
-
-#if BASE64_WITH_AVX512
-    else if (flag & PYBASE64_AVX512VBMI) {
-        state->active_simd_flag = PYBASE64_AVX512VBMI;
-        b64_cpu_flags = BASE64_FORCE_AVX512;
-    }
-#endif
-#if BASE64_WITH_AVX2
-    else if (flag & PYBASE64_AVX2) {
-        state->active_simd_flag = PYBASE64_AVX2;
-        b64_cpu_flags = BASE64_FORCE_AVX2;
-    }
-#endif
-#if BASE64_WITH_AVX
-    else if (flag & PYBASE64_AVX) {
-        state->active_simd_flag = PYBASE64_AVX;
-        b64_cpu_flags = BASE64_FORCE_AVX;
-    }
-#endif
-#if BASE64_WITH_SSE42
-    else if (flag & PYBASE64_SSE42) {
-        state->active_simd_flag = PYBASE64_SSE42;
-        b64_cpu_flags = BASE64_FORCE_SSE42;
-    }
-#endif
-#if BASE64_WITH_SSE41
-    else if (flag & PYBASE64_SSE41) {
-        state->active_simd_flag = PYBASE64_SSE41;
-        b64_cpu_flags = BASE64_FORCE_SSE41;
-    }
-#endif
-#if BASE64_WITH_SSSE3
-    else if (flag & PYBASE64_SSSE3) {
-        state->active_simd_flag = PYBASE64_SSSE3;
-        b64_cpu_flags = BASE64_FORCE_SSSE3;
-    }
-#endif
-    else {
-        state->active_simd_flag = PYBASE64_NONE;
-        b64_cpu_flags = BASE64_FORCE_PLAIN;
-    }
-    if (b64_cpu_flags_mem != b64_cpu_flags) {
-        struct base64_state b64_state;
-        base64_stream_encode_init(&b64_state, b64_cpu_flags);
-        b64_cpu_flags_mem = b64_cpu_flags;
-    }
-#if PY_VERSION_HEX >= 0x030d0000
-    PyMutex_Unlock(&mutex);
-#endif
+    return result;
 }
 
 static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
@@ -1429,39 +1369,27 @@ static PyObject* pybase64_set_simd_path(PyObject* self, PyObject* arg)
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
-    set_simd_path(state, (uint32_t)PyLong_AsUnsignedLong(arg));
+    Py_ssize_t size;
+    char const* data = PyUnicode_AsUTF8AndSize(arg, &size);
+    if (data == NULL) {
+        return NULL;
+    }
+    std::string_view name{data, static_cast<size_t>(size)};
+    simdutf::implementation const* const implementation = implementations[name];
+    if (implementation == NULL) {
+        return PyErr_Format(PyExc_LookupError, "can't find implementation %R", arg);
+    }
+#if PY_VERSION_HEX >= 0x030d0000
+    static PyMutex mutex = {0};
+    PyMutex_Lock(&mutex);
+#endif
+    if (implementation != state->active_implementation) {
+        state->active_implementation = implementation;
+    }
+#if PY_VERSION_HEX >= 0x030d0000
+    PyMutex_Unlock(&mutex);
+#endif
     Py_RETURN_NONE;
-}
-
-static PyObject* pybase64_get_simd_name(PyObject* self, PyObject* arg)
-{
-    uint32_t flags = (uint32_t)PyLong_AsUnsignedLong(arg);
-
-    if (flags & PYBASE64_NEON) {
-        return PyUnicode_FromString("NEON");
-    }
-
-    if (flags & PYBASE64_AVX512VBMI) {
-        return PyUnicode_FromString("AVX512VBMI");
-    }
-    if (flags & PYBASE64_AVX2) {
-        return PyUnicode_FromString("AVX2");
-    }
-    if (flags & PYBASE64_AVX) {
-        return PyUnicode_FromString("AVX");
-    }
-    if (flags & PYBASE64_SSE42) {
-        return PyUnicode_FromString("SSE42");
-    }
-    if (flags & PYBASE64_SSE41) {
-        return PyUnicode_FromString("SSE41");
-    }
-    if (flags & PYBASE64_SSSE3) {
-        return PyUnicode_FromString("SSSE3");
-    }
-
-    assert(flags == PYBASE64_NONE);
-    return PyUnicode_FromString("No SIMD");
 }
 
 static PyObject* pybase64_import(const char* from, const char* object)
@@ -1546,6 +1474,8 @@ static int _pybase64_exec(PyObject *m)
         return -1; /* GCOVR_EXCL_LINE */
     }
 
+    state->active_implementation = best_implementation;
+
     assert(sizeof(ignoreCharsValidateFalse) == (256 - 64));
     state->ignoreCharsValidateFalse = PyBytes_FromStringAndSize((const char*)ignoreCharsValidateFalse, sizeof(ignoreCharsValidateFalse));
     if (state->ignoreCharsValidateFalse == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
@@ -1567,9 +1497,6 @@ static int _pybase64_exec(PyObject *m)
         Py_DECREF(state->binAsciiError); /* GCOVR_EXCL_LINE */
         return -1; /* GCOVR_EXCL_LINE */
     }
-
-    state->simd_flags = pybase64_get_simd_flags();
-    set_simd_path(state, state->simd_flags);
 
     return 0;
 }
@@ -1609,9 +1536,8 @@ static PyMethodDef _pybase64_methods[] = {
     { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
-    { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },
-    { "_get_simd_flags_runtime", (PyCFunction)pybase64_get_simd_flags_runtime, METH_NOARGS, NULL },
-    { "_get_simd_name", (PyCFunction)pybase64_get_simd_name, METH_O, NULL },
+    { "_get_simd_paths_compile", (PyCFunction)pybase64_get_simd_paths_compile, METH_NOARGS, NULL },
+    { "_get_simd_paths_runtime", (PyCFunction)pybase64_get_simd_paths_runtime, METH_NOARGS, NULL },
     { NULL, NULL, 0, NULL }  /* Sentinel */
 };
 

@@ -31,7 +31,7 @@ set(BASE64_REGENERATE_TABLES OFF CACHE INTERNAL "" FORCE)
 add_subdirectory(vendor/base64 EXCLUDE_FROM_ALL)
 target_compile_features(base64 PUBLIC c_std_99)
 
-python_add_library(_pybase64 MODULE src/${SKBUILD_PROJECT_NAME}/_pybase64.cpp src/${SKBUILD_PROJECT_NAME}/_pybase64_get_simd_flags.cpp WITH_SOABI)
+python_add_library(_pybase64 MODULE src/${SKBUILD_PROJECT_NAME}/_pybase64.cpp WITH_SOABI)
 if(MSVC)
   target_compile_options(_pybase64 PRIVATE "/EHsc")
   target_compile_features(_pybase64 PUBLIC cxx_std_20)

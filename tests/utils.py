@@ -14,50 +14,34 @@ if TYPE_CHECKING:
 has_extension = hasattr(pybase64, "_set_simd_path")
 assert has_extension or os.environ.get("CIBUILDWHEEL", "0") == "0"
 
-compile_flags = [0]
-runtime_flags = 0
 if has_extension:
-    runtime_flags = pybase64._get_simd_flags_runtime()  # type: ignore[attr-defined]
-    flags = pybase64._get_simd_flags_compile()  # type: ignore[attr-defined]
-    for i in range(31):
-        if flags & (1 << i):
-            compile_flags += [(1 << i)]
-
-
-def _get_simd_name(simd_id: int) -> str:
-    if has_extension:
-        simd_flag = compile_flags[simd_id]
-        simd_name = "C" if simd_flag == 0 else pybase64._get_simd_name(simd_flag)  # type: ignore[attr-defined]
-    else:
-        simd_name = "PY"
-    return simd_name
-
+    simd_runtime_paths = pybase64._get_simd_paths_runtime()  # type: ignore[attr-defined]
+    simd_compile_paths = pybase64._get_simd_paths_compile()  # type: ignore[attr-defined]
+else:
+    simd_runtime_paths = simd_compile_paths = (pybase64._get_simd_path(),)
 
 param_simd = pytest.mark.parametrize(
     "simd",
-    range(len(compile_flags)),
-    ids=_get_simd_name,
+    simd_compile_paths,
     indirect=True,
 )
 
 
 @pytest.fixture
-def simd(request: pytest.FixtureRequest) -> Iterator[int]:
-    simd_id = request.param
+def simd(request: pytest.FixtureRequest) -> Iterator[str]:
+    simd_path = request.param
     if not has_extension:
-        assert simd_id == 0
-        yield simd_id
+        assert simd_path == "py"
+        yield simd_path
         return
 
-    flag = compile_flags[simd_id]
-    if flag != 0 and not flag & runtime_flags:  # pragma: no branch
-        simd_name = _get_simd_name(simd_id)  # pragma: no cover
-        pytest.skip(f"{simd_name!r} SIMD extension not available")  # pragma: no cover
-    old_flag = pybase64._get_simd_path()  # type: ignore[attr-defined]
-    pybase64._set_simd_path(flag)  # type: ignore[attr-defined]
-    assert pybase64._get_simd_path() == flag  # type: ignore[attr-defined]
-    yield simd_id
-    pybase64._set_simd_path(old_flag)  # type: ignore[attr-defined]
+    if simd_path not in simd_runtime_paths:
+        pytest.skip(f"{simd_path!r} SIMD extension not available")  # pragma: no cover
+    old_simd_path = pybase64._get_simd_path()  # type: ignore[attr-defined]
+    pybase64._set_simd_path(simd_path)  # type: ignore[attr-defined]
+    assert pybase64._get_simd_path() == simd_path  # type: ignore[attr-defined]
+    yield simd_path
+    pybase64._set_simd_path(old_simd_path)  # type: ignore[attr-defined]
 
 
 def unused_args(*args: Any) -> None:  # noqa: ARG001
