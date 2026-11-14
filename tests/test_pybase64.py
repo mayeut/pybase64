@@ -634,14 +634,14 @@ def test_invalid_args_dec_0(dfn: Decode) -> None:
 def test_flags(request: pytest.FixtureRequest) -> None:
     cpu = request.config.getoption("--sde-cpu", skip=True)
     assert {
-        "p4p": ("arm64",),  # no simd
-        "mrm": ("arm64",),  # SSSE3
-        "pnr": ("arm64",),  # SSE41
-        "nhm": ("arm64",),  # SSE42
-        "snb": ("arm64",),  # AVX
-        "hsw": ("arm64",),  # AVX2
-        "skx": ("arm64",),  # AVX2
-        "spr": ("arm64",),  # AVX512VBMI
+        "p4p": ("fallback"),  # no simd
+        "mrm": ("fallback"),  # SSSE3
+        "pnr": ("fallback"),  # SSE41
+        "nhm": ("westmere", "fallback"),  # SSE42
+        "snb": ("westmere", "fallback"),  # AVX
+        "hsw": ("haswell", "westmere", "fallback"),  # AVX2
+        "skx": ("haswell", "westmere", "fallback"),  # AVX2
+        "spr": ("icelake", "haswell", "westmere", "fallback"),  # AVX512VBMI
         "neon": ("arm64",),  # NEON
     }[cpu] == utils.simd_runtime_paths
 
