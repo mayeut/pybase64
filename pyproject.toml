@@ -87,7 +87,7 @@ docs = [
     "furo>=2025.12.19",
 ]
 lint = ["prek"]
-nox = ["nox>=2025.11.12"]
+nox = ["nox>=2026.08.17"]
 build-system = ["scikit-build-core>=1", "ninja", "cmake"]
 dev = [
     {include-group = "coverage"},
