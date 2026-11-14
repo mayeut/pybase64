@@ -28,5 +28,5 @@ jobs:
       uses: $/.github/actions/setup-uv-nox
     - name: Run tests
       run: |
-        nox -s test
+        nox -j auto -s test
         nox -s test_parallel

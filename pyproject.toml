@@ -67,7 +67,7 @@ regex = '(?i)^_version = "(?P<value>.+?)"'
 test = [
     "packaging>=26.0",
     "pytest>=8",
-    "pytest-run-parallel>=0.8.2 ; python_version >= '3.13'",
+    "pytest-run-parallel>=0.8.2 ; python_version >= '3.14'",
     "typing_extensions>=4.6",
 ]
 # we don't support benchmark for python<3.12
@@ -87,7 +87,7 @@ docs = [
     "furo>=2025.12.19",
 ]
 lint = ["prek"]
-nox = ["nox>=2025.11.12"]
+nox = ["nox>=2026.08.17"]
 build-system = ["scikit-build-core>=1", "ninja", "cmake"]
 dev = [
     {include-group = "coverage"},

@@ -10,12 +10,12 @@ import nox
 
 HERE = Path(__file__).resolve().parent
 
-nox.needs_version = ">=2025.11.12"
+nox.needs_version = ">=2026.08.17"
 nox.options.default_venv_backend = "uv"
 nox.options.sessions = ["lint", "test"]
 
 ALL_CPYTHON = [f"3.{minor}" for minor in range(9, 15 + 1)]
-ALL_CPYTHONT = [f"3.{minor}t" for minor in range(13, 15 + 1)]
+ALL_CPYTHONT = [f"3.{minor}t" for minor in range(14, 15 + 1)]
 ALL_PYPY = [f"pypy3.{minor}" for minor in range(9, 12 + 1)]
 ALL_PYTHON = ALL_CPYTHON + ALL_CPYTHONT + ALL_PYPY
 
@@ -36,7 +36,7 @@ def _uv_sync(session: nox.Session, *groups: str, only_binary: bool = True) -> No
     session.run_install(*args, env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location})
 
 
-@nox.session()
+@nox.session(allow_parallel=True)
 def lint(session: nox.Session) -> None:
     """Run linters on the codebase."""
     _uv_sync(session, "lint")
@@ -75,7 +75,7 @@ def remove_extension(session: nox.Session, in_place: bool = False) -> None:
         assert removed
 
 
-@nox.session(python=ALL_PYTHON, venv_backend="uv|virtualenv")
+@nox.session(python=ALL_PYTHON, venv_backend="uv|virtualenv", allow_parallel=True)
 def test(session: nox.Session) -> None:
     """Run tests."""
     _install_dep_group(session, "build-system", "test")
@@ -90,7 +90,7 @@ def test(session: nox.Session) -> None:
     session.run("pytest", *session.posargs, env=env)
 
 
-@nox.session(python=ALL_CPYTHONT, venv_backend="uv|virtualenv")
+@nox.session(python=ALL_CPYTHONT, venv_backend="uv|virtualenv", allow_parallel=False)
 def test_parallel(session: nox.Session) -> None:
     """Run tests."""
     _install_dep_group(session, "build-system", "test")
@@ -134,7 +134,7 @@ def _run_sde_tests(
         session.error(msg)
 
 
-@nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11.15"])
+@nox.session(python=["3.14", "3.15", "pypy3.10", "pypy3.11.15"], allow_parallel=False)
 def _coverage(session: nox.Session) -> None:
     """Internal coverage run. Do not run manually"""
     _uv_sync(session, "build-system", "coverage", only_binary=False)
@@ -213,7 +213,7 @@ def _coverage(session: nox.Session) -> None:
             partial.unlink()
 
 
-@nox.session(venv_backend="none")
+@nox.session(venv_backend="none", allow_parallel=False)
 def coverage(session: nox.Session) -> None:
     """Coverage tests."""
     posargs_ = set(session.posargs)
@@ -232,7 +232,7 @@ def coverage(session: nox.Session) -> None:
     session.notify("_coverage-3.14", posargs)
 
 
-@nox.session(python="3.12")
+@nox.session(python="3.12", allow_parallel=False)
 def benchmark(session: nox.Session) -> None:
     """Benchmark tests."""
     _uv_sync(session, "build-system", "benchmark")
@@ -248,7 +248,7 @@ def benchmark(session: nox.Session) -> None:
     session.run("pytest", "--codspeed", *posargs)
 
 
-@nox.session(python="3.14")
+@nox.session(python="3.14", allow_parallel=True)
 def docs(session: nox.Session) -> None:
     """Build the docs."""
     _uv_sync(session, "build-system", "docs")
@@ -271,13 +271,13 @@ def docs(session: nox.Session) -> None:
     )
 
 
-@nox.session(python="3.14", reuse_venv=True)
+@nox.session(python="3.14", reuse_venv=True, allow_parallel=False)
 def sbom(session: nox.Session) -> None:
     """Embed SBOM file in wheels."""
     session.run("python", "tools/embed_sbom.py", *session.posargs)
 
 
-@nox.session(python="3.14")
+@nox.session(python="3.14", allow_parallel=False)
 def update_requirements(session: nox.Session) -> None:
     session.run(
         "uv",
@@ -295,7 +295,7 @@ def update_requirements(session: nox.Session) -> None:
         )
 
 
-@nox.session(venv_backend="none")
+@nox.session(venv_backend="none", allow_parallel=False)
 def update_licence(session: nox.Session) -> None:
     file = HERE.joinpath("src", "pybase64", "_license.py")
     with file.open("w") as f:

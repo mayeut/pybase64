@@ -39,7 +39,7 @@ pytest==9.2.0 ; python_full_version >= '3.10' \
     --hash=sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588 \
     --hash=sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b
     # via pytest-run-parallel
-pytest-run-parallel==0.10.0 ; python_full_version >= '3.13' \
+pytest-run-parallel==0.10.0 ; python_full_version >= '3.14' \
     --hash=sha256:25e5f9fb90fa15e4ee56537a2f4a3fca12ef0e9b524fa4a4d3ebb728b3161408 \
     --hash=sha256:712e96f4dac3e7dc14eff747ffba4180030db11ff22fd62513d9cf81289a1681
 tomli==2.5.0 ; python_full_version < '3.11' \

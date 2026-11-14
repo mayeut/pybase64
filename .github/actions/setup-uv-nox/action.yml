@@ -8,7 +8,7 @@ runs:
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           activate-environment: true
-          python-version: "3.12"
+          python-version: "3.15t"
       - name: Install nox
         run: uv sync --frozen --only-group nox
         shell: bash
