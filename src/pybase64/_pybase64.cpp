@@ -921,6 +921,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
     }
+    auto const implementation = state->active_implementation;
     /* Parse the input tuple */
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$pOp", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &padded, &ignorechars_object, &canonical)) {
         return NULL;
@@ -1152,7 +1153,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 
         while (len > src_slice) {
             translate_fn(src, cache, src_slice, alphabet, &has_bad_char);
-            result = simdutf::base64_to_binary(
+            result = implementation->base64_to_binary(
                 cache,
                 src_slice,
                 dst,
@@ -1172,7 +1173,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
         if (result.is_ok()) {
             translate_fn(src, cache, len, alphabet, &has_bad_char);
-            result = simdutf::base64_to_binary(
+            result = implementation->base64_to_binary(
                 cache,
                 len,
                 dst,
@@ -1207,7 +1208,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         /* not interacting with Python objects from here, release the GIL */
         Py_BEGIN_ALLOW_THREADS
 
-        result = simdutf::base64_to_binary(
+        result = implementation->base64_to_binary(
             in,
             source_len,
             static_cast<char*>(dest),
