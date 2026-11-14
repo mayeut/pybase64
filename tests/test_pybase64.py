@@ -634,9 +634,9 @@ def test_invalid_args_dec_0(dfn: Decode) -> None:
 def test_flags(request: pytest.FixtureRequest) -> None:
     cpu = request.config.getoption("--sde-cpu", skip=True)
     assert {
-        "p4p": ("fallback"),  # no simd
-        "mrm": ("fallback"),  # SSSE3
-        "pnr": ("fallback"),  # SSE41
+        "p4p": ("fallback",),  # no simd
+        "mrm": ("fallback",),  # SSSE3
+        "pnr": ("fallback",),  # SSE41
         "nhm": ("westmere", "fallback"),  # SSE42
         "snb": ("westmere", "fallback"),  # AVX
         "hsw": ("haswell", "westmere", "fallback"),  # AVX2
