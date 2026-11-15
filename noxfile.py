@@ -182,7 +182,7 @@ def _coverage(session: nox.Session) -> None:
     session.run(
         "gcovr",
         "-r=.",
-        "-e=base64",
+        "-e=vendor",
         "-e=.coverage-build",
         "--gcov-delete",
         f"--json=coverage-native-partial-{session.python}.json",
