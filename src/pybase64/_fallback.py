@@ -399,6 +399,16 @@ def encodebytes(s: Buffer) -> bytes:
     return builtin_encodebytes(s)
 
 
+def standard_b64encode(s: Buffer) -> bytes:
+    """Encode bytes using the standard Base64 alphabet.
+
+    Argument ``s`` is a :term:`bytes-like object` to encode.
+
+    The result is returned as a :class:`bytes` object.
+    """
+    return b64encode(s)
+
+
 def urlsafe_b64encode(s: Buffer, *, padded: bool = True) -> bytes:
     """Encode bytes using the URL- and filesystem-safe Base64 alphabet.
 

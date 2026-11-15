@@ -1330,6 +1330,22 @@ static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject* args, Py
     return pybase64_decode_impl(self, args, kwds, 1);
 }
 
+static PyObject* pybase64_standard_encode(PyObject* self, PyObject* in_object)
+{
+    Py_buffer buffer;
+    PyObject* out_object;
+
+    if (get_buffer(in_object, &buffer, 1) != 0) {
+        return NULL;
+    }
+
+    out_object = pybase64_encode_impl_core(self, &buffer, NULL, 0, 0U);
+
+    PyBuffer_Release(&buffer);
+
+    return out_object;
+}
+
 static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 {
     Py_buffer buffer;
@@ -1655,6 +1671,7 @@ static PyMethodDef _pybase64_methods[] = {
     { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_VARARGS | METH_KEYWORDS, NULL },
     { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
+    { "standard_b64encode", (PyCFunction)pybase64_standard_encode, METH_O, NULL },
     { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },

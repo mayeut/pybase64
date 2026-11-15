@@ -21,6 +21,7 @@ try:
         b64encode,
         b64encode_as_string,
         encodebytes,
+        standard_b64encode,
         urlsafe_b64encode,
     )
 except ImportError:
@@ -32,6 +33,7 @@ except ImportError:
         b64encode,
         b64encode_as_string,
         encodebytes,
+        standard_b64encode,
         urlsafe_b64encode,
     )
 
@@ -69,16 +71,6 @@ def get_version() -> str:
     if simd_name != "fallback":
         return f"{__version__} (C extension active - {simd_name})"
     return f"{__version__} (C extension inactive)"
-
-
-def standard_b64encode(s: Buffer) -> bytes:
-    """Encode bytes using the standard Base64 alphabet.
-
-    Argument ``s`` is a :term:`bytes-like object` to encode.
-
-    The result is returned as a :class:`bytes` object.
-    """
-    return b64encode(s)
 
 
 def standard_b64decode(s: str | Buffer) -> bytes:
