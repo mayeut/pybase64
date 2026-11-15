@@ -873,6 +873,37 @@ static PyObject* pybase64_encode_as_string(PyObject* self, PyObject* args, PyObj
     return pybase64_encode_impl(self, args, kwds, PYBASE64_FLAGS_ENCODE_AS_STRING);
 }
 
+static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject* args, PyObject *kwds)
+{
+    static const char *kwlist[] = { "", "padded", NULL };
+    static const char alphabet[] = { '-', '_' };
+
+    Py_buffer buffer;
+    PyObject* out_object;
+    PyObject* in_object;
+    int padded = 1;
+    unsigned int flags = 0U;
+
+    /* Parse the input tuple */
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|$p", KW_CONST_CAST kwlist, &in_object, &padded)) {
+        return NULL;
+    }
+
+    if (get_buffer(in_object, &buffer, 0) != 0) {
+        return NULL;
+    }
+
+    if ((buffer.len > 0) && !padded) {
+        flags |= PYBASE64_FLAGS_NO_PADDING;
+    }
+
+    out_object = pybase64_encode_impl_core(self, &buffer, alphabet, 0, flags);
+
+    PyBuffer_Release(&buffer);
+
+    return out_object;
+}
+
 static PyObject* get_ignorechars_buffer(PyObject* object, Py_buffer* buffer, char const* alphabet)
 {
     if (get_buffer(object, buffer, 1) != 0) {
@@ -1299,6 +1330,22 @@ static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject* args, Py
     return pybase64_decode_impl(self, args, kwds, 1);
 }
 
+static PyObject* pybase64_standard_encode(PyObject* self, PyObject* in_object)
+{
+    Py_buffer buffer;
+    PyObject* out_object;
+
+    if (get_buffer(in_object, &buffer, 1) != 0) {
+        return NULL;
+    }
+
+    out_object = pybase64_encode_impl_core(self, &buffer, NULL, 0, 0U);
+
+    PyBuffer_Release(&buffer);
+
+    return out_object;
+}
+
 static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
 {
     Py_buffer buffer;
@@ -1624,6 +1671,8 @@ static PyMethodDef _pybase64_methods[] = {
     { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_VARARGS | METH_KEYWORDS, NULL },
     { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
+    { "standard_b64encode", (PyCFunction)pybase64_standard_encode, METH_O, NULL },
+    { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_VARARGS | METH_KEYWORDS, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
     { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },

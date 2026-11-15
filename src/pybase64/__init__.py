@@ -21,6 +21,8 @@ try:
         b64encode,
         b64encode_as_string,
         encodebytes,
+        standard_b64encode,
+        urlsafe_b64encode,
     )
 except ImportError:
     from pybase64._fallback import (
@@ -31,6 +33,8 @@ except ImportError:
         b64encode,
         b64encode_as_string,
         encodebytes,
+        standard_b64encode,
+        urlsafe_b64encode,
     )
 
 
@@ -69,16 +73,6 @@ def get_version() -> str:
     return f"{__version__} (C extension inactive)"
 
 
-def standard_b64encode(s: Buffer) -> bytes:
-    """Encode bytes using the standard Base64 alphabet.
-
-    Argument ``s`` is a :term:`bytes-like object` to encode.
-
-    The result is returned as a :class:`bytes` object.
-    """
-    return b64encode(s)
-
-
 def standard_b64decode(s: str | Buffer) -> bytes:
     """Decode bytes encoded with the standard Base64 alphabet.
 
@@ -93,20 +87,6 @@ def standard_b64decode(s: str | Buffer) -> bytes:
     to the padding check.
     """
     return b64decode(s)
-
-
-def urlsafe_b64encode(s: Buffer, *, padded: bool = True) -> bytes:
-    """Encode bytes using the URL- and filesystem-safe Base64 alphabet.
-
-    Argument ``s`` is a :term:`bytes-like object` to encode.
-
-    The result is returned as a :class:`bytes` object.
-
-    The alphabet uses '-' instead of '+' and '_' instead of '/'.
-
-    The result can still contain ``=`` if ``padded`` is true (default).
-    """
-    return b64encode(s, b"-_", padded=padded)
 
 
 def urlsafe_b64decode(s: str | Buffer, *, padded: bool = False) -> bytes:
