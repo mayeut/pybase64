@@ -15,6 +15,14 @@
 #include <arm_neon.h>
 #endif
 
+#if defined(Py_GIL_DISABLED) && !defined(Py_TARGET_ABI3T)
+#define PYBASE64_BEGIN_ALLOW_THREADS(Mi_size) {
+#define PYBASE64_END_ALLOW_THREADS }
+#else
+#define PYBASE64_BEGIN_ALLOW_THREADS(Mi_size) { PyThreadState *_save; _save = NULL; if ((Mi_size) >= (64 * 1024)) { _save = PyEval_SaveThread(); }
+#define PYBASE64_END_ALLOW_THREADS if (_save) { PyEval_RestoreThread(_save); } }
+#endif
+
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64) || BASE64_WITH_NEON64
 #define HAVE_FAST_UNALIGNED_ACCESS 1
 #else
@@ -713,7 +721,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     }
 
     /* not interacting with Python objects from here, release the GIL */
-    Py_BEGIN_ALLOW_THREADS
+    PYBASE64_BEGIN_ALLOW_THREADS(buffer->len)
 
     int const nopadding = (flags & PYBASE64_FLAGS_NO_PADDING);
     int const b64_flags = 0;
@@ -807,7 +815,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     }
 
     /* restore the GIL */
-    Py_END_ALLOW_THREADS
+    PYBASE64_END_ALLOW_THREADS
 
 #if PY_VERSION_HEX >= 0x030f0000
     if (!(flags & PYBASE64_FLAGS_ENCODE_AS_STRING)) {
@@ -1065,12 +1073,12 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
 #endif
 
         /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
+        PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
         translate_fn(source, translate_dst, source_len, alphabet, &has_bad_char);
 
         /* restore the GIL */
-        Py_END_ALLOW_THREADS
+        PYBASE64_END_ALLOW_THREADS
 
 #if PY_VERSION_HEX >= 0x030f0000
         translate_object = PyBytesWriter_Finish(writer);
@@ -1124,12 +1132,12 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         int result;
 
         /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
+        PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
         result = decode_slow(source, source_len, dest, &out_len, &ignorechars_buffer, padded, canonical);
 
         /* restore the GIL */
-        Py_END_ALLOW_THREADS
+        PYBASE64_END_ALLOW_THREADS
 
         if (result != PYBASE64_DECODE_SLOW_SUCCESS) {
             switch(result) /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/10 */
@@ -1177,7 +1185,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         struct base64_state b64_state;
 
         /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
+        PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
         base64_stream_decode_init(&b64_state, 0);
 
@@ -1204,7 +1212,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
 
         /* restore the GIL */
-        Py_END_ALLOW_THREADS
+        PYBASE64_END_ALLOW_THREADS
 
         if (result <= 0) {
             PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
@@ -1221,7 +1229,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         struct base64_state b64_state;
 
         /* not interacting with Python objects from here, release the GIL */
-        Py_BEGIN_ALLOW_THREADS
+        PYBASE64_BEGIN_ALLOW_THREADS(source_len)
 
         base64_stream_decode_init(&b64_state, 0);
         result = base64_stream_decode(&b64_state, source, source_len, dest, &out_len);
@@ -1230,7 +1238,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
         }
 
         /* restore the GIL */
-        Py_END_ALLOW_THREADS
+        PYBASE64_END_ALLOW_THREADS
 
         if (result <= 0) {
             PyErr_SetString(state->binAsciiError, "Non-base64 digit found");
