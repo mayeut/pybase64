@@ -613,6 +613,13 @@ def test_invalid_data_enc(efn: Encode, vector: Any, exception: type[BaseExceptio
         efn(vector)
 
 
+@params_invalid_data_enc
+@pytest.mark.parametrize("helper", ["standard_b64encode", "urlsafe_b64encode"])
+def test_invalid_data_helper(helper: str, vector: Any, exception: type[BaseException]) -> None:
+    with pytest.raises(exception):
+        getattr(pybase64, helper)(vector)
+
+
 @params_invalid_data_encodebytes
 def test_invalid_data_encodebytes(vector: Any, exception: type[BaseException]) -> None:
     with pytest.raises(exception):
@@ -623,6 +630,12 @@ def test_invalid_data_encodebytes(vector: Any, exception: type[BaseException]) -
 def test_invalid_args_enc_0(efn: Encode) -> None:
     with pytest.raises(TypeError):
         efn()  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize("helper", ["standard_b64encode", "urlsafe_b64encode"])
+def test_invalid_args_helper(helper: str) -> None:
+    with pytest.raises(TypeError):
+        getattr(pybase64, helper)()
 
 
 @param_decode_functions
