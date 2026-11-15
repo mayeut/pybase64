@@ -1012,31 +1012,11 @@ END:
     return result;
 }
 
-static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, int return_bytearray)
+static PyObject* pybase64_decode_impl_core(PyObject* self, PyObject* in_object, char const* alphabet, PyObject* validation_object, PyObject* ignorechars_object, int padded, int canonical, int return_bytearray)
 {
-    static char const* const arg_names[] = { "s", "altchars", "validate", "padded", "ignorechars", "canonical" };
-    PyObject* parsed_args[6];
-    if (fastcall_parse_args(args, nargs, kwnames, 1, 3, 6, arg_names, parsed_args) != 0) {
-        return NULL;
-    }
-    PyObject* in_object = parsed_args[0];
-    PyObject* in_alphabet = parsed_args[1];
-    PyObject* validation_object = parsed_args[2];
-    int padded = 1;
-    if (parsed_args[3]) {
-        padded = PyObject_IsTrue(parsed_args[3]);
-    }
-    PyObject* ignorechars_object = parsed_args[4];
-    int canonical = 0;
-    if (parsed_args[5]) {
-        canonical = PyObject_IsTrue(parsed_args[5]);
-    }
-
-    int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
     int user_ignorechars;
     int has_bad_char = 0;
-    char alphabet[2];
     int validation;
     Py_buffer buffer;
     Py_buffer ignorechars_buffer;
@@ -1070,16 +1050,12 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_
         }
     }
 
-    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
-        return NULL;
-    }
-
     user_ignorechars = (ignorechars_object != NULL);
 
     /* default to fast path when validation is true */
     fast_path = validation;
 
-    use_alphabet_for_ignore_chars = use_alphabet;
+    use_alphabet_for_ignore_chars = (alphabet !=  NULL);
     if (!validation) {
         assert(ignorechars_object == NULL);
         ignorechars_object = state->ignoreCharsValidateFalse;
@@ -1148,7 +1124,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_
     }
 
 /* TRY: */
-    if (!fast_path && use_alphabet) {
+    if (!fast_path && (alphabet != NULL)) {
         PyObject* translate_object;
         char* translate_dst;
 
@@ -1267,7 +1243,7 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_
             goto EXCEPT;
         }
     }
-    else if (use_alphabet) {
+    else if (alphabet != NULL) {
         /* TODO, make this more efficient */
         const Py_ssize_t src_slice = 16 * 1024;
         const size_t dst_slice = (src_slice / 4) * 3;
@@ -1371,16 +1347,43 @@ FINALLY:
         Py_DECREF(ignorechars_object);
     }
     if (has_bad_char && (out_object != NULL)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/4 */
-        static const char format_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=True will be an error in future versions";
-        static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars=%R and validate=False will be discarded in future versions";
+        static const char format_validation[] = "invalid characters '+' or '/' in Base64 data with altchars='%c%c' and validate=True will be an error in future versions";
+        static const char format_no_validation[] = "invalid characters '+' or '/' in Base64 data with altchars='%c%c' and validate=False will be discarded in future versions";
         char const* format = validation ? format_validation : format_no_validation;
         PyObject* category = validation ? PyExc_DeprecationWarning : PyExc_FutureWarning;
-        if (PyErr_WarnFormat(category, 2, format, in_alphabet) < 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        if (PyErr_WarnFormat(category, 2, format, alphabet[0], alphabet[1]) < 0) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             Py_XDECREF(out_object); /* GCOVR_EXCL_LINE */
             out_object = NULL; /* GCOVR_EXCL_LINE */
         }
     }
     return out_object;
+}
+
+
+static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, int return_bytearray)
+{
+    static char const* const arg_names[] = { "s", "altchars", "validate", "padded", "ignorechars", "canonical" };
+    PyObject* parsed_args[6];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 3, 6, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+    PyObject* in_object = parsed_args[0];
+    int use_alphabet = 0;
+    char alphabet[2];
+    if (parse_alphabet(parsed_args[1], alphabet, &use_alphabet) != 0) {
+        return NULL;
+    }
+    PyObject* validation_object = parsed_args[2];
+    int padded = 1;
+    if (parsed_args[3]) {
+        padded = PyObject_IsTrue(parsed_args[3]);
+    }
+    PyObject* ignorechars_object = parsed_args[4];
+    int canonical = 0;
+    if (parsed_args[5]) {
+        canonical = PyObject_IsTrue(parsed_args[5]);
+    }
+    return pybase64_decode_impl_core(self, in_object, use_alphabet ? alphabet : NULL, validation_object, ignorechars_object, padded, canonical, return_bytearray);
 }
 
 static PyObject* pybase64_decode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
@@ -1391,6 +1394,31 @@ static PyObject* pybase64_decode(PyObject* self, PyObject *const *args, Py_ssize
 static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     return pybase64_decode_impl(self, args, nargs, kwnames, 1);
+}
+
+static PyObject* pybase64_standard_decode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    static char const* const arg_names[] = { "s" };
+    PyObject* parsed_args[1];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 1, 1, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+    return pybase64_decode_impl_core(self, parsed_args[0], NULL, NULL, NULL, 1, 0, 0);
+}
+
+static PyObject* pybase64_urlsafe_decode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    static char const* const arg_names[] = { "s", "padded" };
+    PyObject* parsed_args[2];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 1, 2, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+    int padded = 0;
+    if (parsed_args[1]) {
+        padded = PyObject_IsTrue(parsed_args[1]);
+    }
+    static const char alphabet[] = { '-', '_' };
+    return pybase64_decode_impl_core(self, parsed_args[0], alphabet, NULL, NULL, padded, 0, 0);
 }
 
 static PyObject* pybase64_standard_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
@@ -1742,7 +1770,9 @@ static PyMethodDef _pybase64_methods[] = {
     { "b64decode", (PyCFunction)pybase64_decode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "standard_b64decode", (PyCFunction)pybase64_standard_decode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "standard_b64encode", (PyCFunction)pybase64_standard_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "urlsafe_b64decode", (PyCFunction)pybase64_urlsafe_decode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
