@@ -182,7 +182,7 @@ def _coverage(session: nox.Session) -> None:
     session.run(
         "gcovr",
         "-r=.",
-        "-e=base64",
+        "-e=vendor",
         "-e=.coverage-build",
         "--gcov-delete",
         f"--json=coverage-native-partial-{session.python}.json",
@@ -306,7 +306,7 @@ def update_licence(session: nox.Session) -> None:
         f.write("=" * 79 + "\n\n")
         f.write("libbase64\n")
         f.write("=" * 79 + "\n")
-        f.write(HERE.joinpath("base64", "LICENSE").read_text())
+        f.write(HERE.joinpath("vendor", "base64", "LICENSE").read_text())
         f.write("=" * 79)
         f.write('"""\n')
     session.log(file.read_text())
