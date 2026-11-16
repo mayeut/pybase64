@@ -59,6 +59,57 @@ typedef struct pybase64_state {
 #endif
 
 /* returns 0 on success */
+static int fastcall_parse_args(
+    /* fastcall fn args */
+    PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames,
+    /* constraints */
+    Py_ssize_t required_pos_args, Py_ssize_t max_pos_args,
+    /* mapping */
+    Py_ssize_t arg_count, char const* const* arg_names, PyObject** parsed_args
+)
+{
+    if (nargs > max_pos_args) {
+        PyErr_Format(PyExc_TypeError, "takes %zd positional argument but %zd were given", max_pos_args, nargs);
+        return -1;
+    }
+    for (Py_ssize_t i = 0; i < nargs; ++i) {
+        parsed_args[i] = args[i];
+    }
+    for (Py_ssize_t i = nargs; i < arg_count; ++i) {
+        parsed_args[i] = NULL;
+    }
+    if (kwnames != NULL) {
+        Py_ssize_t kw_count = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t k = 0; k < kw_count; k++) {
+            PyObject* arg_name = PyTuple_GET_ITEM(kwnames, k);
+            Py_ssize_t index = -1;
+            for (Py_ssize_t i = 0; i < arg_count; i++) {
+                if (PyUnicode_CompareWithASCIIString(arg_name, arg_names[i]) == 0) {
+                  index = i;
+                  break;
+                }
+            }
+            if (index < 0) {
+                PyErr_Format(PyExc_TypeError, "got an unexpected keyword argument %R", arg_name);
+                return -1;
+            }
+            if (parsed_args[index] != NULL) {
+                PyErr_Format(PyExc_TypeError, "got multiple values for argument %R", arg_name);
+                return -1;
+            }
+            parsed_args[index] = args[nargs + k];
+        }
+    }
+    for (Py_ssize_t i = 0; i < required_pos_args; ++i) {
+        if (parsed_args[i] == NULL) {
+            PyErr_Format(PyExc_TypeError, "missing required positional argument: '%s'", arg_names[i]);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* returns 0 on success */
 static int get_buffer(PyObject* object, Py_buffer* buffer, int bytes_like)
 {
     if (PyObject_GetBuffer(object, buffer, PyBUF_RECORDS_RO | PyBUF_C_CONTIGUOUS) != 0) {
@@ -826,29 +877,35 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     return out_object;
 }
 
-static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *kwds, unsigned int flags)
+static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, unsigned int flags)
 {
-    static const char *kwlist[] = { "", "altchars", "padded", "wrapcol", NULL };
+    static char const* const arg_names[] = { "s", "altchars", "padded", "wrapcol" };
+    PyObject* parsed_args[4];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 2, 4, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+
+    Py_ssize_t wrapcol = 0;
+    if (parsed_args[3]) {
+        wrapcol = PyLong_AsSsize_t(parsed_args[3]);
+        if (PyErr_Occurred()) {
+            return NULL;
+        }
+    }
+
+    int padded = 1;
+    if (parsed_args[2]) {
+        padded = PyObject_IsTrue(parsed_args[2]);
+    }
 
     int use_alphabet = 0;
     char alphabet[2];
+    if (parse_alphabet(parsed_args[1], alphabet, &use_alphabet) != 0) {
+        return NULL;
+    }
+
     Py_buffer buffer;
-    PyObject* out_object;
-    PyObject* in_object;
-    PyObject* in_alphabet = NULL;
-    int padded = 1;
-    Py_ssize_t wrapcol = 0;
-
-    /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O$pn", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &padded, &wrapcol)) {
-        return NULL;
-    }
-
-    if (parse_alphabet(in_alphabet, alphabet, &use_alphabet) != 0) {
-        return NULL;
-    }
-
-    if (get_buffer(in_object, &buffer, 0) != 0) {
+    if (get_buffer(parsed_args[0], &buffer, 0) != 0) {
         return NULL;
     }
 
@@ -856,48 +913,48 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject* args, PyObject *
         flags |= PYBASE64_FLAGS_NO_PADDING;
     }
 
-    out_object = pybase64_encode_impl_core(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
+    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
 
     PyBuffer_Release(&buffer);
 
     return out_object;
 }
 
-static PyObject* pybase64_encode(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_encode_impl(self, args, kwds, 0U);
+    return pybase64_encode_impl(self, args, nargs, kwnames, 0U);
 }
 
-static PyObject* pybase64_encode_as_string(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_encode_as_string(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_encode_impl(self, args, kwds, PYBASE64_FLAGS_ENCODE_AS_STRING);
+    return pybase64_encode_impl(self, args, nargs, kwnames, PYBASE64_FLAGS_ENCODE_AS_STRING);
 }
 
-static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    static const char *kwlist[] = { "", "padded", NULL };
-    static const char alphabet[] = { '-', '_' };
+    static const char *const arg_names[] = { "s", "padded" };
+    PyObject* parsed_args[2];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 1, 2, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+
+    int padded = 1;
+    if (parsed_args[1]) {
+        padded = PyObject_IsTrue(parsed_args[1]);
+    }
 
     Py_buffer buffer;
-    PyObject* out_object;
-    PyObject* in_object;
-    int padded = 1;
+    if (get_buffer(parsed_args[0], &buffer, 0) != 0) {
+        return NULL;
+    }
+
     unsigned int flags = 0U;
-
-    /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|$p", KW_CONST_CAST kwlist, &in_object, &padded)) {
-        return NULL;
-    }
-
-    if (get_buffer(in_object, &buffer, 0) != 0) {
-        return NULL;
-    }
-
     if ((buffer.len > 0) && !padded) {
         flags |= PYBASE64_FLAGS_NO_PADDING;
     }
 
-    out_object = pybase64_encode_impl_core(self, &buffer, alphabet, 0, flags);
+    static const char alphabet[] = { '-', '_' };
+    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, alphabet, 0, flags);
 
     PyBuffer_Release(&buffer);
 
@@ -955,9 +1012,25 @@ END:
     return result;
 }
 
-static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *kwds, int return_bytearray)
+static PyObject* pybase64_decode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, int return_bytearray)
 {
-    static const char *kwlist[] = { "", "altchars", "validate", "padded", "ignorechars", "canonical", NULL };
+    static char const* const arg_names[] = { "s", "altchars", "validate", "padded", "ignorechars", "canonical" };
+    PyObject* parsed_args[6];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 3, 6, arg_names, parsed_args) != 0) {
+        return NULL;
+    }
+    PyObject* in_object = parsed_args[0];
+    PyObject* in_alphabet = parsed_args[1];
+    PyObject* validation_object = parsed_args[2];
+    int padded = 1;
+    if (parsed_args[3]) {
+        padded = PyObject_IsTrue(parsed_args[3]);
+    }
+    PyObject* ignorechars_object = parsed_args[4];
+    int canonical = 0;
+    if (parsed_args[5]) {
+        canonical = PyObject_IsTrue(parsed_args[5]);
+    }
 
     int use_alphabet = 0;
     int use_alphabet_for_ignore_chars;
@@ -968,12 +1041,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     Py_buffer buffer;
     Py_buffer ignorechars_buffer;
     size_t out_len;
-    PyObject* in_alphabet = NULL;
-    PyObject* in_object;
-    PyObject* validation_object = NULL;
-    PyObject* ignorechars_object = NULL;
-    int canonical = 0;
-    int padded = 1;
     int fast_path;
     PyObject* out_object = NULL;
 #if PY_VERSION_HEX >= 0x030f0000
@@ -987,10 +1054,6 @@ static PyObject* pybase64_decode_impl(PyObject* self, PyObject* args, PyObject *
     pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
     if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
         return NULL; /* GCOVR_EXCL_LINE */
-    }
-    /* Parse the input tuple */
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO$pOp", KW_CONST_CAST kwlist, &in_object, &in_alphabet, &validation_object, &padded, &ignorechars_object, &canonical)) {
-        return NULL;
     }
 
     if (validation_object == NULL) {
@@ -1320,42 +1383,50 @@ FINALLY:
     return out_object;
 }
 
-static PyObject* pybase64_decode(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_decode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_decode_impl(self, args, kwds, 0);
+    return pybase64_decode_impl(self, args, nargs, kwnames, 0);
 }
 
-static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject* args, PyObject *kwds)
+static PyObject* pybase64_decode_as_bytearray(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_decode_impl(self, args, kwds, 1);
+    return pybase64_decode_impl(self, args, nargs, kwnames, 1);
 }
 
-static PyObject* pybase64_standard_encode(PyObject* self, PyObject* in_object)
+static PyObject* pybase64_standard_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buffer;
-    PyObject* out_object;
-
-    if (get_buffer(in_object, &buffer, 1) != 0) {
+   static char const* const arg_names[] = { "s" };
+    PyObject* parsed_args[1];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 1, 1, arg_names, parsed_args) != 0) {
         return NULL;
     }
 
-    out_object = pybase64_encode_impl_core(self, &buffer, NULL, 0, 0U);
+    Py_buffer buffer;
+    if (get_buffer(parsed_args[0], &buffer, 1) != 0) {
+        return NULL;
+    }
+
+    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, NULL, 0, 0U);
 
     PyBuffer_Release(&buffer);
 
     return out_object;
 }
 
-static PyObject* pybase64_encodebytes(PyObject* self, PyObject* in_object)
+static PyObject* pybase64_encodebytes(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buffer;
-    PyObject* out_object;
-
-    if (get_buffer(in_object, &buffer, 1) != 0) {
+   static char const* const arg_names[] = { "s" };
+    PyObject* parsed_args[1];
+    if (fastcall_parse_args(args, nargs, kwnames, 1, 1, 1, arg_names, parsed_args) != 0) {
         return NULL;
     }
 
-    out_object = pybase64_encode_impl_core(self, &buffer, NULL, 76, PYBASE64_FLAGS_APPEND_NEW_LINE);
+    Py_buffer buffer;
+    if (get_buffer(parsed_args[0], &buffer, 1) != 0) {
+        return NULL;
+    }
+
+    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, NULL, 76, PYBASE64_FLAGS_APPEND_NEW_LINE);
 
     PyBuffer_Release(&buffer);
 
@@ -1666,13 +1737,13 @@ static void _pybase64_free(void *m)
 }
 
 static PyMethodDef _pybase64_methods[] = {
-    { "b64encode", (PyCFunction)pybase64_encode, METH_VARARGS | METH_KEYWORDS, NULL },
-    { "b64encode_as_string", (PyCFunction)pybase64_encode_as_string, METH_VARARGS | METH_KEYWORDS, NULL },
-    { "b64decode", (PyCFunction)pybase64_decode, METH_VARARGS | METH_KEYWORDS, NULL },
-    { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_VARARGS | METH_KEYWORDS, NULL },
-    { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_O, NULL },
-    { "standard_b64encode", (PyCFunction)pybase64_standard_encode, METH_O, NULL },
-    { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_VARARGS | METH_KEYWORDS, NULL },
+    { "b64encode", (PyCFunction)pybase64_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "b64encode_as_string", (PyCFunction)pybase64_encode_as_string, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "b64decode", (PyCFunction)pybase64_decode, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "b64decode_as_bytearray", (PyCFunction)pybase64_decode_as_bytearray, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "encodebytes", (PyCFunction)pybase64_encodebytes, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "standard_b64encode", (PyCFunction)pybase64_standard_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
+    { "urlsafe_b64encode", (PyCFunction)pybase64_urlsafe_encode, METH_FASTCALL | METH_KEYWORDS, NULL },
     { "_get_simd_path", (PyCFunction)pybase64_get_simd_path, METH_NOARGS, NULL },
     { "_set_simd_path", (PyCFunction)pybase64_set_simd_path, METH_O, NULL },
     { "_get_simd_flags_compile", (PyCFunction)pybase64_get_simd_flags_compile, METH_NOARGS, NULL },
