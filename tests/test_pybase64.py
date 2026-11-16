@@ -626,6 +626,17 @@ def test_invalid_data_encodebytes(vector: Any, exception: type[BaseException]) -
         pybase64.encodebytes(vector)
 
 
+def test_invalid_args_encodebytes() -> None:
+    with pytest.raises(TypeError):
+        pybase64.encodebytes()  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        pybase64.encodebytes(b"", s=b"")  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        pybase64.encodebytes(b"", dummy=b"")  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        pybase64.encodebytes(b"", b"")  # type: ignore[call-arg]
+
+
 @param_encode_functions
 def test_invalid_args_enc_0(efn: Encode) -> None:
     with pytest.raises(TypeError):
