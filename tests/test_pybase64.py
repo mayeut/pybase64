@@ -630,7 +630,7 @@ def test_invalid_args_encodebytes() -> None:
     with pytest.raises(TypeError):
         pybase64.encodebytes()  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        pybase64.encodebytes(b"", s=b"")  # type: ignore[call-arg]
+        pybase64.encodebytes(b"", s=b"")  # type: ignore[misc]
     with pytest.raises(TypeError):
         pybase64.encodebytes(b"", dummy=b"")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
@@ -641,6 +641,8 @@ def test_invalid_args_encodebytes() -> None:
 def test_invalid_args_enc_0(efn: Encode) -> None:
     with pytest.raises(TypeError):
         efn()  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        efn(s=b"", wrapcol="bad-type")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("helper", ["standard_b64encode", "urlsafe_b64encode"])
