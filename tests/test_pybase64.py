@@ -645,7 +645,10 @@ def test_invalid_args_enc_0(efn: Encode) -> None:
         efn(s=b"", wrapcol="bad-type")  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("helper", ["standard_b64encode", "urlsafe_b64encode"])
+@pytest.mark.parametrize(
+    "helper",
+    ["standard_b64decode", "standard_b64encode", "urlsafe_b64decode", "urlsafe_b64encode"],
+)
 def test_invalid_args_helper(helper: str) -> None:
     with pytest.raises(TypeError):
         getattr(pybase64, helper)()
