@@ -39,7 +39,6 @@ static simdutf::implementation const* const best_implementation = implementation
 #define HAVE_FAST_UNALIGNED_ACCESS 0
 #endif
 
-#define PYBASE64_FLAGS_ENCODE_AS_STRING (1U << 0)
 #define PYBASE64_FLAGS_NO_PADDING       (1U << 2)
 
 #define PYBASE64_DECODE_SLOW_SUCCESS 0
@@ -665,7 +664,7 @@ END:
     return PYBASE64_DECODE_SLOW_SUCCESS;
 }
 
-template<bool append_new_line>
+template<bool append_new_line, bool as_string>
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
     PyObject* out_object;
@@ -715,7 +714,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         out_len++;
     }
 
-    if (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) {
+    if constexpr (as_string) {
         out_object = PyUnicode_New((Py_ssize_t)out_len, 127);
         if (out_object == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             return NULL; /* GCOVR_EXCL_LINE */
@@ -813,7 +812,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     PYBASE64_END_ALLOW_THREADS
 
 #if PY_VERSION_HEX >= 0x030f0000
-    if (!(flags & PYBASE64_FLAGS_ENCODE_AS_STRING)) {
+    if constexpr (!as_string) {
         out_object = PyBytesWriter_FinishWithPointer(writer, dst);
     }
 #endif
@@ -821,7 +820,8 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     return out_object;
 }
 
-static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, unsigned int flags)
+template<bool as_string>
+static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     static char const* const arg_names[] = { "s", "altchars", "padded", "wrapcol" };
     PyObject* parsed_args[4];
@@ -853,11 +853,12 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_
         return NULL;
     }
 
+    unsigned int flags = 0U;
     if ((buffer.len > 0) && !padded) {
         flags |= PYBASE64_FLAGS_NO_PADDING;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
+    PyObject* out_object = pybase64_encode_impl_core<false, as_string>(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
 
     PyBuffer_Release(&buffer);
 
@@ -866,12 +867,12 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_
 
 static PyObject* pybase64_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_encode_impl(self, args, nargs, kwnames, 0U);
+    return pybase64_encode_impl<false>(self, args, nargs, kwnames);
 }
 
 static PyObject* pybase64_encode_as_string(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
-    return pybase64_encode_impl(self, args, nargs, kwnames, PYBASE64_FLAGS_ENCODE_AS_STRING);
+    return pybase64_encode_impl<true>(self, args, nargs, kwnames);
 }
 
 static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
@@ -898,7 +899,7 @@ static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject *const *args, 
     }
 
     static const char alphabet[] = { '-', '_' };
-    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, alphabet, 0, flags);
+    PyObject* out_object = pybase64_encode_impl_core<false, false>(self, &buffer, alphabet, 0, flags);
 
     PyBuffer_Release(&buffer);
 
@@ -1443,7 +1444,7 @@ static PyObject* pybase64_standard_encode(PyObject* self, PyObject *const *args,
         return NULL;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, NULL, 0, 0U);
+    PyObject* out_object = pybase64_encode_impl_core<false, false>(self, &buffer, NULL, 0, 0U);
 
     PyBuffer_Release(&buffer);
 
@@ -1463,7 +1464,7 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject *const *args, Py_
         return NULL;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core<true>(self, &buffer, NULL, 76, 0U);
+    PyObject* out_object = pybase64_encode_impl_core<true, false>(self, &buffer, NULL, 76, 0U);
 
     PyBuffer_Release(&buffer);
 
