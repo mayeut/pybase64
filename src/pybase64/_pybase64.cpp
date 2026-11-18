@@ -665,7 +665,7 @@ END:
 }
 
 template<bool append_new_line, bool as_string>
-static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
+inline static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
     PyObject* out_object;
 #if PY_VERSION_HEX >= 0x030f0000
@@ -746,7 +746,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     /* not interacting with Python objects from here, release the GIL */
     PYBASE64_BEGIN_ALLOW_THREADS(buffer->len)
 
-    if (append_new_line && (out_len > 0U)) {
+    if constexpr (append_new_line) {
         out_len--; /* only consider len without new line terminator */
     }
 
@@ -803,7 +803,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         implementation->binary_to_base64(static_cast<char const*>(buffer->buf), buffer->len, dst, options);
         dst += out_len;
     }
-    if (append_new_line && (out_len > 0U)) {
+    if constexpr (append_new_line) {
         *dst++ = '\n';
     }
 
