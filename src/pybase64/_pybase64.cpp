@@ -40,7 +40,6 @@ static simdutf::implementation const* const best_implementation = implementation
 #endif
 
 #define PYBASE64_FLAGS_ENCODE_AS_STRING (1U << 0)
-#define PYBASE64_FLAGS_APPEND_NEW_LINE  (1U << 1)
 #define PYBASE64_FLAGS_NO_PADDING       (1U << 2)
 
 #define PYBASE64_DECODE_SLOW_SUCCESS 0
@@ -666,6 +665,7 @@ END:
     return PYBASE64_DECODE_SLOW_SUCCESS;
 }
 
+template<bool append_new_line>
 static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buffer, char const* alphabet, Py_ssize_t wrapcol, unsigned int flags)
 {
     PyObject* out_object;
@@ -707,7 +707,8 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     size_t out_len = (wrapcol > 0) ?
         simdutf::base64_length_from_binary_with_lines(buffer->len, options, wrapcol) :
         implementation->base64_length_from_binary(buffer->len, options);
-    if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
+
+    if (append_new_line) {
         if (out_len > ((size_t)PY_SSIZE_T_MAX - 1U)) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
             return PyErr_NoMemory(); /* GCOVR_EXCL_LINE */
         }
@@ -747,7 +748,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     /* not interacting with Python objects from here, release the GIL */
     PYBASE64_BEGIN_ALLOW_THREADS(buffer->len)
 
-    if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
+    if (append_new_line && (out_len > 0U)) {
         out_len--; /* only consider len without new line terminator */
     }
 
@@ -804,7 +805,7 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         implementation->binary_to_base64(static_cast<char const*>(buffer->buf), buffer->len, dst, options);
         dst += out_len;
     }
-    if (flags & PYBASE64_FLAGS_APPEND_NEW_LINE) {
+    if (append_new_line && (out_len > 0U)) {
         *dst++ = '\n';
     }
 
@@ -856,7 +857,7 @@ static PyObject* pybase64_encode_impl(PyObject* self, PyObject *const *args, Py_
         flags |= PYBASE64_FLAGS_NO_PADDING;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
+    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, use_alphabet ? alphabet : NULL, wrapcol, flags);
 
     PyBuffer_Release(&buffer);
 
@@ -897,7 +898,7 @@ static PyObject* pybase64_urlsafe_encode(PyObject* self, PyObject *const *args, 
     }
 
     static const char alphabet[] = { '-', '_' };
-    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, alphabet, 0, flags);
+    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, alphabet, 0, flags);
 
     PyBuffer_Release(&buffer);
 
@@ -1442,7 +1443,7 @@ static PyObject* pybase64_standard_encode(PyObject* self, PyObject *const *args,
         return NULL;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, NULL, 0, 0U);
+    PyObject* out_object = pybase64_encode_impl_core<false>(self, &buffer, NULL, 0, 0U);
 
     PyBuffer_Release(&buffer);
 
@@ -1462,7 +1463,7 @@ static PyObject* pybase64_encodebytes(PyObject* self, PyObject *const *args, Py_
         return NULL;
     }
 
-    PyObject* out_object = pybase64_encode_impl_core(self, &buffer, NULL, 76, PYBASE64_FLAGS_APPEND_NEW_LINE);
+    PyObject* out_object = pybase64_encode_impl_core<true>(self, &buffer, NULL, 76, 0U);
 
     PyBuffer_Release(&buffer);
 
