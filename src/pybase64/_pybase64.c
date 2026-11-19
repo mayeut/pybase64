@@ -1735,8 +1735,8 @@ static int _pybase64_exec(PyObject *m)
 #else
     state->emptyBytes = PyBytes_FromStringAndSize(NULL, 0);
 #endif
-    if (state->emptyBytes == NULL) {
-        return -1;
+    if (state->emptyBytes == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
 #if PY_VERSION_HEX >= 0x030d0000
@@ -1744,8 +1744,8 @@ static int _pybase64_exec(PyObject *m)
 #else
     state->emptyStr = PyUnicode_FromStringAndSize(NULL, 0);
 #endif
-    if (state->emptyStr == NULL) {
-        return -1;
+    if (state->emptyStr == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return -1; /* GCOVR_EXCL_LINE */
     }
 
     state->binAsciiError = pybase64_import_BinAsciiError();
