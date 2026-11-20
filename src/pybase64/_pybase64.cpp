@@ -672,23 +672,19 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
     PyBytesWriter* writer;
 #endif
     char* dst;
-    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-        return NULL; /* GCOVR_EXCL_LINE */
-    }
-    auto const implementation = state->active_implementation;
 
     if (wrapcol < 0) {
         PyErr_SetString(PyExc_ValueError, "wrapcol must be >= 0");
         return NULL;
     }
 
+    pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
+    if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
+        return NULL; /* GCOVR_EXCL_LINE */
+    }
+
     if (buffer->len == 0) {
-        pybase64_state *state = (pybase64_state*)PyModule_GetState(self);
-        if (state == NULL) { /* GCOVR_EXCL_BR_WITHOUT_HIT: 1/2 */
-            return NULL; /* GCOVR_EXCL_LINE */
-        }
-        PyObject* emptyObject = (flags & PYBASE64_FLAGS_ENCODE_AS_STRING) ? state->emptyStr : state->emptyBytes;
+        PyObject* emptyObject = as_string ? state->emptyStr : state->emptyBytes;
         Py_INCREF(emptyObject);
         return emptyObject;
     }
@@ -703,6 +699,9 @@ static PyObject* pybase64_encode_impl_core(PyObject* self, Py_buffer const* buff
         alphabet = nullptr;
         options = (flags & PYBASE64_FLAGS_NO_PADDING) ? simdutf::base64_url : simdutf::base64_url_with_padding;
     }
+
+    auto const implementation = state->active_implementation;
+
     size_t out_len = (wrapcol > 0) ?
         simdutf::base64_length_from_binary_with_lines(buffer->len, options, wrapcol) :
         implementation->base64_length_from_binary(buffer->len, options);
