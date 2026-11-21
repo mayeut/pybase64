@@ -252,7 +252,9 @@ def benchmark(session: nox.Session) -> None:
 def docs(session: nox.Session) -> None:
     """Build the docs."""
     _uv_sync(session, "build-system", "docs")
-    session.install("--no-deps", "--no-build-isolation", ".")
+    env = os.environ.copy()
+    env["READTHEDOCS"] = "True"
+    session.install("--no-deps", "--no-build-isolation", ".", env=env)
     session.chdir("docs")
     session.run(
         "python",
