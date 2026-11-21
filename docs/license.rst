@@ -10,5 +10,5 @@ pybase64
 libbase64
 ---------
 
-.. literalinclude:: ../base64/LICENSE
+.. literalinclude:: ../vendor/base64/LICENSE
    :language: none

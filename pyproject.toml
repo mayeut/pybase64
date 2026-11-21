@@ -49,13 +49,17 @@ wheel.exclude = ["*.c", "*.h"]
 wheel.reproducible = true
 
 [[tool.scikit-build.overrides]]
-if.failed = true
-if.not.env.CIBUILDWHEEL = true
+if.platform-system = "^android"
+cmake.version = ">=4.4"
+
+[[tool.scikit-build.overrides]]
+if.env.READTHEDOCS = true
 wheel.cmake = false
 
 [[tool.scikit-build.overrides]]
-if.platform-system = "^android"
-cmake.version = ">=4.4"
+if.failed = true
+if.not.env.CIBUILDWHEEL = true
+wheel.cmake = false
 
 [[tool.dynamic-metadata]]
 provider = "scikit_build_core.metadata.regex"
