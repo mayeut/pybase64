@@ -37,6 +37,7 @@ repos:
     args: ["--python-version=3.9"]
     additional_dependencies:
       - mypy==1.20.2
+      - packaging<26.4
       - pytest<9
 
 - repo: https://github.com/pre-commit/mirrors-mypy
